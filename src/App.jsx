@@ -444,10 +444,10 @@ export default function App() {
         </div>
 
         {/* Selected content viewer */}
-        <section ref={contentRef} className="mt-6 rounded-2xl border border-gray-200 bg-white p-4">
-          <div className="mb-2 text-sm text-gray-500">Selected: {selected.kind} {selected.id || "–"}</div>
-          <div
-            className="prose max-w-none prose-sm"
+        <section ref={contentRef} className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
+          <div className="article-header">Selected: {selected.kind} {selected.id || "–"}</div>
+          <article
+            className="prose prose-base md:prose-lg max-w-3xl mx-auto"
             dangerouslySetInnerHTML={{ __html: selected.html || "<em>Select an article, recital, or annex.</em>" }}
           />
         </section>
