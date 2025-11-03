@@ -9,8 +9,13 @@ import { motion, AnimatePresence } from "framer-motion";
 // ---------------- Config: hard‑coded local laws ----------------
 // Replace the paths with files you serve from /public or your static folder.
 const LAWS = [
-  { label: "AI Act (EU 2024/1689)", value: "/data/ai_act.html.xhtml" },
-  { label: "GDPR (EU 2016/679) – Unconsolidated", value: "/data/gdpr_unconsolidated_with_recitals.xml" },
+  { label: "AI Act (EU 2024/1689)", value: "data/aia.xhtml" },
+  { label: "GDPR (EU 2016/679) – Unconsolidated", value: "data/gdpr.xml" },
+  { label: "DMA (EU 2022/1925) – Unconsolidated", value: "data/dma.xhtml" },
+  { label: "DSA (EU 2022/2065)", value: "data/dsa.xhtml" },
+  { label: "Data Act (EU 2023/2854)", value: "data/da.xhtml" },
+  { label: "Data Governance Act (EU 2022/868)", value: "data/dga.html" },
+  { label: "ePrivacy - Consolidated, no recitals", value: "data/eprivacy_consolidated.html" },
 ];
 
 // ---------------- Minimal UI primitives ----------------
