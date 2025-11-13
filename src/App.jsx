@@ -257,7 +257,7 @@ function Landing({ onSelect }) {
             EU Law Visualiser
           </span>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-            Read EU law,
+            Read EU law beautifully,
             <span className="block text-slate-200">one at a time.</span>
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-slate-300 sm:text-base">
