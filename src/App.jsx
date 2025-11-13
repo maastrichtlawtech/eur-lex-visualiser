@@ -6,16 +6,14 @@ import { motion, AnimatePresence } from "framer-motion";
 // DATA / PROCESSING LAYER
 // =============================================================
 
-// ---------------- Config: hard‑coded local laws ----------------
-// Replace the paths with files you serve from /public or your static folder.
+// ---------------- Config: hard-coded local laws ----------------
 const LAWS = [
-  { label: "AI Act (EU 2024/1689)", value: "data/aia.xhtml" },
-  { label: "GDPR (EU 2016/679) – Unconsolidated", value: "data/gdpr.xml" },
-  { label: "DMA (EU 2022/1925) – Unconsolidated", value: "data/dma.xhtml" },
-  { label: "DSA (EU 2022/2065)", value: "data/dsa.xhtml" },
-  { label: "Data Act (EU 2023/2854)", value: "data/da.xhtml" },
-  { label: "Data Governance Act (EU 2022/868)", value: "data/dga.html" },
-  //{ label: "ePrivacy - Consolidated, no recitals", value: "data/eprivacy_consolidated.html" },
+  { key: "aia", label: "AI Act (EU 2024/1689)", value: "data/aia.xhtml" },
+  { key: "gdpr", label: "GDPR (EU 2016/679) – Unconsolidated", value: "data/gdpr.xml" },
+  { key: "dma", label: "DMA (EU 2022/1925) – Unconsolidated", value: "data/dma.xhtml" },
+  { key: "dsa", label: "DSA (EU 2022/2065)", value: "data/dsa.xhtml" },
+  { key: "data-act", label: "Data Act (EU 2023/2854)", value: "data/da.xhtml" },
+  { key: "dga", label: "Data Governance Act (EU 2022/868)", value: "data/dga.html" },
 ];
 
 // ---------------- Minimal UI primitives ----------------
@@ -42,7 +40,7 @@ const fetchText = async (path) => {
   return await res.text();
 };
 
-// ---------------- Parser (best‑effort for OJ & consolidated) ----------------
+// ---------------- Parser (best-effort for OJ & consolidated) ----------------
 function parseSingleXHTMLToCombined(xhtmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xhtmlText, "text/html");
@@ -72,7 +70,10 @@ function parseSingleXHTMLToCombined(xhtmlText) {
     if (!(el instanceof Element)) continue;
 
     // "Division headings"
-    if (el.tagName === "P" && (el.classList.contains("title-division-1") || el.classList.contains("oj-ti-section-1"))) {
+    if (
+      el.tagName === "P" &&
+      (el.classList.contains("title-division-1") || el.classList.contains("oj-ti-section-1"))
+    ) {
       const txt = norm(getText(el));
       const upper = txt.toUpperCase();
 
@@ -91,7 +92,10 @@ function parseSingleXHTMLToCombined(xhtmlText) {
       }
     }
 
-    if (el.tagName === "P" && (el.classList.contains("title-division-2") || el.classList.contains("oj-ti-section-2"))) {
+    if (
+      el.tagName === "P" &&
+      (el.classList.contains("title-division-2") || el.classList.contains("oj-ti-section-2"))
+    ) {
       const txt = norm(getText(el));
       if (pendingHeader === "chapter") currentChapter.title = txt;
       else if (pendingHeader === "section") currentSection.title = txt;
@@ -239,21 +243,105 @@ function Accordion({ title, children, defaultOpen = false }) {
   );
 }
 
+// ---------------- Landing Page (new) ----------------
+function Landing({ onSelect }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white">
+      <div className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-10">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center"
+        >
+          <span className="inline-flex items-center rounded-full bg-slate-800/70 px-3 py-1 text-xs font-medium tracking-tight text-slate-200 ring-1 ring-slate-700/60">
+            EU Law Visualiser
+          </span>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+            Read EU law,
+            <span className="block text-slate-200">one at a time.</span>
+          </h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-300 sm:text-base">
+            Choose the instrument you are working with. You will then see an interactive view with
+            chapters, articles, recitals, and annexes side by side.
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mt-8 w-full"
+        >
+          <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
+            Step 1 · Select a law
+          </h2>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {LAWS.map((law, idx) => (
+              <motion.button
+                key={law.value}
+                whileHover={{ y: -2, scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => onSelect(law.value)}
+                className="group flex h-full flex-col rounded-2xl border border-slate-700/70 bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-800/80 p-4 text-left shadow-lg shadow-black/40 transition hover:border-slate-300 hover:bg-slate-900/90"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-50">
+                      {law.label}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-300">
+                      Click to open an interactive table of contents, recitals and annexes.
+                    </p>
+                  </div>
+                  <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 text-[11px] text-slate-200">
+                    {idx + 1}
+                  </span>
+                </div>
+                <div className="mt-3 flex items-center gap-1 text-xs text-slate-400">
+                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
+                    Articles viewer
+                  </span>
+                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
+                    Recitals
+                  </span>
+                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
+                    Annexes
+                  </span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          className="mt-8 text-xs text-slate-500"
+        >
+          <p>Built by Konrad Kollnig at the Law &amp; Tech Lab, Maastricht University.</p>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 // Top navigation bar with Prev/Next groups for each kind
-function TopBar({ lawPath, setLawPath, lists, selected, onPrevNext }) {
+function TopBar({ lawPath, setLawPath, lists, selected, onPrevNext, onBackHome }) {
   const { articles, recitals, annexes } = lists;
 
   const getListAndIndex = () => {
     if (selected.kind === "article") {
-      const idx = articles.findIndex(a => a.article_number === selected.id);
+      const idx = articles.findIndex((a) => a.article_number === selected.id);
       return { kind: "article", index: idx, list: articles, label: "Article" };
     }
     if (selected.kind === "recital") {
-      const idx = recitals.findIndex(r => r.recital_number === selected.id);
+      const idx = recitals.findIndex((r) => r.recital_number === selected.id);
       return { kind: "recital", index: idx, list: recitals, label: "Recital" };
     }
     if (selected.kind === "annex") {
-      const idx = annexes.findIndex(x => x.annex_id === selected.id);
+      const idx = annexes.findIndex((x) => x.annex_id === selected.id);
       return { kind: "annex", index: idx, list: annexes, label: "Annex" };
     }
     return { kind: null, index: -1, list: [], label: "" };
@@ -262,8 +350,76 @@ function TopBar({ lawPath, setLawPath, lists, selected, onPrevNext }) {
   const { kind, index, list, label } = getListAndIndex();
 
   return (
+      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+        <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-6 py-3">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="ml-2 hidden text-xs md:inline-flex"
+              onClick={onBackHome}
+            >
+              ← Overview of Laws
+            </Button>
+
+            <button
+              type="button"
+              onClick={onBackHome}
+              className="text-base font-semibold hover:underline"
+            >
+              EU Law Visualiser
+            </button>
+
+            <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
+              Konrad Kollnig, Law &amp; Tech Lab Maastricht
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+              {/* --- Unified navigation control --- */}
+              {kind && (
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    disabled={index <= 0}
+                    onClick={() => onPrevNext(kind, index - 1)}
+                    title={`Previous ${label.toLowerCase()}`}
+                  >
+                    ← Prev {label}
+                  </Button>
+                  <span className="text-sm text-gray-600">
+                    {label} {index + 1} of {list.length}
+                  </span>
+                  <Button
+                    variant="outline"
+                    disabled={index === -1 || index >= list.length - 1}
+                    onClick={() => onPrevNext(kind, index + 1)}
+                    title={`Next ${label.toLowerCase()}`}
+                  >
+                    Next {label} →
+                  </Button>
+                </div>
+              )}
+
+              {/* --- Law selection --- */}
+              <select
+                value={lawPath}
+                onChange={(e) => setLawPath(e.target.value)}
+                className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
+              >
+                {LAWS.map((l) => (
+                  <option key={l.value} value={l.value}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+        </div>
+      </header>
+    );
+
+  return (
     <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto w-full px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-6 py-3">
         <div className="flex items-center gap-3">
           <div className="text-base font-semibold">EU Law Visualiser</div>
           <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
@@ -315,9 +471,21 @@ function TopBar({ lawPath, setLawPath, lists, selected, onPrevNext }) {
   );
 }
 
+const getInitialLawPathFromUrl = () => {
+  if (typeof window === "undefined") return "";
+
+  const params = new URLSearchParams(window.location.search);
+  const key = params.get("law");
+
+  if (!key) return "";
+  const entry = LAWS.find(l => l.key === key);
+  return entry ? entry.value : "";
+};
+
 // ---------------- App ----------------
 export default function App() {
-  const [lawPath, setLawPath] = useState(LAWS[0]?.value || "");
+  // Start with no law selected
+  const [lawPath, setLawPath] = useState(() => getInitialLawPathFromUrl());
   const [data, setData] = useState({ articles: [], recitals: [], annexes: [] });
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [error, setError] = useState("");
@@ -351,6 +519,26 @@ export default function App() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (lawPath) {
+      const entry = LAWS.find(l => l.value === lawPath);
+      if (entry) params.set("law", entry.key);
+    } else {
+      params.delete("law");
+    }
+
+    const newUrl =
+      window.location.pathname +
+      (params.toString() ? `?${params.toString()}` : "") +
+      window.location.hash;
+
+    window.history.replaceState(null, "", newUrl);
+  }, [lawPath]);
 
   useEffect(() => {
     if (lawPath) loadLaw(lawPath);
@@ -415,15 +603,24 @@ export default function App() {
     if (kind === "annex") return selectAnnexIdx(nextIndex);
   };
 
-  const onClickArticle = (a) => selectArticleIdx(data.articles.findIndex((x) => x.article_number === a.article_number));
-  const onClickRecital = (r) => selectRecitalIdx(data.recitals.findIndex((x) => x.recital_number === r.recital_number));
-  const onClickAnnex = (ax) => selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
+  const onClickArticle = (a) =>
+    selectArticleIdx(data.articles.findIndex((x) => x.article_number === a.article_number));
+  const onClickRecital = (r) =>
+    selectRecitalIdx(data.recitals.findIndex((x) => x.recital_number === r.recital_number));
+  const onClickAnnex = (ax) =>
+    selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
 
   // When selection changes, jump to the content display
   useEffect(() => {
     if (contentRef.current) contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selected.kind, selected.id]);
 
+  // --------- Show landing page until a law is selected ----------
+  if (!lawPath) {
+    return <Landing onSelect={setLawPath} />;
+  }
+
+  // --------- Main visualiser UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TopBar
@@ -432,6 +629,7 @@ export default function App() {
         lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
         selected={selected}
         onPrevNext={onPrevNext}
+        onBackHome={() => setLawPath("")}
       />
 
       <main className="w-full px-6 py-6">
@@ -448,8 +646,14 @@ export default function App() {
                     <ul className="space-y-1">
                       {ch.items.map((a) => (
                         <li key={`toc-${a.article_number}`}>
-                          <Button variant="ghost" className="w-full justify-start text-left" onClick={() => onClickArticle(a)}>
-                            <span className="truncate text-left">Article {a.article_number}: {a.article_title}</span>
+                          <Button
+                            variant="ghost"
+                            className="w-full justify-start text-left"
+                            onClick={() => onClickArticle(a)}
+                          >
+                            <span className="truncate text-left">
+                              Article {a.article_number}: {a.article_title}
+                            </span>
                             <span className="text-xs text-gray-500">›</span>
                           </Button>
                         </li>
@@ -459,14 +663,20 @@ export default function App() {
 
                   {ch.sections?.map((sec) => (
                     <div key={sec.label} className="mt-3">
-                      <div className="text-sm font-semibold text-gray-700 text-center border-t border-gray-100 pt-2">
+                      <div className="border-t border-gray-100 pt-2 text-center text-sm font-semibold text-gray-700">
                         {sec.label}
                       </div>
                       <ul className="mt-1 space-y-1">
                         {sec.items.map((a) => (
                           <li key={`toc-${a.article_number}`}>
-                            <Button variant="ghost" className="w-full justify-start text-left" onClick={() => onClickArticle(a)}>
-                              <span className="truncate text-left">Article {a.article_number}: {a.article_title}</span>
+                            <Button
+                              variant="ghost"
+                              className="w-full justify-start text-left"
+                              onClick={() => onClickArticle(a)}
+                            >
+                              <span className="truncate text-left">
+                                Article {a.article_number}: {a.article_title}
+                              </span>
                               <span className="text-xs text-gray-500">›</span>
                             </Button>
                           </li>
@@ -487,7 +697,12 @@ export default function App() {
             <div className="mt-3 space-y-2">
               {data.annexes?.length ? (
                 data.annexes.map((ax, i) => (
-                  <Button key={`annex-${i}`} variant="outline" className="w-full justify-between" onClick={() => onClickAnnex(ax)}>
+                  <Button
+                    key={`annex-${i}`}
+                    variant="outline"
+                    className="w-full justify-between"
+                    onClick={() => onClickAnnex(ax)}
+                  >
                     <span className="truncate text-left">{ax.annex_title || ax.annex_id}</span>
                     <span className="text-xs text-gray-500">›</span>
                   </Button>
@@ -504,7 +719,12 @@ export default function App() {
             <p className="mt-1 text-sm text-gray-600">Context for interpretation.</p>
             <div className="mt-3 grid grid-cols-8 gap-2 md:grid-cols-10">
               {data.recitals?.map((r) => (
-                <Button key={`rbtn-${r.recital_number}`} variant="outline" className="px-2 py-1" onClick={() => onClickRecital(r)}>
+                <Button
+                  key={`rbtn-${r.recital_number}`}
+                  variant="outline"
+                  className="px-2 py-1"
+                  onClick={() => onClickRecital(r)}
+                >
                   {r.recital_number}
                 </Button>
               ))}
@@ -517,15 +737,22 @@ export default function App() {
 
         {/* Selected content viewer */}
         <section ref={contentRef} className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="article-header">Selected: {selected.kind} {selected.id || "–"}</div>
+          <div className="article-header">
+            Selected: {selected.kind} {selected.id || "–"}
+            {loading && <span className="ml-2 text-xs text-gray-500">(loading…)</span>}
+          </div>
           <article
-            className="prose prose-base md:prose-lg max-w-3xl mx-auto"
-            dangerouslySetInnerHTML={{ __html: selected.html || "<em>Select an article, recital, or annex.</em>" }}
+            className="prose prose-base mx-auto max-w-3xl md:prose-lg"
+            dangerouslySetInnerHTML={{
+              __html: selected.html || "<em>Select an article, recital, or annex.</em>",
+            }}
           />
         </section>
 
         {error && (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
         )}
       </main>
     </div>
