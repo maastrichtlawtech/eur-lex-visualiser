@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Extension Icons</title>
+</head>
+<body>
+  <h1>Extension Icon Generator</h1>
+  <p>Click the buttons below to generate and download icons:</p>
+  <div>
+    <button onclick="generateIcon(16)">Generate 16x16</button>
+    <button onclick="generateIcon(48)">Generate 48x48</button>
+    <button onclick="generateIcon(128)">Generate 128x128</button>
+  </div>
+  <canvas id="canvas" style="border: 1px solid #ccc; margin-top: 20px;"></canvas>
+
+  <script>
+    function generateIcon(size) {
+      const canvas = document.getElementById('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      
+      // Draw blue background
+      ctx.fillStyle = '#0066cc';
+      ctx.fillRect(0, 0, size, size);
+      
+      // Draw white "E" letter
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${size * 0.6}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('E', size / 2, size / 2);
+      
+      // Download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+  </script>
+</body>
+</html>
+

@@ -2,7 +2,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { LAWS } from "../constants/laws.js";
 import { Button } from "./Button.jsx";
 
-export function TopBar({ lawKey, lists, selected, onPrevNext }) {
+export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = false }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -85,17 +85,19 @@ export function TopBar({ lawKey, lists, selected, onPrevNext }) {
           )}
 
           {/* --- Law selection --- */}
-          <select
-            value={currentLaw?.value || ""}
-            onChange={handleLawChange}
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
-          >
-            {LAWS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
+          {!isExtensionMode && (
+            <select
+              value={currentLaw?.value || ""}
+              onChange={handleLawChange}
+              className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
+            >
+              {LAWS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
     </header>

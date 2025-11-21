@@ -1,9 +1,20 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { LAWS } from "../constants/laws.js";
 
 export function Landing() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Redirect to extension route if extension params are present
+  useEffect(() => {
+    const isExtension = searchParams.get('extension') === 'true';
+    const key = searchParams.get('key');
+    if (isExtension && key) {
+      navigate(`/extension?extension=true&key=${key}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">

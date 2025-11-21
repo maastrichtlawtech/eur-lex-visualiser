@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "EUR-Lex Visualiser",
+  "version": "1.0.0",
+  "description": "Capture EUR-Lex HTML and send to localhost visualiser",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://eur-lex.europa.eu/*",
+    "http://localhost:*/*"
+  ],
+  "action": {
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://eur-lex.europa.eu/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["http://localhost:*/*"],
+      "js": ["localhost-inject.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
+

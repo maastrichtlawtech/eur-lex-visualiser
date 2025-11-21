@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { Routes, Route, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LAWS } from "./constants/laws.js";
 import { fetchText } from "./utils/fetch.js";
 import { parseAnyToCombined } from "./utils/parsers.js";
@@ -13,11 +13,13 @@ import { TopBar } from "./components/TopBar.jsx";
 function LawViewer() {
   const { key, kind, id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState({ articles: [], recitals: [], annexes: [] });
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isExtensionMode, setIsExtensionMode] = useState(false);
 
   const contentRef = useRef(null); // used to jump the page to the content block
 
@@ -38,15 +40,112 @@ function LawViewer() {
     }
   }, []);
 
+  const loadFromExtension = React.useCallback(async (htmlString) => {
+    if (!htmlString) {
+      console.error('loadFromExtension called with empty htmlString');
+      return;
+    }
+    setLoading(true);
+    setError("");
+    setSelected({ kind: "article", id: null, html: "" });
+    setIsExtensionMode(true);
+    try {
+      console.log('Parsing HTML from extension, length:', htmlString.length);
+      const combined = parseAnyToCombined(htmlString);
+      console.log('Parsed result:', {
+        articles: combined.articles?.length || 0,
+        recitals: combined.recitals?.length || 0,
+        annexes: combined.annexes?.length || 0
+      });
+      setData(combined);
+    } catch (e) {
+      console.error('Error parsing HTML from extension:', e);
+      setError(String(e.message || e));
+      setData({ articles: [], recitals: [], annexes: [] });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Check for extension HTML from injected script tag in DOM
+  useEffect(() => {
+    const isExtension = searchParams.get('extension') === 'true';
+    const storageKey = searchParams.get('key');
+    
+    if (isExtension && storageKey) {
+      console.log('Extension mode detected, storage key:', storageKey);
+      
+      let loaded = false;
+      
+      // Try to get HTML from DOM (injected by content script)
+      const checkForHtml = () => {
+        const scriptTag = document.getElementById('eurlex-extension-html');
+        if (scriptTag && scriptTag.textContent && !loaded) {
+          const html = scriptTag.textContent;
+          console.log('Found HTML from extension in DOM, length:', html.length);
+          loaded = true;
+          loadFromExtension(html);
+          return true;
+        }
+        return false;
+      };
+      
+      // Check immediately
+      if (checkForHtml()) {
+        return;
+      }
+      
+      // Also check on DOM ready
+      const handleDOMReady = () => {
+        if (!loaded) {
+          console.log('DOM ready, checking for HTML...');
+          checkForHtml();
+        }
+      };
+      
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', handleDOMReady);
+      } else {
+        handleDOMReady();
+      }
+      
+      // Poll for the script tag
+      let attempts = 0;
+      const pollInterval = setInterval(() => {
+        attempts++;
+        if (checkForHtml() || loaded || attempts > 100) {
+          clearInterval(pollInterval);
+          if (attempts > 100 && !loaded) {
+            const scriptTag = document.getElementById('eurlex-extension-html');
+            if (!scriptTag) {
+              console.error('Failed to find extension HTML script tag after polling');
+              setError('Failed to load HTML from extension. Please try capturing the page again.');
+            } else if (!scriptTag.textContent) {
+              console.error('Extension HTML script tag found but empty');
+              setError('Extension HTML script tag is empty. Please try capturing the page again.');
+            }
+          }
+        }
+      }, 50); // Check every 50ms for up to 5 seconds
+      
+      return () => {
+        document.removeEventListener('DOMContentLoaded', handleDOMReady);
+        clearInterval(pollInterval);
+      };
+    }
+  }, [searchParams, loadFromExtension]);
+
   // Load law when path changes
   useEffect(() => {
+    if (isExtensionMode) return; // Don't load from file if we're in extension mode
+    
     if (lawPath) {
       loadLaw(lawPath);
     } else if (key) {
       // Only redirect if we have a key but no matching law path
       navigate("/", { replace: true });
     }
-  }, [lawPath, key, loadLaw, navigate]);
+  }, [lawPath, key, loadLaw, navigate, isExtensionMode]);
 
   // Update selection from URL params when data is loaded or URL params change
   useEffect(() => {
@@ -85,21 +184,37 @@ function LawViewer() {
 
     // If no URL params or they didn't match, select default and update URL
     if (!kind || !id) {
+      const extensionKey = isExtensionMode ? searchParams.get('key') : null;
+      const extensionParams = extensionKey ? `?extension=true&key=${extensionKey}` : '';
+      
       if (data.articles?.[0]) {
         const a0 = data.articles[0];
         setSelected({ kind: "article", id: a0.article_number, html: a0.article_html });
-        navigate(`/law/${key}/article/${a0.article_number}`, { replace: true });
+        if (isExtensionMode) {
+          // In extension mode, update URL without key
+          navigate(`/extension/article/${a0.article_number}${extensionParams}`, { replace: true });
+        } else {
+          navigate(`/law/${key}/article/${a0.article_number}`, { replace: true });
+        }
       } else if (data.recitals?.[0]) {
         const r0 = data.recitals[0];
         setSelected({ kind: "recital", id: r0.recital_number, html: r0.recital_html });
-        navigate(`/law/${key}/recital/${r0.recital_number}`, { replace: true });
+        if (isExtensionMode) {
+          navigate(`/extension/recital/${r0.recital_number}${extensionParams}`, { replace: true });
+        } else {
+          navigate(`/law/${key}/recital/${r0.recital_number}`, { replace: true });
+        }
       } else if (data.annexes?.[0]) {
         const x0 = data.annexes[0];
         setSelected({ kind: "annex", id: x0.annex_id, html: x0.annex_html });
-        navigate(`/law/${key}/annex/${x0.annex_id}`, { replace: true });
+        if (isExtensionMode) {
+          navigate(`/extension/annex/${x0.annex_id}${extensionParams}`, { replace: true });
+        } else {
+          navigate(`/law/${key}/annex/${x0.annex_id}`, { replace: true });
+        }
       }
     }
-  }, [data, kind, id, key, navigate]);
+  }, [data, kind, id, key, navigate, isExtensionMode, searchParams]);
 
   // Group articles by chapter for TOC
   const toc = useMemo(() => {
@@ -138,23 +253,42 @@ function LawViewer() {
   }, [data.articles]);
 
   // --- Selection helpers ---
+
+  const getExtensionParams = useMemo(() => {
+    if (!isExtensionMode) return '';
+    const extensionKey = searchParams.get('key');
+    return extensionKey ? `?extension=true&key=${extensionKey}` : '?extension=true';
+  }, [isExtensionMode, searchParams]);
+
   const selectArticleIdx = (idx) => {
     const a = data.articles[idx];
     if (!a) return;
     setSelected({ kind: "article", id: a.article_number, html: a.article_html });
-    navigate(`/law/${key}/article/${a.article_number}`, { replace: true });
+    if (isExtensionMode) {
+      navigate(`/extension/article/${a.article_number}${getExtensionParams}`, { replace: true });
+    } else {
+      navigate(`/law/${key}/article/${a.article_number}`, { replace: true });
+    }
   };
   const selectRecitalIdx = (idx) => {
     const r = data.recitals[idx];
     if (!r) return;
     setSelected({ kind: "recital", id: r.recital_number, html: r.recital_html });
-    navigate(`/law/${key}/recital/${r.recital_number}`, { replace: true });
+    if (isExtensionMode) {
+      navigate(`/extension/recital/${r.recital_number}${getExtensionParams}`, { replace: true });
+    } else {
+      navigate(`/law/${key}/recital/${r.recital_number}`, { replace: true });
+    }
   };
   const selectAnnexIdx = (idx) => {
     const x = data.annexes[idx];
     if (!x) return;
     setSelected({ kind: "annex", id: x.annex_id, html: x.annex_html });
-    navigate(`/law/${key}/annex/${x.annex_id}`, { replace: true });
+    if (isExtensionMode) {
+      navigate(`/extension/annex/${x.annex_id}${getExtensionParams}`, { replace: true });
+    } else {
+      navigate(`/law/${key}/annex/${x.annex_id}`, { replace: true });
+    }
   };
 
   const onPrevNext = (kind, nextIndex) => {
@@ -179,10 +313,11 @@ function LawViewer() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TopBar
-        lawKey={key}
+        lawKey={isExtensionMode ? "extension" : key}
         lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
         selected={selected}
         onPrevNext={onPrevNext}
+        isExtensionMode={isExtensionMode}
       />
 
       <main className="w-full px-6 py-6">
@@ -319,6 +454,9 @@ export default function App() {
       <Route path="/" element={<Landing />} />
       <Route path="/law/:key" element={<LawViewer />} />
       <Route path="/law/:key/:kind/:id" element={<LawViewer />} />
+      {/* Extension routes - no key needed */}
+      <Route path="/extension" element={<LawViewer />} />
+      <Route path="/extension/:kind/:id" element={<LawViewer />} />
     </Routes>
   );
 }
