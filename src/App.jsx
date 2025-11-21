@@ -1,491 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { LAWS } from "./constants/laws.js";
+import { fetchText } from "./utils/fetch.js";
+import { parseAnyToCombined } from "./utils/parsers.js";
+import { getLawPathFromKey } from "./utils/url.js";
+import { Button } from "./components/Button.jsx";
+import { Accordion } from "./components/Accordion.jsx";
+import { Landing } from "./components/Landing.jsx";
+import { TopBar } from "./components/TopBar.jsx";
 
-// =============================================================
-// DATA / PROCESSING LAYER
-// =============================================================
-
-// ---------------- Config: hard-coded local laws ----------------
-const LAWS = [
-  { key: "aia", label: "AI Act (EU 2024/1689)", value: "data/aia.xhtml" },
-  { key: "gdpr", label: "GDPR (EU 2016/679) – Unconsolidated", value: "data/gdpr.xml" },
-  { key: "dma", label: "DMA (EU 2022/1925) – Unconsolidated", value: "data/dma.xhtml" },
-  { key: "dsa", label: "DSA (EU 2022/2065)", value: "data/dsa.xhtml" },
-  { key: "data-act", label: "Data Act (EU 2023/2854)", value: "data/da.xhtml" },
-  { key: "dga", label: "Data Governance Act (EU 2022/868)", value: "data/dga.html" },
-];
-
-// ---------------- Minimal UI primitives ----------------
-const Button = ({ className = "", variant = "default", ...props }) => (
-  <button
-    className={
-      `inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm transition ` +
-      (variant === "outline"
-        ? "border border-gray-300 bg-white hover:bg-gray-50"
-        : variant === "ghost"
-        ? "bg-transparent hover:bg-gray-100"
-        : "bg-black text-white hover:bg-gray-900") +
-      " " +
-      className
-    }
-    {...props}
-  />
-);
-
-// ---------------- Fetch helper ----------------
-const fetchText = async (path) => {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`Failed to load ${path}: ${res.status}`);
-  return await res.text();
-};
-
-// ---------------- Parser (best-effort for OJ & consolidated) ----------------
-function parseSingleXHTMLToCombined(xhtmlText) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xhtmlText, "text/html");
-
-  const getText = (el) => (el ? el.textContent.replace(/\s+/g, " ").trim() : "");
-  const innerHTML = (el) =>
-    el
-      ? Array.from(el.childNodes)
-          .map((n) => (n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent))
-          .join("")
-      : "";
-
-  const articles = [];
-  const recitals = [];
-  const annexes = [];
-  let currentDivNum, currentDivTitle;
-
-  const norm = (s = "") => s.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
-
-  let currentChapter = { number: "", title: "" };
-  let currentSection = { number: "", title: "" };
-  let pendingHeader = null; // "chapter" | "section" | null
-
-  const walker = doc.createTreeWalker(doc.body || doc, NodeFilter.SHOW_ELEMENT);
-  while (walker.nextNode()) {
-    const el = walker.currentNode;
-    if (!(el instanceof Element)) continue;
-
-    // "Division headings"
-    if (
-      el.tagName === "P" &&
-      (el.classList.contains("title-division-1") || el.classList.contains("oj-ti-section-1"))
-    ) {
-      const txt = norm(getText(el));
-      const upper = txt.toUpperCase();
-
-      if (/^\s*CHAPTER\b/.test(upper)) {
-        currentChapter = { number: txt, title: "" };
-        currentSection = { number: "", title: "" }; // reset section when a new chapter starts
-        pendingHeader = "chapter";
-      } else if (/^\s*SECTION\b/.test(upper)) {
-        currentSection = { number: txt, title: "" };
-        pendingHeader = "section";
-      } else {
-        // If neither keyword appears, treat as a chapter-level number
-        currentChapter = { number: txt, title: "" };
-        currentSection = { number: "", title: "" };
-        pendingHeader = "chapter";
-      }
-    }
-
-    if (
-      el.tagName === "P" &&
-      (el.classList.contains("title-division-2") || el.classList.contains("oj-ti-section-2"))
-    ) {
-      const txt = norm(getText(el));
-      if (pendingHeader === "chapter") currentChapter.title = txt;
-      else if (pendingHeader === "section") currentSection.title = txt;
-      pendingHeader = null;
-    }
-
-    // Recitals (OJ typical layout: DIV.eli-subdivision#rct_*)
-    if (el.tagName === "DIV" && el.classList.contains("eli-subdivision") && (el.id || "").startsWith("rct_")) {
-      const tds = el.querySelectorAll("table td");
-      if (tds.length >= 2) {
-        const m = (tds[0].textContent || "").match(/\(?\s*(\d+)\s*\)?/);
-        const recital_number = m ? m[1] : (tds[0].textContent || "").trim();
-        const textCell = tds[1];
-        recitals.push({
-          recital_number,
-          recital_text: getText(textCell),
-          recital_html: innerHTML(textCell),
-        });
-      } else {
-        // Fallback: take the whole block
-        const num = el.querySelector(".recital-number, .oj-recital-num, strong");
-        const recital_number = (num && getText(num).replace(/\D+/g, "")) || `${recitals.length + 1}`;
-        recitals.push({ recital_number, recital_text: getText(el), recital_html: innerHTML(el) });
-      }
-      continue;
-    }
-
-    // Articles — OJ style
-    if (el.tagName === "P" && el.classList.contains("oj-ti-art")) {
-      let container = el.parentElement;
-      while (container && !(container.tagName === "DIV" && container.classList.contains("eli-subdivision"))) {
-        container = container.parentElement;
-      }
-      const n = getText(el).match(/Article\s+(\d+)/i);
-      const article_number = n ? n[1] : getText(el);
-      const titleBlock = container ? container.querySelector("div.eli-title p.oj-sti-art") : null;
-      const article_title = titleBlock ? getText(titleBlock) : "";
-      console.log({ number: currentDivNum, title: currentDivTitle });
-      articles.push({
-        article_number,
-        article_title,
-        division: {
-          chapter: { number: currentChapter.number, title: currentChapter.title },
-          section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
-        },
-        article_html: innerHTML(container || el.parentElement),
-      });
-      continue;
-    }
-
-    // Articles — consolidated style
-    if (el.tagName === "DIV" && el.classList.contains("eli-subdivision")) {
-      const numP = el.querySelector("p.title-article-norm");
-      if (numP) {
-        const m = numP.textContent.match(/Article\s+(\d+)/i);
-        const article_number = m ? m[1] : numP.textContent.trim();
-        const titleP = el.querySelector("p.stitle-article-norm");
-        const article_title = titleP ? getText(titleP) : "";
-        console.log({ number: currentDivNum, title: currentDivTitle });
-        articles.push({
-          article_number,
-          article_title,
-          division: {
-            chapter: { number: currentChapter.number, title: currentChapter.title },
-            section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
-          },
-          article_html: innerHTML(el),
-        });
-      }
-    }
-
-    // Annexes — detect heading and capture full block HTML
-    if (el.tagName === "P") {
-      const t = getText(el);
-      const looksLikeAnnex =
-        /^ANNEX(\s+[IVXLC]+|\s+\d+)?/i.test(t) ||
-        el.classList.contains("oj-ti-annex") ||
-        el.classList.contains("oj-ti-annex-1") ||
-        el.classList.contains("title-annex-norm");
-      if (looksLikeAnnex) {
-        // Title
-        let title = t;
-        const titleP = el.parentElement?.querySelector("div.eli-title p, p.oj-ti-annex-2, p.stitle-annex-norm");
-        if (titleP) title = `${t} — ${getText(titleP)}`;
-        // Container: nearest subdivision, else the parent block
-        let container = el.parentElement;
-        while (container && !(container.tagName === "DIV" && container.classList.contains("eli-subdivision"))) {
-          container = container.parentElement;
-        }
-        const annex_html = innerHTML(container || el.parentElement || el);
-        // Id/number if present
-        const m = t.match(/^ANNEX\s*([IVXLC]+|\d+)?/i);
-        const annex_id = (m && (m[1] || "").trim()) || title;
-        annexes.push({ annex_id, annex_title: title, annex_html });
-      }
-    }
-  }
-
-  // Sorts
-  const asNum = (s) => (s == null ? NaN : parseInt(String(s).replace(/\D+/g, ""), 10));
-  recitals.sort((a, b) => (asNum(a.recital_number) || 0) - (asNum(b.recital_number) || 0));
-  return { articles, recitals, annexes };
-}
-
-function parseAnyToCombined(text) {
-  try {
-    const obj = JSON.parse(text);
-    if (obj && (Array.isArray(obj.articles) || Array.isArray(obj.recitals) || Array.isArray(obj.annexes))) {
-      return { articles: obj.articles || [], recitals: obj.recitals || [], annexes: obj.annexes || [] };
-    }
-  } catch {
-    /* not JSON */
-  }
-  return parseSingleXHTMLToCombined(text);
-}
-
-// =============================================================
-// UI LAYER
-// =============================================================
-
-function Accordion({ title, children, defaultOpen = false }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="rounded-xl border border-gray-200 bg-white">
-      <button
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium"
-        onClick={() => setOpen(!open)}
-      >
-        <span>{title}</span>
-        {open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-      </button>
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="border-t p-2"
-          >
-            {children}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-// ---------------- Landing Page (new) ----------------
-function Landing({ onSelect }) {
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-950 to-black text-white">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col items-center justify-center px-6 py-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <span className="inline-flex items-center rounded-full bg-slate-800/70 px-3 py-1 text-xs font-medium tracking-tight text-slate-200 ring-1 ring-slate-700/60">
-            EU Law Visualiser
-          </span>
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-            Read EU law beautifully,
-            <span className="block text-slate-200">one at a time.</span>
-          </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-slate-300 sm:text-base">
-            Choose the instrument you are working with. You will then see an interactive view with
-            chapters, articles, recitals, and annexes side by side.
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mt-8 w-full"
-        >
-          <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-slate-400">
-            Step 1 · Select a law
-          </h2>
-
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {LAWS.map((law, idx) => (
-              <motion.button
-                key={law.value}
-                whileHover={{ y: -2, scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                onClick={() => onSelect(law.value)}
-                className="group flex h-full flex-col rounded-2xl border border-slate-700/70 bg-gradient-to-br from-slate-900/80 via-slate-900/40 to-slate-800/80 p-4 text-left shadow-lg shadow-black/40 transition hover:border-slate-300 hover:bg-slate-900/90"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-slate-50">
-                      {law.label}
-                    </div>
-                    <p className="mt-1 text-xs text-slate-300">
-                      Click to open an interactive table of contents, recitals and annexes.
-                    </p>
-                  </div>
-                  <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-600 text-[11px] text-slate-200">
-                    {idx + 1}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center gap-1 text-xs text-slate-400">
-                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
-                    Articles viewer
-                  </span>
-                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
-                    Recitals
-                  </span>
-                  <span className="rounded-full bg-slate-800/70 px-2 py-0.5">
-                    Annexes
-                  </span>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mt-8 text-xs text-slate-500"
-        >
-          <p>Built by Konrad Kollnig at the Law &amp; Tech Lab, Maastricht University.</p>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
-
-// Top navigation bar with Prev/Next groups for each kind
-function TopBar({ lawPath, setLawPath, lists, selected, onPrevNext, onBackHome }) {
-  const { articles, recitals, annexes } = lists;
-
-  const getListAndIndex = () => {
-    if (selected.kind === "article") {
-      const idx = articles.findIndex((a) => a.article_number === selected.id);
-      return { kind: "article", index: idx, list: articles, label: "Article" };
-    }
-    if (selected.kind === "recital") {
-      const idx = recitals.findIndex((r) => r.recital_number === selected.id);
-      return { kind: "recital", index: idx, list: recitals, label: "Recital" };
-    }
-    if (selected.kind === "annex") {
-      const idx = annexes.findIndex((x) => x.annex_id === selected.id);
-      return { kind: "annex", index: idx, list: annexes, label: "Annex" };
-    }
-    return { kind: null, index: -1, list: [], label: "" };
-  };
-
-  const { kind, index, list, label } = getListAndIndex();
-
-  return (
-      <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-6 py-3">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="ml-2 hidden text-xs md:inline-flex"
-              onClick={onBackHome}
-            >
-              ← Overview of Laws
-            </Button>
-
-            <button
-              type="button"
-              onClick={onBackHome}
-              className="text-base font-semibold hover:underline"
-            >
-              EU Law Visualiser
-            </button>
-
-            <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
-              Konrad Kollnig, Law &amp; Tech Lab Maastricht
-            </span>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-              {/* --- Unified navigation control --- */}
-              {kind && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    disabled={index <= 0}
-                    onClick={() => onPrevNext(kind, index - 1)}
-                    title={`Previous ${label.toLowerCase()}`}
-                  >
-                    ← Prev {label}
-                  </Button>
-                  <span className="text-sm text-gray-600">
-                    {label} {index + 1} of {list.length}
-                  </span>
-                  <Button
-                    variant="outline"
-                    disabled={index === -1 || index >= list.length - 1}
-                    onClick={() => onPrevNext(kind, index + 1)}
-                    title={`Next ${label.toLowerCase()}`}
-                  >
-                    Next {label} →
-                  </Button>
-                </div>
-              )}
-
-              {/* --- Law selection --- */}
-              <select
-                value={lawPath}
-                onChange={(e) => setLawPath(e.target.value)}
-                className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
-              >
-                {LAWS.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-        </div>
-      </header>
-    );
-
-  return (
-    <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-6 py-3">
-        <div className="flex items-center gap-3">
-          <div className="text-base font-semibold">EU Law Visualiser</div>
-          <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
-            Konrad Kollnig, Law &amp; Tech Lab Maastricht
-          </span>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* --- Unified navigation control --- */}
-          {kind && (
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                disabled={index <= 0}
-                onClick={() => onPrevNext(kind, index - 1)}
-                title={`Previous ${label.toLowerCase()}`}
-              >
-                ← Prev {label}
-              </Button>
-              <span className="text-sm text-gray-600">
-                {label} {index + 1} of {list.length}
-              </span>
-              <Button
-                variant="outline"
-                disabled={index === -1 || index >= list.length - 1}
-                onClick={() => onPrevNext(kind, index + 1)}
-                title={`Next ${label.toLowerCase()}`}
-              >
-                Next {label} →
-              </Button>
-            </div>
-          )}
-
-          {/* --- Law selection --- */}
-          <select
-            value={lawPath}
-            onChange={(e) => setLawPath(e.target.value)}
-            className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
-          >
-            {LAWS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    </header>
-  );
-}
-
-const getInitialLawPathFromUrl = () => {
-  if (typeof window === "undefined") return "";
-
-  const params = new URLSearchParams(window.location.search);
-  const key = params.get("law");
-
-  if (!key) return "";
-  const entry = LAWS.find(l => l.key === key);
-  return entry ? entry.value : "";
-};
-
-// ---------------- App ----------------
-export default function App() {
-  // Start with no law selected
-  const [lawPath, setLawPath] = useState(() => getInitialLawPathFromUrl());
+// ---------------- Law Viewer Component ----------------
+function LawViewer() {
+  const { key } = useParams();
+  const navigate = useNavigate();
+  const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState({ articles: [], recitals: [], annexes: [] });
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [error, setError] = useState("");
@@ -493,7 +21,8 @@ export default function App() {
 
   const contentRef = useRef(null); // used to jump the page to the content block
 
-  const loadLaw = async (path) => {
+  const loadLaw = React.useCallback(async (path) => {
+    if (!path) return;
     setLoading(true);
     setError("");
     setSelected({ kind: "article", id: null, html: "" });
@@ -518,31 +47,17 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
+  // Load law when path changes
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const params = new URLSearchParams(window.location.search);
-
     if (lawPath) {
-      const entry = LAWS.find(l => l.value === lawPath);
-      if (entry) params.set("law", entry.key);
-    } else {
-      params.delete("law");
+      loadLaw(lawPath);
+    } else if (key) {
+      // Only redirect if we have a key but no matching law path
+      navigate("/", { replace: true });
     }
-
-    const newUrl =
-      window.location.pathname +
-      (params.toString() ? `?${params.toString()}` : "") +
-      window.location.hash;
-
-    window.history.replaceState(null, "", newUrl);
-  }, [lawPath]);
-
-  useEffect(() => {
-    if (lawPath) loadLaw(lawPath);
-  }, [lawPath]);
+  }, [lawPath, key, loadLaw, navigate]);
 
   // Group articles by chapter for TOC
   const toc = useMemo(() => {
@@ -615,21 +130,14 @@ export default function App() {
     if (contentRef.current) contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selected.kind, selected.id]);
 
-  // --------- Show landing page until a law is selected ----------
-  if (!lawPath) {
-    return <Landing onSelect={setLawPath} />;
-  }
-
   // --------- Main visualiser UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TopBar
-        lawPath={lawPath}
-        setLawPath={setLawPath}
+        lawKey={key}
         lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
         selected={selected}
         onPrevNext={onPrevNext}
-        onBackHome={() => setLawPath("")}
       />
 
       <main className="w-full px-6 py-6">
@@ -756,5 +264,15 @@ export default function App() {
         )}
       </main>
     </div>
+  );
+}
+
+// ---------------- App ----------------
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/law/:key" element={<LawViewer />} />
+    </Routes>
   );
 }
