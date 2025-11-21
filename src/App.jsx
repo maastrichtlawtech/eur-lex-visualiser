@@ -11,7 +11,7 @@ import { TopBar } from "./components/TopBar.jsx";
 
 // ---------------- Law Viewer Component ----------------
 function LawViewer() {
-  const { key } = useParams();
+  const { key, kind, id } = useParams();
   const navigate = useNavigate();
   const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState({ articles: [], recitals: [], annexes: [] });
@@ -30,17 +30,6 @@ function LawViewer() {
       const text = await fetchText(path);
       const combined = parseAnyToCombined(text);
       setData(combined);
-      // Default select first available thing
-      if (combined.articles?.[0]) {
-        const a0 = combined.articles[0];
-        setSelected({ kind: "article", id: a0.article_number, html: a0.article_html });
-      } else if (combined.recitals?.[0]) {
-        const r0 = combined.recitals[0];
-        setSelected({ kind: "recital", id: r0.recital_number, html: r0.recital_html });
-      } else if (combined.annexes?.[0]) {
-        const x0 = combined.annexes[0];
-        setSelected({ kind: "annex", id: x0.annex_id, html: x0.annex_html });
-      }
     } catch (e) {
       setError(String(e.message || e));
       setData({ articles: [], recitals: [], annexes: [] });
@@ -58,6 +47,59 @@ function LawViewer() {
       navigate("/", { replace: true });
     }
   }, [lawPath, key, loadLaw, navigate]);
+
+  // Update selection from URL params when data is loaded or URL params change
+  useEffect(() => {
+    if (!data.articles?.length && !data.recitals?.length && !data.annexes?.length) {
+      // Data not loaded yet, wait for it
+      return;
+    }
+
+    // Try to select from URL params
+    if (kind && id) {
+      let found = false;
+      if (kind === "article") {
+        const article = data.articles?.find(a => a.article_number === id);
+        if (article) {
+          setSelected({ kind: "article", id: article.article_number, html: article.article_html });
+          found = true;
+        }
+      } else if (kind === "recital") {
+        const recital = data.recitals?.find(r => r.recital_number === id);
+        if (recital) {
+          setSelected({ kind: "recital", id: recital.recital_number, html: recital.recital_html });
+          found = true;
+        }
+      } else if (kind === "annex") {
+        const annex = data.annexes?.find(a => a.annex_id === id);
+        if (annex) {
+          setSelected({ kind: "annex", id: annex.annex_id, html: annex.annex_html });
+          found = true;
+        }
+      }
+      
+      if (found) {
+        return;
+      }
+    }
+
+    // If no URL params or they didn't match, select default and update URL
+    if (!kind || !id) {
+      if (data.articles?.[0]) {
+        const a0 = data.articles[0];
+        setSelected({ kind: "article", id: a0.article_number, html: a0.article_html });
+        navigate(`/law/${key}/article/${a0.article_number}`, { replace: true });
+      } else if (data.recitals?.[0]) {
+        const r0 = data.recitals[0];
+        setSelected({ kind: "recital", id: r0.recital_number, html: r0.recital_html });
+        navigate(`/law/${key}/recital/${r0.recital_number}`, { replace: true });
+      } else if (data.annexes?.[0]) {
+        const x0 = data.annexes[0];
+        setSelected({ kind: "annex", id: x0.annex_id, html: x0.annex_html });
+        navigate(`/law/${key}/annex/${x0.annex_id}`, { replace: true });
+      }
+    }
+  }, [data, kind, id, key, navigate]);
 
   // Group articles by chapter for TOC
   const toc = useMemo(() => {
@@ -100,16 +142,19 @@ function LawViewer() {
     const a = data.articles[idx];
     if (!a) return;
     setSelected({ kind: "article", id: a.article_number, html: a.article_html });
+    navigate(`/law/${key}/article/${a.article_number}`, { replace: true });
   };
   const selectRecitalIdx = (idx) => {
     const r = data.recitals[idx];
     if (!r) return;
     setSelected({ kind: "recital", id: r.recital_number, html: r.recital_html });
+    navigate(`/law/${key}/recital/${r.recital_number}`, { replace: true });
   };
   const selectAnnexIdx = (idx) => {
     const x = data.annexes[idx];
     if (!x) return;
     setSelected({ kind: "annex", id: x.annex_id, html: x.annex_html });
+    navigate(`/law/${key}/annex/${x.annex_id}`, { replace: true });
   };
 
   const onPrevNext = (kind, nextIndex) => {
@@ -273,6 +318,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/law/:key" element={<LawViewer />} />
+      <Route path="/law/:key/:kind/:id" element={<LawViewer />} />
     </Routes>
   );
 }
