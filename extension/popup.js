@@ -89,7 +89,7 @@ function extractTitleKey(html) {
   return 'untitled';
 }
 
-// Send to localhost
+// Send to visualiser
 sendBtn.addEventListener('click', async () => {
   try {
     const result = await chrome.storage.local.get(['capturedHtml', 'capturedUrl']);
@@ -99,7 +99,7 @@ sendBtn.addEventListener('click', async () => {
       return;
     }
 
-    showStatus('Sending to localhost...', 'info');
+    showStatus('Sending to visualiser...', 'info');
     
     // Generate storage key based on title from HTML
     const titleKey = extractTitleKey(result.capturedHtml);
@@ -122,17 +122,22 @@ sendBtn.addEventListener('click', async () => {
       }
     });
     
-    // Open localhost with just the storage key - use /extension route
-    const localhostUrl = `http://localhost:5173/eur-lex-visualiser/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
-    
-    console.log('Opening URL:', localhostUrl);
-    
-    // Open in new tab
-    chrome.tabs.create({ url: localhostUrl }, (tab) => {
-      showStatus('Opening localhost visualiser...', 'success');
-      setTimeout(() => {
-        window.close();
-      }, 1000);
+    // Get config from storage and build URL
+    chrome.storage.local.get(['eurlexConfig'], (result) => {
+      const config = result.eurlexConfig || {
+        baseUrl: 'https://maastrichtlawtech.github.io/eur-lex-visualiser'
+      };
+      const visualiserUrl = `${config.baseUrl}/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
+      
+      console.log('Opening URL:', visualiserUrl);
+      
+      // Open in new tab
+      chrome.tabs.create({ url: visualiserUrl }, () => {
+        showStatus('Opening visualiser...', 'success');
+        setTimeout(() => {
+          window.close();
+        }, 1000);
+      });
     });
   } catch (error) {
     console.error('Send error:', error);

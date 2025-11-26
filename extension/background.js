@@ -1,8 +1,47 @@
 // Background service worker for the extension
 // Handles storage retrieval for content scripts and opening tabs
 
+// ============================================================================
+// CONFIGURATION - TOGGLE BETWEEN LOCALHOST AND PRODUCTION
+// ============================================================================
+// Change USE_LOCALHOST below - that's it! All other files read from storage.
+// Set to true for localhost, false for production
+// ============================================================================
+
+const USE_LOCALHOST = false;
+const LOCALHOST_URL = 'http://localhost:5173/eur-lex-visualiser';
+const PRODUCTION_URL = 'https://maastrichtlawtech.github.io/eur-lex-visualiser';
+
+const config = {
+  useLocalhost: USE_LOCALHOST,
+  baseUrl: USE_LOCALHOST ? LOCALHOST_URL : PRODUCTION_URL,
+  localhostUrl: LOCALHOST_URL,
+  productionUrl: PRODUCTION_URL
+};
+
+// Initialize config in storage
+chrome.storage.local.set({ eurlexConfig: config }, () => {
+  console.log('Config initialized:', config);
+});
+
+// Helper to get config from storage
+async function getConfig() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['eurlexConfig'], (result) => {
+      resolve(result.eurlexConfig || config);
+    });
+  });
+}
+
+async function getExtensionUrl(storageKey) {
+  const config = await getConfig();
+  return `${config.baseUrl}/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('EUR-Lex Visualiser extension installed');
+  // Ensure config is initialized
+  chrome.storage.local.set({ eurlexConfig: config });
 });
 
 // Extract title from HTML and sanitize for use as storage key
@@ -59,9 +98,9 @@ chrome.action.onClicked.addListener(async (tab) => {
       
       console.log('HTML stored with key:', storageKey);
       
-      // Open localhost visualiser
-      const localhostUrl = `http://localhost:5173/eur-lex-visualiser/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
-      chrome.tabs.create({ url: localhostUrl });
+      // Open visualiser
+      const visualiserUrl = await getExtensionUrl(storageKey);
+      chrome.tabs.create({ url: visualiserUrl });
     }
   } catch (error) {
     console.error('Error capturing page on icon click:', error);
@@ -86,9 +125,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'openLocalhost') {
-    // Open localhost in new tab
+    // Open visualiser in new tab
     chrome.tabs.create({ url: request.url }, (tab) => {
-      console.log('Opened localhost visualiser in tab:', tab.id);
+      console.log('Opened visualiser in tab:', tab.id);
       sendResponse({ success: true });
     });
     return true;

@@ -1,8 +1,28 @@
 // Content script for eur-lex.europa.eu pages
-// Automatically captures HTML when page loads and opens localhost visualiser
+// Automatically captures HTML when page loads and opens visualiser
 
 (function() {
   'use strict';
+  
+  // Helper to get config from storage
+  function getConfig(callback) {
+    chrome.storage.local.get(['eurlexConfig'], (result) => {
+      const config = result.eurlexConfig || {
+        useLocalhost: false,
+        baseUrl: 'https://maastrichtlawtech.github.io/eur-lex-visualiser',
+        localhostUrl: 'http://localhost:5173/eur-lex-visualiser',
+        productionUrl: 'https://maastrichtlawtech.github.io/eur-lex-visualiser'
+      };
+      callback(config);
+    });
+  }
+  
+  function getExtensionUrl(storageKey, callback) {
+    getConfig((config) => {
+      const url = `${config.baseUrl}/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
+      callback(url);
+    });
+  }
   
   // Extract title from HTML and sanitize for use as storage key
   function extractTitleKey(html) {
@@ -53,11 +73,12 @@
         
         console.log('HTML stored with key:', storageKey);
         
-        // Open localhost visualiser in new tab
-        const localhostUrl = `http://localhost:5173/eur-lex-visualiser/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
-        chrome.runtime.sendMessage({
-          action: 'openLocalhost',
-          url: localhostUrl
+        // Open visualiser in new tab
+        getExtensionUrl(storageKey, (visualiserUrl) => {
+          chrome.runtime.sendMessage({
+            action: 'openLocalhost',
+            url: visualiserUrl
+          });
         });
       });
     }, 1000); // Wait 1 second after page load to ensure everything is ready

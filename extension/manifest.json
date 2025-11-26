@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "EUR-Lex Visualiser",
   "version": "1.0.0",
-  "description": "Capture EUR-Lex HTML and send to localhost visualiser",
+  "description": "Capture EUR-Lex HTML and send to visualiser",
   "permissions": [
     "storage",
     "activeTab",
@@ -11,6 +11,7 @@
   ],
   "host_permissions": [
     "https://eur-lex.europa.eu/*",
+    "https://maastrichtlawtech.github.io/*",
     "http://localhost:*/*"
   ],
   "action": {
@@ -27,7 +28,10 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["http://localhost:*/*"],
+      "matches": [
+        "https://maastrichtlawtech.github.io/eur-lex-visualiser/*",
+        "http://localhost:*/*"
+      ],
       "js": ["localhost-inject.js"],
       "run_at": "document_start"
     }

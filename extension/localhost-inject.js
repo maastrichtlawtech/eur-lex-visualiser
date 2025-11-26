@@ -1,4 +1,4 @@
-// Content script injected into localhost pages
+// Content script injected into visualiser pages
 // This script reads HTML from extension storage via background script and makes it available to the page
 
 (function() {
