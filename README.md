@@ -139,13 +139,13 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## License
 
-[Add your license here]
+This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
 
 ## Credits
 
 Built by **Konrad Kollnig** at the **Law & Tech Lab, Maastricht University**.
 
-For questions or feedback, please contact [your contact information].
+For questions or feedback, please contact [eu-law@trackercontrol.org](mailto:eu-law@trackercontrol.org).
 
 ## Acknowledgments
 
