@@ -309,6 +309,30 @@ function LawViewer() {
     if (contentRef.current) contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [selected.kind, selected.id]);
 
+  // Update document title based on current law and selection
+  useEffect(() => {
+    if (isExtensionMode) {
+      if (selected.id) {
+        const kindLabel = selected.kind === "article" ? "Article" : selected.kind === "recital" ? "Recital" : "Annex";
+        document.title = `Custom Law - ${kindLabel} ${selected.id} | EU Law Visualiser`;
+      } else {
+        document.title = "Custom Law | EU Law Visualiser";
+      }
+    } else if (key) {
+      const law = LAWS.find(l => l.key === key);
+      const lawName = law ? law.label : key;
+      
+      if (selected.id) {
+        const kindLabel = selected.kind === "article" ? "Article" : selected.kind === "recital" ? "Recital" : "Annex";
+        document.title = `${lawName} - ${kindLabel} ${selected.id} | EU Law Visualiser`;
+      } else {
+        document.title = `${lawName} | EU Law Visualiser`;
+      }
+    } else {
+      document.title = "EU Law Visualiser";
+    }
+  }, [key, selected.kind, selected.id, isExtensionMode]);
+
   // --------- Main visualiser UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">

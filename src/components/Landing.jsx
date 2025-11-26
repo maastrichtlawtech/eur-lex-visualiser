@@ -8,6 +8,11 @@ export function Landing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
+  // Update document title
+  useEffect(() => {
+    document.title = "EU Law Visualiser";
+  }, []);
+
   // Redirect to extension route if extension params are present
   useEffect(() => {
     const isExtension = searchParams.get('extension') === 'true';
