@@ -157,7 +157,7 @@ export function Landing() {
                 <li className="flex gap-2">
                   <span className="font-semibold text-gray-500">2.</span>
                   <span>
-                    Visit any EU law page on <a href="https://eur-lex.europa.eu" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">EUR-Lex</a>{" "}
+                    Visit any EU law page on EUR-Lex{" "}
                     (e.g.{" "}
                     <a
                       href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
