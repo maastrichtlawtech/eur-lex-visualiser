@@ -1,6 +1,6 @@
 # EU Law Visualiser
 
-A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://www.maastrichtuniversity.nl/nl/kas-kollnig) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/law-tech-lab).
+A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://kollnig.net) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/law-tech-lab).
 
 ## 🌐 Try It Now
 

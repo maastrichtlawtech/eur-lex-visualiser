@@ -100,7 +100,7 @@ export function Landing() {
           <p>
             Built by{" "}
             <a
-              href="https://www.maastrichtuniversity.nl/nl/kas-kollnig"
+              href="https://kollnig.net"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-700 hover:text-gray-900 underline"

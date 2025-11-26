@@ -55,7 +55,7 @@ export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = 
 
           <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
             <a
-              href="https://www.maastrichtuniversity.nl/nl/kas-kollnig"
+              href="https://kollnig.net"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-gray-900 hover:underline"
