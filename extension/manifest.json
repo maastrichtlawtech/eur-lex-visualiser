@@ -3,6 +3,15 @@
   "name": "EUR-Lex Visualiser",
   "version": "1.0.0",
   "description": "Capture EUR-Lex HTML and send to visualiser",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "eur-lex-visualiser@maastrichtlawtech.github.io",
+      "strict_min_version": "109.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "permissions": [
     "storage",
     "unlimitedStorage",

@@ -1,6 +1,7 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { Github } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
 
 export function Landing() {
@@ -89,9 +90,18 @@ export function Landing() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="mt-8 text-xs text-gray-500"
+          className="mt-8 flex flex-col items-center gap-2 text-xs text-gray-500"
         >
           <p>Built by Konrad Kollnig at the Law &amp; Tech Lab, Maastricht University.</p>
+          <a
+            href="https://github.com/maastrichtlawtech/eur-lex-visualiser"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-gray-600 transition hover:text-gray-900"
+          >
+            <Github className="h-4 w-4" />
+            <span>Source code on GitHub</span>
+          </a>
         </motion.div>
       </div>
     </div>
