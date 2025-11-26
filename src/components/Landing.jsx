@@ -92,6 +92,119 @@ export function Landing() {
         </motion.div>
 
         <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-8 w-full"
+        >
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
+            <h2 className="text-sm font-semibold text-gray-900">
+              Visualize Any EU Law
+            </h2>
+            <p className="mt-2 text-xs text-gray-700">
+              Want to visualize a different EU law? Install our browser extension to open <strong>any EU law</strong> from EUR-Lex in this visualiser.
+            </p>
+            
+            <div className="mt-4">
+              <p className="mb-3 text-xs font-medium text-gray-700">Install the extension:</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
+                >
+                  <span className="text-base">🌐</span>
+                  <span>Chrome</span>
+                </a>
+                <a
+                  href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
+                >
+                  <span className="text-base">🦁</span>
+                  <span>Brave</span>
+                </a>
+                <a
+                  href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
+                >
+                  <span className="text-base">🔷</span>
+                  <span>Edge</span>
+                </a>
+                <a
+                  href="https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-orange-50 hover:shadow-sm"
+                >
+                  <span className="text-base">🦊</span>
+                  <span>Firefox</span>
+                </a>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-lg bg-white p-3">
+              <p className="text-xs font-medium text-gray-900">How it works:</p>
+              <ol className="mt-2 space-y-1.5 text-xs text-gray-700">
+                <li className="flex gap-2">
+                  <span className="font-semibold text-gray-500">1.</span>
+                  <span>Install the extension for your browser (see links above)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold text-gray-500">2.</span>
+                  <span>
+                    Visit any EU law page on <a href="https://eur-lex.europa.eu" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">EUR-Lex</a>{" "}
+                    (e.g.{" "}
+                    <a
+                      href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline break-all"
+                    >
+                      https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
+                    </a>
+                    )
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold text-gray-500">3.</span>
+                  <span>Open the law in your preferred language using the language selector on EUR-Lex</span>
+                </li>
+                <li className="mt-2">
+                  <img
+                    src={`${import.meta.env.BASE_URL}/language-selector.png`}
+                    alt="EUR-Lex language selector showing available languages"
+                    className="w-full rounded-lg border border-gray-200 shadow-sm"
+                  />
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-semibold text-gray-500">4.</span>
+                  <span>The extension automatically opens the law in this visualiser</span>
+                </li>
+              </ol>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2.5">
+              <p className="text-xs font-medium text-red-900">⚠️ Note:</p>
+              <p className="mt-1 text-xs text-red-800">
+                Languages other than English currently do not function properly. Please use the English version of EU laws for best results.
+              </p>
+            </div>
+
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+              <p className="text-xs font-medium text-amber-900">💡 Pro tip:</p>
+              <p className="mt-1 text-xs text-amber-800">
+                Create a bookmark to the visualised law page to easily access it again later!
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
