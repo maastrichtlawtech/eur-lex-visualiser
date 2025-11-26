@@ -1,6 +1,10 @@
 # EU Law Visualiser
 
-A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://konradkollnig.com) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/research/law-tech-lab).
+A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://www.maastrichtuniversity.nl/nl/kas-kollnig) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/research/law-tech-lab).
+
+## 🌐 Try It Now
+
+**[Open the EU Law Visualiser](https://maastrichtlawtech.github.io/eur-lex-visualiser)**
 
 ## Features
 
@@ -8,13 +12,14 @@ A beautiful, interactive web application for reading and navigating European Uni
 - 📝 **Recitals Viewer**: Quick access to all recitals with a grid-based navigation interface
 - 📎 **Annexes Browser**: Easy browsing of supplementary materials and annexes
 - 🔍 **Article Navigation**: Seamless navigation between articles, recitals, and annexes with Previous/Next controls
-- 🎨 **Modern UI**: Clean, responsive design built with Tailwind CSS and Framer Motion animations
-- 🔗 **URL State Management**: Shareable links with law selection preserved in the URL
+- 🔗 **Shareable Links**: Bookmark and share links to specific articles, recitals, or annexes
 - 📱 **Responsive Design**: Works beautifully on desktop, tablet, and mobile devices
 
-## Supported Legal Instruments
+## How to Use
 
-The visualiser currently supports the following EU legal instruments:
+### Option 1: Use Pre-loaded Laws (No Extension Required)
+
+Visit the [EU Law Visualiser](https://maastrichtlawtech.github.io/eur-lex-visualiser) and select from the pre-loaded legal instruments:
 
 - **AI Act** (EU 2024/1689)
 - **GDPR** (EU 2016/679) – Unconsolidated
@@ -23,26 +28,52 @@ The visualiser currently supports the following EU legal instruments:
 - **Data Act** (EU 2023/2854)
 - **Data Governance Act** (EU 2022/868)
 
-## Tech Stack
+Simply click on any law to open it in an interactive viewer with a table of contents, recitals, and annexes.
 
-- **React 19** – UI framework
-- **Vite** – Build tool and dev server
-- **Tailwind CSS** – Styling
-- **Framer Motion** – Animations
-- **Lucide React** – Icons
+### Option 2: Visualize Any EU Law from EUR-Lex (Extension Required)
 
-## Installation
+The visualiser can open **any EU law** (at least newer ones) directly from EUR-Lex. To use this feature, you need to install a browser extension.
 
-### Prerequisites
+#### Install the Browser Extension
+
+[![Chrome Web Store](https://img.shields.io/badge/Chrome-4285F4?style=for-the-badge&logo=GoogleChrome&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
+[![Brave](https://img.shields.io/badge/Brave-FB542B?style=for-the-badge&logo=Brave&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
+[![Edge](https://img.shields.io/badge/Edge-0078D7?style=for-the-badge&logo=Microsoft-Edge&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
+[![Firefox](https://img.shields.io/badge/Firefox-FF7139?style=for-the-badge&logo=Firefox-Browser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/)
+
+- **Chrome, Brave, or Edge**: [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
+- **Firefox**: [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/)
+
+#### Using the Extension
+
+1. Install the extension for your browser (see links above)
+2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu)
+3. The extension will automatically detect the page and open it in the visualiser
+4. You'll see the same interactive interface with table of contents, recitals, and annexes
+
+The extension works automatically—no need to click anything. Just browse EUR-Lex as usual, and when you visit a legal document page, it will open in the visualiser.
+
+## Browser Support
+
+The application works in most modern browsers:
+- Chrome, Brave, Edge (Chromium-based browsers)
+- Firefox
+- Other modern browsers with ES6+ JavaScript support
+
+## For Developers
+
+### Installation
+
+#### Prerequisites
 
 - Node.js (v18 or higher recommended)
 - npm or yarn
 
-### Setup
+#### Setup
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/maastrichtlawtech/eur-lex-visualiser.git
 cd eu-law-visualiser
 ```
 
@@ -58,18 +89,16 @@ npm run dev
 
 4. Open your browser and navigate to `http://localhost:5173`
 
-## Usage
-
-### Development
+### Development Commands
 
 - `npm run dev` – Start the development server with hot module replacement
 - `npm run build` – Build the project for production
 - `npm run preview` – Preview the production build locally
 - `npm run lint` – Run ESLint to check code quality
 
-### Adding New Laws
+### Adding New Pre-loaded Laws
 
-To add a new legal instrument:
+To add a new legal instrument to the pre-loaded list:
 
 1. Place the law file (XHTML, XML, or HTML) in the `public/data/` directory
 2. Add an entry to `src/constants/laws.js`:
@@ -82,7 +111,7 @@ The parser automatically handles:
 - Consolidated format
 - JSON format (if pre-processed)
 
-## Project Structure
+### Project Structure
 
 ```
 eu-law-visualiser/
@@ -103,12 +132,21 @@ eu-law-visualiser/
 │   ├── App.jsx             # Main application component
 │   ├── main.jsx            # Application entry point
 │   └── index.css           # Global styles
+├── extension/              # Browser extension files
 ├── package.json
 ├── vite.config.js
 └── README.md
 ```
 
-## How It Works
+### Tech Stack
+
+- **React** – UI framework
+- **Vite** – Build tool and dev server
+- **Tailwind CSS** – Styling
+- **Framer Motion** – Animations
+- **Lucide React** – Icons
+
+### How It Works
 
 1. **Parsing**: The application parses EU legal documents (typically in XHTML format from EUR-Lex) to extract:
    - Articles (with chapter/section hierarchy)
@@ -126,12 +164,7 @@ eu-law-visualiser/
    - Browser back/forward navigation
    - Direct linking to specific laws
 
-## Browser Support
-
-The application works in all modern browsers that support:
-- ES6+ JavaScript
-- CSS Grid and Flexbox
-- Fetch API
+4. **Extension Integration**: The browser extension captures HTML from EUR-Lex pages and passes it to the visualiser, which parses and displays it in the same interactive format.
 
 ## Contributing
 

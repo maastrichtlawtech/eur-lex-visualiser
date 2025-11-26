@@ -105,7 +105,7 @@ export function Landing() {
             className="inline-flex items-center gap-1.5 text-gray-600 transition hover:text-gray-900"
           >
             <Github className="h-4 w-4" />
-            <span>Source code on GitHub</span>
+            <span>Source code and support on GitHub</span>
           </a>
         </motion.div>
       </div>
