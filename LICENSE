@@ -1,20 +1,9 @@
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 
- Copyright (C) 2024 Konrad Kollnig
-
- This program is free software: you can redistribute it and/or modify
- it under the terms of the GNU General Public License as published by
- the Free Software Foundation, either version 3 of the License, or
- (at your option) any later version.
-
- This program is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
-
- You should have received a copy of the GNU General Public License along
- with this program.  If not, see <https://www.gnu.org/licenses/>.
+ Copyright (C) 2007 Free Software Foundation, Inc. <https://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
 
                             Preamble
 
@@ -97,8 +86,8 @@ in a fashion requiring copyright permission, other than the making of an
 exact copy.  The resulting work is called a "modified version" of the
 earlier work or a work "based on" the earlier work.
 
-  A "covered work" means either the unmodified Program or a work based on
-the Program.
+  A "covered work" means either the unmodified Program or a work based
+on the Program.
 
   To "propagate" a work means to do anything with it that, without
 permission, would make you directly or secondarily liable for
@@ -122,14 +111,14 @@ menu, a prominent item in the list meets this criterion.
 
   1. Source Code.
 
-  The "source code" for a work means the preferred form of the work for
-making modifications to it.  "Object code" means any non-source form of
-a work.
+  The "source code" for a work means the preferred form of the work
+for making modifications to it.  "Object code" means any non-source
+form of a work.
 
   A "Standard Interface" means an interface that either is an official
 standard defined by a recognized standards body, or, in the case of
-interfaces specified for a particular programming language, one that is
-widely used among developers working in that language.
+interfaces specified for a particular programming language, one that
+is widely used among developers working in that language.
 
   The "System Libraries" of an executable work include anything, other
 than the work as a whole, that (a) is included in the normal form of
@@ -151,9 +140,9 @@ programs which are used unmodified in performing those activities but
 which are not part of the work.  For example, Corresponding Source
 includes interface definition files associated with source files for
 the work, and the source code for shared libraries and dynamically
-linked subprograms that the work is designed to require, such as by
-intimate data communication or control flow between those subprograms
-and other parts of the work.
+linked subprograms that the work is specifically designed to require,
+such as by intimate data communication or control flow between those
+subprograms and other parts of the work.
 
   The Corresponding Source need not include anything that users
 can regenerate automatically from other parts of the Corresponding
@@ -209,8 +198,8 @@ technological measures.
 receive it, in any medium, provided that you conspicuously and
 appropriately publish on each copy an appropriate copyright notice;
 keep intact all notices stating that this License and any
-non-permissive terms added under section 7 apply to the code; keep
-intact all notices of the absence of any warranty; and give all
+non-permissive terms added in accord with section 7 apply to the code;
+keep intact all notices of the absence of any warranty; and give all
 recipients a copy of this License along with the Program.
 
   You may charge any price or no price for each copy that you convey,
@@ -234,8 +223,9 @@ terms of section 4, provided that you also meet all of these conditions:
     License to anyone who comes into possession of a copy.  This
     License will therefore apply, along with any applicable section 7
     additional terms, to the whole of the work, and all its parts,
-    regardless of how they are packaged.  This License does not
-    permit sublicensing in exception under section 10.
+    regardless of how they are packaged.  This License gives no
+    permission to license the work in any other way, but it does not
+    invalidate such permission if you have separately received it.
 
     d) If the work has interactive user interfaces, each must display
     Appropriate Legal Notices; however, if the Program has interactive
@@ -243,7 +233,7 @@ terms of section 4, provided that you also meet all of these conditions:
     work need not make them do so.
 
   A compilation of a covered work with other separate and independent
-works, which are not by their nature extensions of the covered work
+works, which are not by their nature extensions of the covered work,
 and which are not combined with it such as to form a larger program,
 in or on a volume of a storage or distribution medium, is called an
 "aggregate" if the compilation and its resulting copyright are not
@@ -312,7 +302,7 @@ doubtful cases shall be resolved in favor of coverage.  For a particular
 product received by a particular user, "normally used" refers to a
 typical or common use of that class of product, regardless of the status
 of the particular user or of the way in which the particular user
-actually uses, or expects or is intended to use, the product.  A product
+actually uses, or expects or is expected to use, the product.  A product
 is a consumer product regardless of whether the product has substantial
 commercial, industrial or non-consumer uses, unless such uses represent
 the only significant mode of use of the product.
@@ -339,8 +329,8 @@ been installed in ROM).
   The requirement to provide Installation Information does not include a
 requirement to continue to provide support service, warranty, or updates
 for a work that has been modified or installed by the recipient, or for
-the User Product in which it has been modified or installed.  Access to
-a network may be denied when the modification itself materially and
+the User Product in which it has been modified or installed.  Access to a
+network may be denied when the modification itself materially and
 adversely affects the operation of the network or violates the rules and
 protocols for communication across the network.
 
@@ -389,11 +379,11 @@ that material) supplement the terms of this License with terms:
     e) Declining to grant rights under trademark law for use of some
     trade names, trademarks, or service marks; or
 
-    f) Requiring indemnification of licensors and authors of that material
-    by anyone who conveys the material (or modified versions of it) with
-    contractual assumptions of liability to the recipient, for any
-    liability that these contractual assumptions directly impose on those
-    licensors and authors.
+    f) Requiring indemnification of licensors and authors of that
+    material by anyone who conveys the material (or modified versions of
+    it) with contractual assumptions of liability to the recipient, for
+    any liability that these contractual assumptions directly impose on
+    those licensors and authors.
 
   All other non-permissive additional terms are considered "further
 restrictions" within the meaning of section 10.  If the Program as you
@@ -468,11 +458,15 @@ transaction who receives a copy of the work also receives whatever
 licenses to the work the party's predecessor in interest had or could
 give under the previous paragraph, plus a right to possession of the
 Corresponding Source of the work from the predecessor in interest, if
-the predecessor has or can get the rights to that Corresponding Source.
+the predecessor has it or can get it with reasonable efforts.
 
-  Nothing in this License shall be construed as excluding or limiting
-any implied license or other defenses to infringement that may
-otherwise be available to you under applicable patent law.
+  You may not impose any further restrictions on the exercise of the
+rights granted or affirmed under this License.  For example, you may
+not impose a license fee, royalty, or other charge for exercise of
+rights granted under this License, and you may not initiate litigation
+(including a cross-claim or counterclaim in a lawsuit) alleging that
+any patent claim is infringed by making, using, selling, offering for
+sale, or importing the Program or any portion of it.
 
   11. Patents.
 
@@ -638,7 +632,7 @@ state the exclusion of warranty; and each file should have at least
 the "copyright" line and a pointer to where the full notice is found.
 
     <one line to give the program's name and a brief idea of what it does.>
-    Copyright (C) 2024 Konrad Kollnig
+    Copyright (C) <year>  <name of author>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -650,15 +644,15 @@ the "copyright" line and a pointer to where the full notice is found.
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License along
-    with this program.  If not, see <https://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 Also add information on how to contact you by electronic and paper mail.
 
   If the program does terminal interaction, make it output a short
 notice like this when it starts in an interactive mode:
 
-    <program>  Copyright (C) 2024 Konrad Kollnig
+    <program>  Copyright (C) <year>  <name of author>
     This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
     This is free software, and you are welcome to redistribute it
     under certain conditions; type `show c' for details.
