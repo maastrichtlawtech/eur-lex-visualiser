@@ -38,57 +38,167 @@ async function getExtensionUrl(storageKey) {
   return `${config.baseUrl}/extension?extension=true&key=${encodeURIComponent(storageKey)}`;
 }
 
+// Check if URL is a valid EUR-Lex page (legal-content or eli/reg)
+function isValidPage(url) {
+  if (!url) return false;
+  const urlLower = url.toLowerCase();
+  return urlLower.includes('eur-lex.europa.eu/legal-content/') || 
+         urlLower.includes('eur-lex.europa.eu/eli/reg');
+}
+
+// Update icon state based on whether the page is valid
+async function updateIconState(tabId) {
+  try {
+    const tab = await chrome.tabs.get(tabId);
+    if (isValidPage(tab.url)) {
+      // Enable icon - use colored icons
+      chrome.action.setIcon({
+        tabId: tabId,
+        path: {
+          16: 'icon16.png',
+          48: 'icon48.png',
+          128: 'icon128.png'
+        }
+      });
+      chrome.action.setBadgeText({ tabId: tabId, text: '' });
+      chrome.action.setTitle({ 
+        tabId: tabId, 
+        title: 'EUR-Lex Visualiser - Click to capture and visualise this page' 
+      });
+    } else {
+      // Disable icon - use greyscale icons (default)
+      chrome.action.setIcon({
+        tabId: tabId,
+        path: {
+          16: 'icon16-grey.png',
+          48: 'icon48-grey.png',
+          128: 'icon128-grey.png'
+        }
+      });
+      chrome.action.setBadgeText({ tabId: tabId, text: '' });
+      chrome.action.setTitle({ 
+        tabId: tabId, 
+        title: 'EUR-Lex Visualiser - Navigate to a EUR-Lex legal-content page to use this extension' 
+      });
+    }
+  } catch (error) {
+    console.error('Error updating icon state:', error);
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('EUR-Lex Visualiser extension installed');
   // Ensure config is initialized
   chrome.storage.local.set({ eurlexConfig: config });
+  // Initialize icons for all open tabs
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      if (tab.id) {
+        updateIconState(tab.id);
+      }
+    });
+  });
 });
 
-// Extract title from HTML and sanitize for use as storage key
-function extractTitleKey(html) {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    const titleElement = doc.querySelector('title');
-    if (titleElement && titleElement.textContent) {
-      const title = titleElement.textContent.trim();
-      const sanitized = title.replace(/[^a-zA-Z0-9._-]/g, '_');
-      return sanitized || 'untitled';
-    }
-  } catch (e) {
-    console.error('Error extracting title:', e);
+// Update icon when tab is updated
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url) {
+    updateIconState(tabId);
   }
-  return 'untitled';
+});
+
+// Update icon when tab is activated
+chrome.tabs.onActivated.addListener((activeInfo) => {
+  updateIconState(activeInfo.tabId);
+});
+
+// Clean up old stored HTML to free up storage space
+async function cleanupOldStorage() {
+  try {
+    const allItems = await new Promise((resolve) => {
+      chrome.storage.local.get(null, (items) => {
+        resolve(items || {});
+      });
+    });
+    
+    // Find all HTML storage keys
+    const htmlKeys = Object.keys(allItems).filter(key => 
+      key.startsWith('eurlex_html_') && !key.endsWith('_url')
+    );
+    
+    // If we have more than 100 stored pages, remove the oldest ones
+    // (Keep the 100 most recent based on storage order)
+    // Note: With unlimitedStorage permission, we can store more, but still clean up old entries
+    if (htmlKeys.length > 100) {
+      const keysToRemove = htmlKeys.slice(0, htmlKeys.length - 100);
+      const removePromises = keysToRemove.map(key => {
+        return new Promise((resolve) => {
+          chrome.storage.local.remove([key, `${key}_url`], resolve);
+        });
+      });
+      
+      await Promise.all(removePromises);
+      console.log(`Cleaned up ${keysToRemove.length} old HTML entries`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up storage:', error);
+  }
 }
 
 // Handle extension icon click
 chrome.action.onClicked.addListener(async (tab) => {
-  // Only work on EUR-Lex pages
-  if (!tab.url || !tab.url.includes('eur-lex.europa.eu')) {
-    console.log('Not a EUR-Lex page, ignoring click');
+  console.log('Icon clicked, tab URL:', tab.url);
+  
+  // Check if it's a valid EUR-Lex page (legal-content or eli/reg)
+  const urlLower = tab.url ? tab.url.toLowerCase() : '';
+  const isLegalContent = urlLower.includes('eur-lex.europa.eu/legal-content/');
+  const isEliReg = urlLower.includes('eur-lex.europa.eu/eli/reg');
+  
+  if (!tab.url || (!isLegalContent && !isEliReg)) {
+    console.log('Not a valid EUR-Lex page, ignoring click. URL:', tab.url);
     return;
   }
   
-  console.log('Extension icon clicked on EUR-Lex page:', tab.url);
+  console.log('Extension icon clicked on EUR-Lex page:', tab.url, 'Type:', isLegalContent ? 'legal-content' : 'eli/reg');
   
   try {
-    // Capture HTML from the current tab
+    // Capture HTML and title from the current tab
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
+        // Extract title from the page (has DOM access)
+        let titleKey = 'untitled';
+        try {
+          const titleElement = document.querySelector('title');
+          if (titleElement && titleElement.textContent) {
+            const title = titleElement.textContent.trim();
+            // Sanitize title for use as storage key
+            titleKey = title.replace(/[^a-zA-Z0-9._-]/g, '_') || 'untitled';
+          }
+        } catch (e) {
+          console.error('Error extracting title:', e);
+        }
+        
         return {
           html: document.documentElement.outerHTML,
-          url: window.location.href
+          url: window.location.href,
+          titleKey: titleKey
         };
       }
     });
     
+    console.log('Script execution results:', results);
+    
     if (results && results[0] && results[0].result) {
-      const { html, url } = results[0].result;
+      const { html, url, titleKey } = results[0].result;
       
-      // Extract title and create storage key
-      const titleKey = extractTitleKey(html);
+      // Create storage key from extracted title
       const storageKey = `eurlex_html_${titleKey}`;
+      
+      console.log('Extracted title key:', titleKey, 'Storage key:', storageKey);
+      
+      // Clean up old storage before storing new content
+      await cleanupOldStorage();
       
       // Store HTML in extension storage
       await chrome.storage.local.set({
@@ -100,7 +210,10 @@ chrome.action.onClicked.addListener(async (tab) => {
       
       // Open visualiser
       const visualiserUrl = await getExtensionUrl(storageKey);
+      console.log('Opening visualiser URL:', visualiserUrl);
       chrome.tabs.create({ url: visualiserUrl });
+    } else {
+      console.error('No results from script execution');
     }
   } catch (error) {
     console.error('Error capturing page on icon click:', error);

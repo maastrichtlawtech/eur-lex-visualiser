@@ -30,7 +30,7 @@ captureBtn.addEventListener('click', async () => {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
-    if (!tab.url || !tab.url.includes('eur-lex.europa.eu')) {
+    if (!tab.url || (!tab.url.includes('eur-lex.europa.eu/legal-content/') && !tab.url.includes('eur-lex.europa.eu/eli/reg'))) {
       showStatus('Please navigate to a EUR-Lex page first.', 'error');
       return;
     }

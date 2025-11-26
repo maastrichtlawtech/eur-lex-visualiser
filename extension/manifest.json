@@ -5,6 +5,7 @@
   "description": "Capture EUR-Lex HTML and send to visualiser",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "activeTab",
     "tabs",
     "scripting"
@@ -19,14 +20,14 @@
   ],
   "action": {
     "default_icon": {
-      "16": "icon16.png",
-      "48": "icon48.png",
-      "128": "icon128.png"
+      "16": "icon16-grey.png",
+      "48": "icon48-grey.png",
+      "128": "icon128-grey.png"
     }
   },
   "content_scripts": [
     {
-      "matches": ["https://eur-lex.europa.eu/*"],
+      "matches": ["https://eur-lex.europa.eu/legal-content/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     },

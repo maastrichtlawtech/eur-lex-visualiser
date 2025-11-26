@@ -44,6 +44,12 @@
   
   // Wait for page to be fully loaded
   function captureAndOpen() {
+    // Only work on legal-content pages
+    if (!window.location.href.includes('eur-lex.europa.eu/legal-content/')) {
+      console.log('Not a EUR-Lex legal-content page, skipping auto-capture');
+      return;
+    }
+    
     // Check if page is fully loaded
     if (document.readyState !== 'complete') {
       window.addEventListener('load', captureAndOpen);
@@ -61,15 +67,22 @@
       const titleKey = extractTitleKey(html);
       const storageKey = `eurlex_html_${titleKey}`;
       
-      // Store HTML in extension storage
-      chrome.storage.local.set({
-        [storageKey]: html,
-        [`${storageKey}_url`]: url
-      }, () => {
-        if (chrome.runtime.lastError) {
-          console.error('Error storing HTML:', chrome.runtime.lastError);
-          return;
-        }
+      // Clean up old storage before storing (request background script to do it)
+      chrome.runtime.sendMessage({ action: 'cleanupStorage' }, () => {
+        // Store HTML in extension storage
+        chrome.storage.local.set({
+          [storageKey]: html,
+          [`${storageKey}_url`]: url
+        }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('Error storing HTML:', chrome.runtime.lastError);
+            return;
+          }
+          handleStorageSuccess();
+        });
+      });
+      
+      function handleStorageSuccess() {
         
         console.log('HTML stored with key:', storageKey);
         
@@ -80,7 +93,7 @@
             url: visualiserUrl
           });
         });
-      });
+      }
     }, 1000); // Wait 1 second after page load to ensure everything is ready
   }
   
