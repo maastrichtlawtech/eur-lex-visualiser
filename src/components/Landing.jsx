@@ -97,7 +97,27 @@ export function Landing() {
           transition={{ delay: 0.2 }}
           className="mt-8 flex flex-col items-center gap-2 text-xs text-gray-500"
         >
-          <p>Built by Konrad Kollnig at the Law &amp; Tech Lab, Maastricht University.</p>
+          <p>
+            Built by{" "}
+            <a
+              href="https://www.maastrichtuniversity.nl/nl/kas-kollnig"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 hover:text-gray-900 underline"
+            >
+              Konrad Kollnig
+            </a>{" "}
+            at the{" "}
+            <a
+              href="https://www.maastrichtuniversity.nl/law-tech-lab"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 hover:text-gray-900 underline"
+            >
+              Law &amp; Tech Lab
+            </a>
+            , Maastricht University.
+          </p>
           <a
             href="https://github.com/maastrichtlawtech/eur-lex-visualiser"
             target="_blank"

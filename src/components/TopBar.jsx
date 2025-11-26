@@ -54,7 +54,24 @@ export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = 
           </button>
 
           <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
-            Konrad Kollnig, Law &amp; Tech Lab Maastricht
+            <a
+              href="https://www.maastrichtuniversity.nl/nl/kas-kollnig"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-900 hover:underline"
+            >
+              Konrad Kollnig
+            </a>
+            ,{" "}
+            <a
+              href="https://www.maastrichtuniversity.nl/law-tech-lab"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-gray-900 hover:underline"
+            >
+              Law &amp; Tech Lab
+            </a>{" "}
+            Maastricht
           </span>
         </div>
 
