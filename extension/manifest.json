@@ -12,7 +12,10 @@
   "host_permissions": [
     "https://eur-lex.europa.eu/*",
     "https://maastrichtlawtech.github.io/*",
-    "http://localhost:*/*"
+    "http://localhost/*",
+    "http://localhost:5173/*",
+    "http://127.0.0.1/*",
+    "http://127.0.0.1:5173/*"
   ],
   "action": {
     "default_icon": {
@@ -30,13 +33,17 @@
     {
       "matches": [
         "https://maastrichtlawtech.github.io/eur-lex-visualiser/*",
-        "http://localhost:*/*"
+        "http://localhost/*",
+        "http://localhost:5173/*",
+        "http://127.0.0.1/*",
+        "http://127.0.0.1:5173/*"
       ],
       "js": ["localhost-inject.js"],
       "run_at": "document_start"
     }
   ],
   "background": {
+    "scripts": ["background.js"],
     "service_worker": "background.js"
   },
   "icons": {
