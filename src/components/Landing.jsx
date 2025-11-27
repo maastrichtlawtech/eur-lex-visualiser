@@ -188,13 +188,6 @@ export function Landing() {
               </ol>
             </div>
 
-            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 p-2.5">
-              <p className="text-xs font-medium text-red-900">⚠️ Note:</p>
-              <p className="mt-1 text-xs text-red-800">
-                Languages other than English currently do not function properly. Please use the English version of EU laws for best results.
-              </p>
-            </div>
-
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
               <p className="text-xs font-medium text-amber-900">💡 Pro tip:</p>
               <p className="mt-1 text-xs text-amber-800">
