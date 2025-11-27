@@ -46,10 +46,14 @@ The visualiser can open **any EU law** (at least newer ones) directly from EUR-L
 
 #### Using the Extension
 
-1. Install the extension for your browser (see links above)
-2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu)
-3. The extension will automatically detect the page and open it in the visualiser
-4. You'll see the same interactive interface with table of contents, recitals, and annexes
+1. Install the extension for your browser (see links above).
+2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu) — for example, the [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng).
+3. Use the EUR-Lex language selector to open the law in **English** (the parser currently requires the English version).
+4. The extension automatically captures the page and opens it in the visualiser with the same interactive table of contents, recitals, and annexes.
+
+![EUR-Lex language selector showing available languages](public/language-selector.png)
+
+> 💡 **Pro tip:** once the law has opened in the visualiser, bookmark the page to jump back to the same document later.
 
 The extension works automatically—no need to click anything. Just browse EUR-Lex as usual, and when you visit a legal document page, it will open in the visualiser.
 
