@@ -75,17 +75,6 @@ export function Landing() {
                     {idx + 1}
                   </span>
                 </div>
-                <div className="mt-3 flex items-center gap-1 text-xs text-gray-500">
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5">
-                    Articles viewer
-                  </span>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5">
-                    Recitals
-                  </span>
-                  <span className="rounded-full bg-gray-100 px-2 py-0.5">
-                    Annexes
-                  </span>
-                </div>
               </motion.button>
             ))}
           </div>
