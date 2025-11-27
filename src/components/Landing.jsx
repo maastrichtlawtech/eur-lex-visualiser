@@ -99,10 +99,10 @@ export function Landing() {
         >
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-6">
             <h2 className="text-sm font-semibold text-gray-900">
-              Visualize Any EU Law
+              Visualise other EU laws
             </h2>
             <p className="mt-2 text-xs text-gray-700">
-              Want to visualise a different EU law? Install our browser extension to open <strong>any EU law</strong> from EUR-Lex in this visualiser.
+              Want to visualise a different EU law? Install our browser extension to open <strong>any recent EU law</strong> from EUR-Lex in this visualiser.
             </p>
             
             <div className="mt-4">
@@ -172,7 +172,7 @@ export function Landing() {
                 </li>
                 <li className="flex gap-2">
                   <span className="font-semibold text-gray-500">3.</span>
-                  <span>Open the law in your preferred language using the language selector on EUR-Lex</span>
+                  <span>Open the law in the <strong>English</strong> language using the language selector on EUR-Lex</span>
                 </li>
                 <li className="mt-2">
                   <img
