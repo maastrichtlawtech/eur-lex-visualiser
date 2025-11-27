@@ -102,7 +102,7 @@ export function Landing() {
               Visualize Any EU Law
             </h2>
             <p className="mt-2 text-xs text-gray-700">
-              Want to visualize a different EU law? Install our browser extension to open <strong>any EU law</strong> from EUR-Lex in this visualiser.
+              Want to visualise a different EU law? Install our browser extension to open <strong>any EU law</strong> from EUR-Lex in this visualiser.
             </p>
             
             <div className="mt-4">
