@@ -356,27 +356,35 @@ function LawViewer() {
 
   // Update document title based on current law and selection
   useEffect(() => {
-    if (isExtensionMode) {
-      if (selected.id) {
-        const kindLabel = selected.kind === "article" ? "Article" : selected.kind === "recital" ? "Recital" : "Annex";
-        document.title = `Custom Law - ${kindLabel} ${selected.id} | EU Law Visualiser`;
+    // Determine the base name of the law:
+    // 1. data.title (parsed from HTML)
+    // 2. LAWS entry label (if known key)
+    // 3. "Custom Law" (if extension mode)
+    // 4. key (fallback)
+    let lawName = data.title;
+    if (!lawName) {
+      if (isExtensionMode) {
+        lawName = "Custom Law";
+      } else if (key) {
+        const law = LAWS.find((l) => l.key === key);
+        lawName = law ? law.label : key;
       } else {
-        document.title = "Custom Law | EU Law Visualiser";
+        lawName = "EU Law Visualiser";
       }
-    } else if (key) {
-      const law = LAWS.find(l => l.key === key);
-      const lawName = law ? law.label : key;
-      
-      if (selected.id) {
-        const kindLabel = selected.kind === "article" ? "Article" : selected.kind === "recital" ? "Recital" : "Annex";
-        document.title = `${lawName} - ${kindLabel} ${selected.id} | EU Law Visualiser`;
-      } else {
-        document.title = `${lawName} | EU Law Visualiser`;
-      }
-    } else {
-      document.title = "EU Law Visualiser";
     }
-  }, [key, selected.kind, selected.id, isExtensionMode]);
+
+    if (selected.id) {
+      const kindLabel =
+        selected.kind === "article"
+          ? "Article"
+          : selected.kind === "recital"
+          ? "Recital"
+          : "Annex";
+      document.title = `${lawName} - ${kindLabel} ${selected.id} | EU Law Visualiser`;
+    } else {
+      document.title = `${lawName} | EU Law Visualiser`;
+    }
+  }, [key, selected.kind, selected.id, isExtensionMode, data.title]);
 
   // --------- Main visualiser UI ----------
   return (
