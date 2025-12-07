@@ -5,9 +5,9 @@ import { Button } from "./Button.jsx";
 
 export function PrintModal({ isOpen, onClose, onPrint, counts }) {
   const [options, setOptions] = useState({
-    recitals: true,
+    recitals: false,
     articles: true,
-    annexes: true,
+    annexes: false,
     relatedRecitals: false,
   });
 
