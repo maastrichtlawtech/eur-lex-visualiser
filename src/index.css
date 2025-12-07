@@ -65,3 +65,72 @@
   color: #6b7280;                    /* gray-500 */
   margin-bottom: .5rem;
 }
+
+@media print {
+  /* Hide everything by default */
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  /* Show print-only elements */
+  .print\:block {
+    display: block !important;
+  }
+  
+  /* Reset background colors for printing */
+  body {
+    background: white;
+  }
+  
+  /* Ensure proper page breaks */
+  h1, h2, h3, h4, h5 {
+    page-break-after: avoid;
+  }
+  
+  .break-after-avoid {
+    page-break-after: avoid;
+  }
+  
+  /* Reduce page margins */
+  @page {
+    margin: 1cm;
+  }
+  
+  .break-inside-avoid {
+    page-break-inside: avoid;
+  }
+  
+  /* Reset margins for print */
+  .print\:p-0 {
+    padding: 0 !important;
+  }
+  
+  /* Compact prose for printing */
+  .print-content p.oj-normal,
+  .print-content p {
+    margin: 0.25rem 0;
+    font-size: 0.8rem !important; /* ~12px */
+    line-height: 1.4;
+  }
+  
+  .print-content table {
+    border-spacing: 0 0.15rem;
+    margin: 0.15rem 0;
+  }
+  
+  .print-content table td p {
+    margin: 0;
+    font-size: 0.8rem !important;
+  }
+  
+  .print-content .oj-ti-art,
+  .print-content .oj-sti-art {
+    display: none !important;
+  }
+  
+  /* Recital specific compactness */
+  .prose-xs {
+    font-size: 0.75rem !important; /* ~12px */
+    line-height: 1.3;
+  }
+}

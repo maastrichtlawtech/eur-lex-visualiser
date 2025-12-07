@@ -115,9 +115,10 @@ const stripTags = (html) => {
  * 
  * @param {Array} recitals - Array of { recital_number, recital_text, ... }
  * @param {Array} articles - Array of { article_number, article_title, article_html, ... }
+ * @param {boolean} exclusive - If true, assigns each recital ONLY to the best matching article
  * @returns {Map} - Map where key is article_number, value is array of matching recitals
  */
-export function mapRecitalsToArticles(recitals, articles) {
+export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
   // 1. Prepare Article Documents (Corpus)
   const articleDocs = articles.map(a => ({
     id: a.article_number,
@@ -148,16 +149,38 @@ export function mapRecitalsToArticles(recitals, articles) {
 
     articleVectors.forEach(aVec => {
       const score = cosineSimilarity(recitalVec, aVec);
-      if (score > bestScore) {
-        bestScore = score;
-        bestArticleId = aVec.id;
+      
+      if (exclusive) {
+        // Keep track of the absolute best match
+        if (score > bestScore) {
+          bestScore = score;
+          bestArticleId = aVec.id;
+        }
+      } else {
+        // Multi-assignment logic (existing)
+        if (score > bestScore) {
+           bestScore = score;
+           bestArticleId = aVec.id;
+        }
       }
     });
 
     // Similarity threshold (tunable)
-    if (bestScore > 0.1 && bestArticleId) {
-      const list = articleToRecitals.get(bestArticleId);
-      if (list) list.push(r);
+    if (exclusive) {
+       // For exclusive mode, assign only to the single best article if above threshold
+       if (bestScore > 0.1 && bestArticleId) {
+         const list = articleToRecitals.get(bestArticleId);
+         if (list) list.push(r);
+       }
+    } else {
+       // For existing non-exclusive mode (visualiser sidebar), we stick to the original "best match" logic
+       // Currently the logic above effectively finds ONE best match anyway for the sidebar too, 
+       // but we could expand this to top-N in future. 
+       // For now, let's keep it consistent: assigns to best match > threshold.
+       if (bestScore > 0.1 && bestArticleId) {
+          const list = articleToRecitals.get(bestArticleId);
+          if (list) list.push(r);
+       }
     }
   });
 

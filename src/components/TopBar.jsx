@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Search, X, ExternalLink } from "lucide-react";
+import { ChevronLeft, Search, X, ExternalLink, Printer } from "lucide-react";
 import { Button } from "./Button.jsx";
 import { searchContent } from "../utils/nlp.js";
 
@@ -225,7 +225,7 @@ function SearchBox({ lists, onNavigate }) {
   );
 }
 
-export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtensionMode, eurlexUrl }) {
+export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPrint }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -243,24 +243,6 @@ export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtension
       navigate(`/law/${lawKey}/${item.type}/${safeId}`);
     }
   };
-
-  const getListAndIndex = () => {
-    if (selected.kind === "article") {
-      const idx = articles.findIndex((a) => a.article_number === selected.id);
-      return { kind: "article", index: idx, list: articles, label: "Article" };
-    }
-    if (selected.kind === "recital") {
-      const idx = recitals.findIndex((r) => r.recital_number === selected.id);
-      return { kind: "recital", index: idx, list: recitals, label: "Recital" };
-    }
-    if (selected.kind === "annex") {
-      const idx = annexes.findIndex((x) => x.annex_id === selected.id);
-      return { kind: "annex", index: idx, list: annexes, label: "Annex" };
-    }
-    return { kind: null, index: -1, list: [], label: "" };
-  };
-
-  const { kind, index, list, label } = getListAndIndex();
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
@@ -305,41 +287,18 @@ export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtension
 
         {/* Right: Navigation Controls */}
         <div className="relative z-10 flex items-center gap-2 md:gap-4">
+          <Button
+            variant="ghost"
+            onClick={onPrint}
+            className="hidden md:flex h-9 px-3 gap-2 items-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
+            title="Create a print-ready view or PDF"
+          >
+            <Printer size={16} />
+            <span>Print / PDF</span>
+          </Button>
+
           <SearchBox lists={lists} onNavigate={onNavigate} />
           
-          {kind && (
-            <div className="flex items-center gap-1 rounded-lg bg-gray-50 p-1 ring-1 ring-gray-200">
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
-                disabled={index <= 0}
-                onClick={() => onPrevNext(kind, index - 1)}
-                title={`Previous ${label}`}
-              >
-                <ChevronLeft size={18} />
-              </Button>
-
-              <span className="hidden md:inline-block min-w-[100px] px-2 text-center text-sm font-medium text-gray-600">
-                <span className="text-gray-900">{label} {index + 1}</span>
-                <span className="mx-1 text-gray-400">/</span>
-                {list.length}
-              </span>
-              
-              <span className="md:hidden text-xs font-medium text-gray-600 px-1">
-                {index + 1}/{list.length}
-              </span>
-
-              <Button
-                variant="ghost"
-                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
-                disabled={index === -1 || index >= list.length - 1}
-                onClick={() => onPrevNext(kind, index + 1)}
-                title={`Next ${label}`}
-              >
-                <ChevronRight size={18} />
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     </header>

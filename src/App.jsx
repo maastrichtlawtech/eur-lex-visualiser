@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
 import { Routes, Route, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LAWS } from "./constants/laws.js";
 import { fetchText } from "./utils/fetch.js";
@@ -9,7 +10,10 @@ import { Button } from "./components/Button.jsx";
 import { Accordion } from "./components/Accordion.jsx";
 import { Landing } from "./components/Landing.jsx";
 import { TopBar } from "./components/TopBar.jsx";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { NavigationControls } from "./components/NavigationControls.jsx";
+import { PrintModal } from "./components/PrintModal.jsx";
+import { PrintView } from "./components/PrintView.jsx";
+import { ChevronDown, ChevronUp, Info } from "lucide-react";
 
 function NumberSelector({ label, total, onSelect }) {
   const [val, setVal] = useState("");
@@ -74,7 +78,7 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
         className="w-full flex items-center justify-between px-8 py-5 text-left transition hover:bg-gray-50"
       >
         <div className="flex items-center gap-2 text-blue-900">
-          <span className="font-semibold">Potentially Related Recitals</span>
+          <span className="font-semibold">Related Recitals</span>
           <span className="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full font-medium">
             {recitals.length}
           </span>
@@ -91,6 +95,12 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
           <p className="text-sm text-gray-500">
             These recitals appear to be related to this article based text analysis using simple AI. They do not have the quality of manually curated legal databases but exist for any EU law loaded in this visualiser.
           </p>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 flex gap-2 items-start">
+            <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>
+              <strong>Pro Tip:</strong> Use the <strong>Print / PDF</strong> button in the top bar to generate a document with these related recitals included next to their articles.
+            </span>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {recitals.map((r) => (
               <div
@@ -134,6 +144,8 @@ function LawViewer() {
   const [loading, setLoading] = useState(false);
   const [isExtensionMode, setIsExtensionMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [printOptions, setPrintOptions] = useState(null);
 
   const loadLaw = React.useCallback(async (path) => {
     if (!path) return;
@@ -515,20 +527,70 @@ function LawViewer() {
     return law ? law.eurlex : null;
   }, [key, isExtensionMode, data.eurlex]);
 
+  // Handle printing
+  useEffect(() => {
+    if (printOptions) {
+      const handlePrint = async () => {
+        // Create new window
+        const printWindow = window.open("", "_blank");
+        if (!printWindow) {
+          alert("Please allow popups to print");
+          setPrintOptions(null);
+          return;
+        }
+
+        // Copy styles
+        const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'));
+        styles.forEach(style => {
+          printWindow.document.head.appendChild(style.cloneNode(true));
+        });
+
+        // Add extra print-specific styles to force visibility and background
+        const extraStyle = printWindow.document.createElement("style");
+        extraStyle.textContent = `
+          body { background: white !important; margin: 0; }
+          .print-container { display: block !important; }
+        `;
+        printWindow.document.head.appendChild(extraStyle);
+
+        // Render PrintView into the new window
+        const container = printWindow.document.createElement("div");
+        container.className = "print-container";
+        printWindow.document.body.appendChild(container);
+
+        const root = createRoot(container);
+        
+        // Wrap in a promise to wait for render? 
+        // React 18 createRoot is async-ish but text rendering is usually fast.
+        // We'll use a small timeout to ensure styles are applied.
+        root.render(<PrintView data={data} options={printOptions} />);
+
+        // Wait for styles and content
+        setTimeout(() => {
+          printWindow.print();
+          // Optional: printWindow.close(); // Don't auto-close so user can preview or PDF
+          setPrintOptions(null);
+        }, 500);
+      };
+
+      handlePrint();
+    }
+  }, [printOptions, data]);
+
   // --------- Main visualiser UI ----------
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <TopBar
-        lawKey={isExtensionMode ? "extension" : key}
-        title={data.title}
-        lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
-        selected={selected}
-        onPrevNext={onPrevNext}
-        isExtensionMode={isExtensionMode}
-        eurlexUrl={eurlexUrl}
-      />
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white print:bg-white">
+      <div className="print:hidden">
+        <TopBar
+          lawKey={isExtensionMode ? "extension" : key}
+          title={data.title}
+          lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+          isExtensionMode={isExtensionMode}
+          eurlexUrl={eurlexUrl}
+          onPrint={() => setPrintModalOpen(true)}
+        />
 
-      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
+        <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
         {/* Main Content Area (Left/Center) */}
         <div className="min-w-0 flex-1 order-2 md:order-1">
           <section className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]">
@@ -584,6 +646,16 @@ function LawViewer() {
 
         {/* Sidebar (Right) */}
         <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2">
+          {/* Mobile Navigation */}
+          <div className="md:hidden mb-4">
+            <NavigationControls
+              selected={selected}
+              lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+              onPrevNext={onPrevNext}
+              className="w-full"
+            />
+          </div>
+
           {/* Mobile Toggle */}
           <div className="mb-4 md:hidden">
             <Button
@@ -600,6 +672,17 @@ function LawViewer() {
             {/* Quick Navigation */}
             <div>
               <div className="px-1 mb-2 text-sm font-semibold text-gray-900">Quick Navigation</div>
+              
+              {/* Desktop Navigation */}
+              <div className="hidden md:block mb-4">
+                <NavigationControls
+                  selected={selected}
+                  lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+                  onPrevNext={onPrevNext}
+                  className="w-full"
+                />
+              </div>
+
               <div className="flex flex-col gap-3">
                 {data.articles?.length > 0 && (
                   <NumberSelector
@@ -755,6 +838,26 @@ function LawViewer() {
           </p>
         </div>
       </footer>
+      </div>
+
+      {/* Print View (Hidden unless printing) */}
+      {/* Handled via new window now */}
+      {/* {printOptions && (
+        <div id="print-area" className="hidden print:block">
+          <PrintView data={data} options={printOptions} />
+        </div>
+      )} */}
+
+      <PrintModal
+        isOpen={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        onPrint={(opts) => setPrintOptions(opts)}
+        counts={{
+          articles: data.articles?.length || 0,
+          recitals: data.recitals?.length || 0,
+          annexes: data.annexes?.length || 0,
+        }}
+      />
     </div>
   );
 }
