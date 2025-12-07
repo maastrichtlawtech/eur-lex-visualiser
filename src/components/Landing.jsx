@@ -1,18 +1,64 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Github } from "lucide-react";
+import { Github, Trash, Clock } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
 
 export function Landing() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [showExtensionInfo, setShowExtensionInfo] = useState(false);
+  const [instructionsDismissed, setInstructionsDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('eurlex_instructions_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [showExtensionInfo, setShowExtensionInfo] = useState(!instructionsDismissed);
+
+  const dismissInstructions = (e) => {
+    e.stopPropagation();
+    setInstructionsDismissed(true);
+    setShowExtensionInfo(false);
+    localStorage.setItem('eurlex_instructions_dismissed', 'true');
+  };
+
+  const [customLaws, setCustomLaws] = useState([]);
+
+  const [hiddenLaws, setHiddenLaws] = useState(() => {
+    try {
+      const stored = localStorage.getItem('eurlex_hidden_laws');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [lastOpened, setLastOpened] = useState(() => {
+    try {
+      const stored = localStorage.getItem('eurlex_last_opened');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Update document title
   useEffect(() => {
     document.title = "EU Law Visualiser";
   }, []);
+  
+  // Save last opened update when clicking a law
+  const handleLawClick = (key, isCustom) => {
+    // For custom laws, the timestamp is already in the law object from extension
+    if (!isCustom) {
+      const now = Date.now();
+      const newLastOpened = { ...lastOpened, [key]: now };
+      setLastOpened(newLastOpened);
+      localStorage.setItem('eurlex_last_opened', JSON.stringify(newLastOpened));
+    }
+  };
 
   // Redirect to extension route if extension params are present
   useEffect(() => {
@@ -22,6 +68,85 @@ export function Landing() {
       navigate(`/extension?extension=true&key=${key}`, { replace: true });
     }
   }, [searchParams, navigate]);
+
+  const [isExtensionReady, setIsExtensionReady] = useState(false);
+
+  // Poll for custom laws
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.source !== window) return;
+      
+      if (event.data.type === 'EURLEX_LAW_LIST') {
+        setCustomLaws(event.data.payload.laws || []);
+        setIsExtensionReady(true);
+      }
+      
+      if (event.data.type === 'EURLEX_DELETE_SUCCESS') {
+         // Refresh list
+         window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+      }
+      
+      if (event.data.type === 'EURLEX_EXTENSION_READY') {
+         setIsExtensionReady(true);
+         window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    
+    // Initial fetch
+    window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+    
+    // Poll for a bit to ensure we catch it if the extension script loads late
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (attempts > 20) clearInterval(interval); // 10 seconds
+      window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+    }, 500);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleDelete = (e, key, isCustom) => {
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this law?")) {
+      if (isCustom) {
+        window.postMessage({ type: 'EURLEX_DELETE_LAW', key }, '*');
+      } else {
+        const newHidden = [...hiddenLaws, key];
+        setHiddenLaws(newHidden);
+        localStorage.setItem('eurlex_hidden_laws', JSON.stringify(newHidden));
+      }
+    }
+  };
+  
+  const formatDate = (ts) => {
+    if (!ts) return "Never";
+    return new Date(ts).toLocaleString(undefined, {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  };
+
+  const allLaws = [
+    ...customLaws.map(l => ({
+      ...l,
+      label: l.title,
+      isCustom: true
+    })),
+    ...LAWS.map(l => ({
+      ...l,
+      isCustom: false,
+      timestamp: lastOpened[l.key] || null
+    }))
+  ]
+  .filter(l => !hiddenLaws.includes(l.key || l.value)) // Filter out hidden laws
+  .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by last opened
+  
+  const hasCustomLaws = customLaws.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -50,78 +175,119 @@ export function Landing() {
           transition={{ delay: 0.1 }}
           className="mt-8 w-full"
         >
-          <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
-            Option 1 · Choose a popular EU law
-          </h2>
+          {!instructionsDismissed && !isExtensionReady && (
+            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
+              Option 1 · Choose a popular EU law
+            </h2>
+          )}
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {LAWS.map((law, idx) => (
-              <motion.button
-                key={law.value}
+            {allLaws.map((law, idx) => (
+              <motion.div
+                key={law.key || law.value}
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                onClick={() => navigate(`/law/${law.key}`)}
-                className="group flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md"
+                onClick={() => {
+                  handleLawClick(law.key || law.value, law.isCustom);
+                  if (law.isCustom) {
+                    navigate(`/extension?extension=true&key=${law.key}`);
+                  } else {
+                    navigate(`/law/${law.key}`);
+                  }
+                }}
+                className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleLawClick(law.key || law.value, law.isCustom);
+                    if (law.isCustom) {
+                      navigate(`/extension?extension=true&key=${law.key}`);
+                    } else {
+                      navigate(`/law/${law.key}`);
+                    }
+                  }
+                }}
+                role="button"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <div className="text-sm font-semibold text-gray-900">
+                <div className="flex items-start justify-between gap-2 w-full">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-gray-900 truncate pr-6">
                       {law.label}
                     </div>
-                    <p className="mt-1 text-xs text-gray-600">
-                      Click to open an interactive table of contents, recitals and annexes.
-                    </p>
+                    
+                    
+                    <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
+                      <Clock className="h-3 w-3" />
+                      <span>Last opened: {formatDate(law.timestamp)}</span>
+                    </div>
                   </div>
-                  <span className="mt-0.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-gray-300 bg-gray-50 text-[11px] text-gray-700">
-                    {idx + 1}
-                  </span>
+                  
+                  <button
+                    onClick={(e) => handleDelete(e, law.key || law.value, law.isCustom)}
+                    className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
+                    title={law.isCustom ? "Delete from local storage" : "Hide this law"}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
                 </div>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mt-10 w-full"
-        >
-          <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
-            Option 2 · Visualise other EU laws
-          </h2>
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <button
-              type="button"
-              onClick={() => setShowExtensionInfo((prev) => !prev)}
-              className="flex w-full items-center justify-between px-6 py-4 text-left"
-            >
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Visualise other EU laws in 4 simple steps
-                </p>
-              </div>
-              <motion.span
-                animate={{ rotate: showExtensionInfo ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-xl text-gray-600 shadow-sm"
-              >
-                ❯
-              </motion.span>
-            </button>
-            <AnimatePresence initial={false}>
-              {showExtensionInfo && (
-                <motion.div
-                  initial="collapsed"
-                  animate="open"
-                  exit="collapsed"
-                  variants={{
-                    open: { height: "auto", opacity: 1 },
-                    collapsed: { height: 0, opacity: 0 },
-                  }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden"
+        {!instructionsDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="mt-10 w-full"
+          >
+            {!isExtensionReady && (
+              <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
+                Option 2 · Visualise other EU laws
+              </h2>
+            )}
+            <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${!isExtensionReady ? "mt-4" : ""}`}>
+              <div className="flex w-full items-center justify-between px-6 py-4 text-left">
+                <button
+                  type="button"
+                  onClick={() => setShowExtensionInfo((prev) => !prev)}
+                  className="flex flex-1 items-center justify-between mr-4"
                 >
+                  <p className="text-sm font-semibold text-gray-900">
+                    Visualise other EU laws in 4 simple steps
+                  </p>
+                  <motion.span
+                    animate={{ rotate: showExtensionInfo ? 90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-xl text-gray-600 shadow-sm"
+                  >
+                    ❯
+                  </motion.span>
+                </button>
+                
+                <button
+                  onClick={dismissInstructions}
+                  className="text-xs text-gray-400 hover:text-red-500 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                  title="Dismiss these instructions permanently"
+                >
+                  Dismiss
+                </button>
+              </div>
+              <AnimatePresence initial={false}>
+                {showExtensionInfo && (
+                  <motion.div
+                    initial="collapsed"
+                    animate="open"
+                    exit="collapsed"
+                    variants={{
+                      open: { height: "auto", opacity: 1 },
+                      collapsed: { height: 0, opacity: 0 },
+                    }}
+                    transition={{ duration: 0.25, ease: "easeInOut" }}
+                    className="overflow-hidden"
+                  >
                   <div className="space-y-4 border-t border-gray-100 px-6 pb-6 pt-4 text-xs">
                     <p className="text-gray-700">
                       Want to visualise a different EU law? Install our browser extension to open <strong>any recent EU law</strong> from EUR-Lex in this visualiser.
@@ -210,18 +376,13 @@ export function Landing() {
                       </ol>
                     </div>
 
-                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
-                      <p className="font-medium text-amber-900">💡 Pro tip:</p>
-                      <p className="mt-1 text-amber-800">
-                        Create a bookmark to the visualised law page to easily access it again later!
-                      </p>
-                    </div>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0 }}
@@ -264,4 +425,3 @@ export function Landing() {
     </div>
   );
 }
-

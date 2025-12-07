@@ -24,22 +24,84 @@
     });
   }
   
-  // Extract title from HTML and sanitize for use as storage key
-  function extractTitleKey(html) {
+  // Extract title from HTML using smart parsing logic
+  function smartExtractTitle(html) {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const titleElement = doc.querySelector('title');
-      if (titleElement && titleElement.textContent) {
-        const title = titleElement.textContent.trim();
-        // Replace any characters that might cause issues with a safe version
-        const sanitized = title.replace(/[^a-zA-Z0-9._-]/g, '_');
-        return sanitized || 'untitled';
+
+      const getText = (el) => (el ? el.textContent.replace(/\s+/g, " ").trim() : "");
+      
+      // Helper to format title (cut after "of" and Title Case)
+      const formatTitle = (t) => {
+        if (!t) return "";
+        // Cut after " of " (case insensitive)
+        let short = t.split(/\s+of\s+/i)[0];
+        
+        // Convert to Title Case logic
+        // 1. Lowercase everything
+        // 2. Capitalize first letter of each word
+        // 3. Fix specific acronyms like (EU), (EC)
+        return short.toLowerCase()
+          .replace(/(?:^|\s)\S/g, (a) => a.toUpperCase())
+          .replace(/\b(Eu|Ec|Eec|Euratom)\b/gi, (match) => match.toUpperCase());
+      };
+
+      // Extract title (first occurrence of title classes)
+      const titleEl = doc.querySelector(".oj-doc-ti, .doc-ti, .title-doc-first");
+      let mainTitle = "";
+      if (titleEl) {
+        mainTitle = formatTitle(getText(titleEl));
       }
+
+      // Look for short title in parentheses (e.g. "Artificial Intelligence Act")
+      let shortTitle = "";
+      const docTitles = doc.querySelectorAll(".oj-doc-ti, .doc-ti");
+      for (const el of docTitles) {
+        const txt = getText(el);
+        // Match pattern like "... (Artificial Intelligence Act)" at end of string
+        const match = txt.match(/\(([^)]+)\)$/);
+        if (match) {
+          const candidate = match[1].trim();
+          // Heuristic: Short titles are usually Capitalized Words, not "Text with EEA relevance"
+          if (
+            !candidate.toLowerCase().includes("text with eea relevance") &&
+            !candidate.match(/^\d{4}\/\d+$/) && // not just a number
+            candidate.length > 3 &&
+            candidate.length < 100
+          ) {
+            // Found a likely short title -> prioritize it
+            shortTitle = candidate;
+            break; 
+          }
+        }
+      }
+
+      // Combine titles if both exist and are different
+      let title = "";
+      if (shortTitle && mainTitle && !mainTitle.includes(shortTitle)) {
+        title = `${shortTitle} — ${mainTitle}`;
+      } else {
+        title = shortTitle || mainTitle;
+      }
+      
+      // Fallback to <title> tag if no smart title found
+      if (!title) {
+        const t = doc.querySelector('title');
+        if (t) title = t.textContent.trim();
+      }
+
+      return title || 'Untitled Law';
     } catch (e) {
-      console.error('Error extracting title:', e);
+      console.error('Error extracting smart title:', e);
+      return 'Untitled Law';
     }
-    return 'untitled';
+  }
+
+  // Generate storage key from title
+  function generateStorageKey(title) {
+    const sanitized = title.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `eurlex_law_${sanitized}`;
   }
   
   // Wait for page to be fully loaded
@@ -64,30 +126,37 @@
       console.log('Auto-capturing EUR-Lex page, URL:', url);
       
       // Extract title and create storage key
-      const titleKey = extractTitleKey(html);
-      const storageKey = `eurlex_html_${titleKey}`;
+      const title = smartExtractTitle(html);
+      const storageKey = generateStorageKey(title);
       
       // Clean up old storage before storing (request background script to do it)
       chrome.runtime.sendMessage({ action: 'cleanupStorage' }, () => {
-        // Store HTML in extension storage
+        // Store HTML and metadata in extension storage
+        const data = {
+          html: html,
+          metadata: {
+            title: title,
+            url: url,
+            timestamp: Date.now()
+          }
+        };
+
         chrome.storage.local.set({
-          [storageKey]: html,
-          [`${storageKey}_url`]: url
+          [storageKey]: data
         }, () => {
           if (chrome.runtime.lastError) {
             console.error('Error storing HTML:', chrome.runtime.lastError);
             return;
           }
-          handleStorageSuccess();
+          handleStorageSuccess(storageKey);
         });
       });
       
-      function handleStorageSuccess() {
-        
-        console.log('HTML stored with key:', storageKey);
+      function handleStorageSuccess(key) {
+        console.log('Law stored with key:', key);
         
         // Open visualiser in new tab
-        getExtensionUrl(storageKey, (visualiserUrl) => {
+        getExtensionUrl(key, (visualiserUrl) => {
           chrome.runtime.sendMessage({
             action: 'openLocalhost',
             url: visualiserUrl

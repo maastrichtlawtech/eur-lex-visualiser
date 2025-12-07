@@ -152,7 +152,7 @@ function LawViewer() {
     }
   }, []);
 
-  const loadFromExtension = React.useCallback(async (htmlString) => {
+  const loadFromExtension = React.useCallback(async (htmlString, metadata) => {
     if (!htmlString) {
       console.error('loadFromExtension called with empty htmlString');
       return;
@@ -164,6 +164,12 @@ function LawViewer() {
     try {
       console.log('Parsing HTML from extension, length:', htmlString.length);
       const combined = parseAnyToCombined(htmlString);
+      
+      // Use metadata title if available and parsed title is empty or generic
+      if (metadata?.title && (!combined.title || combined.title === 'Untitled Law')) {
+        combined.title = metadata.title;
+      }
+      
       console.log('Parsed result:', {
         articles: combined.articles?.length || 0,
         recitals: combined.recitals?.length || 0,
@@ -192,73 +198,79 @@ function LawViewer() {
     }
   }, [data.articles, data.recitals]);
 
-  // Check for extension HTML from injected script tag in DOM
+  // Ref to track the currently loaded law key to prevent re-loading on navigation
+  const loadedKeyRef = React.useRef(null);
+
+  // Request law content via postMessage when in extension mode
   useEffect(() => {
     const isExtension = searchParams.get('extension') === 'true';
     const storageKey = searchParams.get('key');
     
     if (isExtension && storageKey) {
-      console.log('Extension mode detected, storage key:', storageKey);
-      
-      let loaded = false;
-      
-      // Try to get HTML from DOM (injected by content script)
-      const checkForHtml = () => {
-        const scriptTag = document.getElementById('eurlex-extension-html');
-        if (scriptTag && scriptTag.textContent && !loaded) {
-          const html = scriptTag.textContent;
-          console.log('Found HTML from extension in DOM, length:', html.length);
-          loaded = true;
-          loadFromExtension(html);
-          return true;
-        }
-        return false;
-      };
-      
-      // Check immediately
-      if (checkForHtml()) {
+      // If we already loaded this key and have data, don't reload.
+      // This prevents reloading when navigating between articles of the same law.
+      if (loadedKeyRef.current === storageKey && data.title) {
         return;
       }
+
+      console.log('Extension mode detected, loading storage key:', storageKey);
+      loadedKeyRef.current = storageKey;
+      setIsExtensionMode(true);
+      setLoading(true);
       
-      // Also check on DOM ready
-      const handleDOMReady = () => {
-        if (!loaded) {
-          console.log('DOM ready, checking for HTML...');
-          checkForHtml();
-        }
-      };
+      let isResponseReceived = false;
       
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', handleDOMReady);
-      } else {
-        handleDOMReady();
-      }
-      
-      // Poll for the script tag
-      let attempts = 0;
-      const pollInterval = setInterval(() => {
-        attempts++;
-        if (checkForHtml() || loaded || attempts > 100) {
-          clearInterval(pollInterval);
-          if (attempts > 100 && !loaded) {
-            const scriptTag = document.getElementById('eurlex-extension-html');
-            if (!scriptTag) {
-              console.error('Failed to find extension HTML script tag after polling');
-              setError('Failed to load HTML from extension. Please try capturing the page again.');
-            } else if (!scriptTag.textContent) {
-              console.error('Extension HTML script tag found but empty');
-              setError('Extension HTML script tag is empty. Please try capturing the page again.');
-            }
+      const handleMessage = (event) => {
+        if (event.source !== window) return;
+        
+        if (event.data.type === 'EURLEX_LAW_DATA') {
+          const payload = event.data.payload;
+          if (payload.error) {
+            console.error('Extension error:', payload.error);
+            setError(`Error loading law: ${payload.error}`);
+            setLoading(false);
+            isResponseReceived = true;
+          } else if (payload.html) {
+            console.log('Received law data from extension');
+            isResponseReceived = true;
+            loadFromExtension(payload.html, payload.metadata);
+          } else {
+            // Empty response, wait for retry
           }
         }
-      }, 50); // Check every 50ms for up to 5 seconds
+      };
+
+      window.addEventListener('message', handleMessage);
+      
+      // Request data immediately
+      window.postMessage({ type: 'EURLEX_GET_LAW', key: storageKey }, '*');
+      
+      // Poll in case the extension bridge script hasn't loaded yet
+      const pollInterval = setInterval(() => {
+        if (isResponseReceived) {
+          clearInterval(pollInterval);
+          return;
+        }
+        console.log('Polling for law data...');
+        window.postMessage({ type: 'EURLEX_GET_LAW', key: storageKey }, '*');
+      }, 500);
+      
+      // Stop polling after 5 seconds to avoid infinite loops if something is wrong
+      const timeout = setTimeout(() => {
+        clearInterval(pollInterval);
+        if (!isResponseReceived && !data.title) {
+           setError("Timed out waiting for extension data. Please ensure the extension is installed and active.");
+           setLoading(false);
+        }
+      }, 5000);
       
       return () => {
-        document.removeEventListener('DOMContentLoaded', handleDOMReady);
+        window.removeEventListener('message', handleMessage);
         clearInterval(pollInterval);
+        clearTimeout(timeout);
       };
     }
-  }, [searchParams, loadFromExtension]);
+  }, [searchParams, loadFromExtension, data.title]);
 
   // Load law when path changes
   useEffect(() => {

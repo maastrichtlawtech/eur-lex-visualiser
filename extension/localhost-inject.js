@@ -1,85 +1,70 @@
 // Content script injected into visualiser pages
-// This script reads HTML from extension storage via background script and makes it available to the page
+// Acts as a bridge between the web app and the extension background script
+// Uses window.postMessage to communicate with the web app without direct DOM injection
 
 (function() {
   'use strict';
   
-  // Get storage key from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const storageKey = urlParams.get('key');
-  const isExtension = urlParams.get('extension') === 'true';
+  console.log('EUR-Lex Visualiser Bridge loaded');
   
-  if (!isExtension || !storageKey) {
-    return; // Not an extension request
-  }
-  
-  console.log('Content script loaded, storage key:', storageKey);
-  
-  // Function to inject HTML into DOM as JSON
-  const injectIntoDOM = (html, url) => {
-    if (!html) {
-      console.error('injectIntoDOM called with no HTML');
-      return;
+  // Listen for messages from the web app
+  window.addEventListener('message', (event) => {
+    // We only accept messages from ourselves
+    if (event.source !== window) return;
+    
+    if (event.data.type && event.data.type.startsWith('EURLEX_')) {
+      handleAppMessage(event.data);
     }
-    
-    console.log('Injecting HTML into DOM as JSON, length:', html.length);
-    
-    // Remove any existing injection
-    const existing = document.getElementById('eurlex-extension-html');
-    if (existing) {
-      existing.remove();
-    }
-    
-    // Create a script tag with type="application/json" containing the HTML
-    const script = document.createElement('script');
-    script.id = 'eurlex-extension-html';
-    script.type = 'application/json';
-    script.setAttribute('data-storage-key', storageKey);
-    if (url) {
-      script.setAttribute('data-source-url', url);
-    }
-    script.textContent = html;
-    
-    // Inject into page
-    (document.head || document.documentElement).appendChild(script);
-    
-    console.log('HTML injected into DOM');
-  };
-  
-  // Get HTML from extension storage via background script
-  const fetchHtml = () => {
-    chrome.runtime.sendMessage(
-      { action: 'getHtml', storageKey: storageKey },
-      (response) => {
-        if (chrome.runtime.lastError) {
-          console.error('Error communicating with background script:', chrome.runtime.lastError);
-          return;
-        }
-        
-        if (response && response.html) {
-          injectIntoDOM(response.html, response.url || '');
-        } else if (response && response.error) {
-          console.error('Background script error:', response.error);
-        } else {
-          console.warn('No HTML found in extension storage for key:', storageKey);
-        }
-      }
-    );
-  };
-  
-  // Try to fetch immediately
-  fetchHtml();
-  
-  // Also set up a polling mechanism as backup
-  let pollCount = 0;
-  const pollInterval = setInterval(() => {
-    pollCount++;
-    if (pollCount > 50) {
-      clearInterval(pollInterval);
-    } else {
-      // Retry fetching
-      fetchHtml();
-    }
-  }, 200);
-})();
+  });
 
+  function handleAppMessage(data) {
+    console.log('Bridge received message:', data.type);
+    
+    switch (data.type) {
+      case 'EURLEX_GET_LAW':
+        chrome.runtime.sendMessage(
+          { action: 'getLaw', storageKey: data.key },
+          (response) => {
+            window.postMessage({
+              type: 'EURLEX_LAW_DATA',
+              payload: response || { error: 'No response from extension' }
+            }, '*');
+          }
+        );
+        break;
+        
+      case 'EURLEX_GET_LIST':
+        chrome.runtime.sendMessage(
+          { action: 'getLawList' },
+          (response) => {
+            window.postMessage({
+              type: 'EURLEX_LAW_LIST',
+              payload: response || { laws: [] }
+            }, '*');
+          }
+        );
+        break;
+        
+      case 'EURLEX_DELETE_LAW':
+        chrome.runtime.sendMessage(
+          { action: 'deleteLaw', storageKey: data.key },
+          (response) => {
+            window.postMessage({
+              type: 'EURLEX_DELETE_SUCCESS',
+              payload: { key: data.key, success: response?.success }
+            }, '*');
+          }
+        );
+        break;
+    }
+  }
+
+  // Notify the app that the extension is ready
+  // We do this after a small delay to ensure the app is initialized,
+  // and we can also do it periodically or when requested if we had a handshake.
+  // For now, let's just send a ready signal.
+  setTimeout(() => {
+    window.postMessage({ type: 'EURLEX_EXTENSION_READY' }, '*');
+  }, 500);
+
+})();
