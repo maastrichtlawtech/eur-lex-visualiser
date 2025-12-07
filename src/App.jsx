@@ -107,7 +107,7 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
                   </span>
                 </div>
                 <div 
-                  className="text-sm text-gray-600 line-clamp-6"
+                  className="text-sm text-gray-600 line-clamp-3"
                   dangerouslySetInnerHTML={{ __html: r.recital_html }}
                 />
               </div>
@@ -129,6 +129,7 @@ function LawViewer() {
   const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
+  const [openChapter, setOpenChapter] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isExtensionMode, setIsExtensionMode] = useState(false);
@@ -376,6 +377,20 @@ function LawViewer() {
     return chapters;
   }, [data.articles]);
 
+  // Auto-expand TOC chapter when selection changes
+  useEffect(() => {
+    if (selected.kind === "article" && selected.id && toc.length > 0) {
+      const foundCh = toc.find(
+        (ch) =>
+          ch.items.some((a) => a.article_number === selected.id) ||
+          ch.sections.some((s) => s.items.some((a) => a.article_number === selected.id))
+      );
+      if (foundCh) {
+        setOpenChapter(foundCh.label);
+      }
+    }
+  }, [selected.kind, selected.id, toc]);
+
   // --- Selection helpers ---
 
   const getExtensionParams = useMemo(() => {
@@ -540,30 +555,6 @@ function LawViewer() {
               {error}
             </div>
           )}
-
-          <div className="mt-8 flex flex-col items-center gap-2 text-xs text-gray-500">
-            <p>
-              Built by{" "}
-              <a
-                href="https://kollnig.net"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-700 hover:text-gray-900 underline"
-              >
-                Konrad Kollnig
-              </a>{" "}
-              at the{" "}
-              <a
-                href="https://www.maastrichtuniversity.nl/law-tech-lab"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-700 hover:text-gray-900 underline"
-              >
-                Law &amp; Tech Lab
-              </a>
-              , Maastricht University.
-            </p>
-          </div>
         </div>
 
         {/* Sidebar (Right) */}
@@ -581,10 +572,10 @@ function LawViewer() {
           </div>
 
           <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
-            {/* Combined Navigation Input Box */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
-              <div className="text-sm font-semibold text-gray-900 mb-2">Quick Navigation</div>
-              <div className="flex flex-wrap gap-3">
+            {/* Quick Navigation */}
+            <div>
+              <div className="px-1 mb-2 text-sm font-semibold text-gray-900">Quick Navigation</div>
+              <div className="flex flex-col gap-3">
                 {data.articles?.length > 0 && (
                   <NumberSelector
                     label="Article"
@@ -623,27 +614,22 @@ function LawViewer() {
             </div>
 
             {/* TOC */}
-            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-              <div className="bg-gray-50 px-4 py-3 font-semibold text-gray-900 border-b border-gray-200">
+            <div className="pt-2">
+              <div className="px-1 mb-2 text-sm font-semibold text-gray-900">
                 Table of Contents
               </div>
-              <div className="max-h-[60vh] overflow-y-auto p-2">
-                {toc.length > 0 ? (
-                  <div className="space-y-2">
-                    {toc.map((ch) => {
-                      const isExpanded =
-                        selected.kind === "article" &&
-                        (ch.items.some((a) => a.article_number === selected.id) ||
-                          ch.sections.some((s) =>
-                            s.items.some((a) => a.article_number === selected.id)
-                          ));
-                      return (
-                        <Accordion
-                          key={ch.label}
-                          title={ch.label || "(Untitled Chapter)"}
-                          isOpen={isExpanded}
-                        >
-                          {ch.items?.length > 0 && (
+              {toc.length > 0 ? (
+                <div className="space-y-2">
+                  {toc.map((ch) => {
+                    const isOpen = openChapter === ch.label;
+                    return (
+                      <Accordion
+                        key={ch.label}
+                        title={ch.label || "(Untitled Chapter)"}
+                        isOpen={isOpen}
+                        onToggle={() => setOpenChapter(isOpen ? null : ch.label)}
+                      >
+                        {ch.items?.length > 0 && (
                           <ul className="space-y-1">
                             {ch.items.map((a) => (
                               <li key={`toc-${a.article_number}`}>
@@ -710,15 +696,40 @@ function LawViewer() {
                       </Accordion>
                     );
                   })}
-                  </div>
-                ) : (
-                  <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>
+              )}
             </div>
           </div>
         </aside>
       </main>
+
+      <footer className="mt-auto border-t border-gray-100 bg-white py-8">
+        <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-2 px-6 text-xs text-gray-500">
+          <p>
+            Built by{" "}
+            <a
+              href="https://kollnig.net"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 hover:text-gray-900 underline"
+            >
+              Konrad Kollnig
+            </a>{" "}
+            at the{" "}
+            <a
+              href="https://www.maastrichtuniversity.nl/law-tech-lab"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-700 hover:text-gray-900 underline"
+            >
+              Law &amp; Tech Lab
+            </a>
+            , Maastricht University.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
