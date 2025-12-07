@@ -4,6 +4,7 @@ import { LAWS } from "./constants/laws.js";
 import { fetchText } from "./utils/fetch.js";
 import { parseAnyToCombined } from "./utils/parsers.js";
 import { getLawPathFromKey } from "./utils/url.js";
+import { mapRecitalsToArticles } from "./utils/nlp.js";
 import { Button } from "./components/Button.jsx";
 import { Accordion } from "./components/Accordion.jsx";
 import { Landing } from "./components/Landing.jsx";
@@ -60,6 +61,64 @@ function NumberSelector({ label, total, onSelect }) {
   );
 }
 
+// ---------------- Related Recitals Component ----------------
+function RelatedRecitals({ recitals, onSelectRecital }) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  if (!recitals || recitals.length === 0) return null;
+
+  return (
+    <div className="mt-8 rounded-xl border border-blue-100 bg-white overflow-hidden shadow-sm">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-8 py-5 text-left transition hover:bg-gray-50"
+      >
+        <div className="flex items-center gap-2 text-blue-900">
+          <span className="font-semibold">Potentially Related Recitals</span>
+          <span className="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full font-medium">
+            {recitals.length}
+          </span>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="h-5 w-5 text-blue-500" />
+        ) : (
+          <ChevronDown className="h-5 w-5 text-blue-500" />
+        )}
+      </button>
+
+        {isOpen && (
+        <div className="px-8 pb-8 pt-2 space-y-4 border-t border-gray-100">
+          <p className="text-sm text-gray-500">
+            These recitals appear to be related to this article based text analysis using simple AI. They do not have the quality of manually curated legal databases but exist for any EU law loaded in this visualiser.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {recitals.map((r) => (
+              <div
+                key={r.recital_number}
+                className="group relative flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-5 transition hover:border-blue-300 hover:bg-white hover:shadow-md cursor-pointer"
+                onClick={() => onSelectRecital(r)}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-serif font-bold text-gray-900">
+                    Recital {r.recital_number}
+                  </span>
+                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 font-medium">
+                    Read →
+                  </span>
+                </div>
+                <div 
+                  className="text-sm text-gray-600 line-clamp-6"
+                  dangerouslySetInnerHTML={{ __html: r.recital_html }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---------------- Law Viewer Component ----------------
 function LawViewer() {
   const { key, kind, id } = useParams();
@@ -67,7 +126,9 @@ function LawViewer() {
   const [searchParams] = useSearchParams();
   const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [] });
+  const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
+  const [returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isExtensionMode, setIsExtensionMode] = useState(false);
@@ -116,6 +177,19 @@ function LawViewer() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (data.articles?.length > 0 && data.recitals?.length > 0) {
+      // Run NLP mapping in a timeout to not block initial render
+      const timer = setTimeout(() => {
+        const map = mapRecitalsToArticles(data.recitals, data.articles);
+        setRecitalMap(map);
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      setRecitalMap(new Map());
+    }
+  }, [data.articles, data.recitals]);
 
   // Check for extension HTML from injected script tag in DOM
   useEffect(() => {
@@ -315,9 +389,9 @@ function LawViewer() {
     if (!a) return;
     setSelected({ kind: "article", id: a.article_number, html: a.article_html });
     if (isExtensionMode) {
-      navigate(`/extension/article/${a.article_number}${getExtensionParams}`, { replace: true });
+      navigate(`/extension/article/${a.article_number}${getExtensionParams}`);
     } else {
-      navigate(`/law/${key}/article/${a.article_number}`, { replace: true });
+      navigate(`/law/${key}/article/${a.article_number}`);
     }
   };
   const selectRecitalIdx = (idx) => {
@@ -325,9 +399,9 @@ function LawViewer() {
     if (!r) return;
     setSelected({ kind: "recital", id: r.recital_number, html: r.recital_html });
     if (isExtensionMode) {
-      navigate(`/extension/recital/${r.recital_number}${getExtensionParams}`, { replace: true });
+      navigate(`/extension/recital/${r.recital_number}${getExtensionParams}`);
     } else {
-      navigate(`/law/${key}/recital/${r.recital_number}`, { replace: true });
+      navigate(`/law/${key}/recital/${r.recital_number}`);
     }
   };
   const selectAnnexIdx = (idx) => {
@@ -335,9 +409,9 @@ function LawViewer() {
     if (!x) return;
     setSelected({ kind: "annex", id: x.annex_id, html: x.annex_html });
     if (isExtensionMode) {
-      navigate(`/extension/annex/${x.annex_id}${getExtensionParams}`, { replace: true });
+      navigate(`/extension/annex/${x.annex_id}${getExtensionParams}`);
     } else {
-      navigate(`/law/${key}/annex/${x.annex_id}`, { replace: true });
+      navigate(`/law/${key}/annex/${x.annex_id}`);
     }
   };
 
@@ -347,15 +421,31 @@ function LawViewer() {
     if (kind === "annex") return selectAnnexIdx(nextIndex);
   };
 
-  const onClickArticle = (a) =>
+  const onClickArticle = (a) => {
+    setReturnToArticle(null); // Clear return path when explicitly selecting an article
     selectArticleIdx(data.articles.findIndex((x) => x.article_number === a.article_number));
-  const onClickRecital = (r) =>
+  };
+  const onClickRecital = (r, fromArticleId = null) => {
+    // If we're coming from an article, save that state so we can go back
+    if (fromArticleId) {
+       setReturnToArticle({ id: fromArticleId });
+    } else if (selected.kind !== "recital") {
+       // If we navigate away to something else (article/annex), clear the return path
+       setReturnToArticle(null);
+    }
+    
     selectRecitalIdx(data.recitals.findIndex((x) => x.recital_number === r.recital_number));
-  const onClickAnnex = (ax) =>
+  };
+  const onClickAnnex = (ax) => {
+    setReturnToArticle(null);
     selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
+  };
 
-  // Update document title based on current law and selection
+  // Update document title and scroll to top based on current law and selection
   useEffect(() => {
+    // Scroll to top when selection changes
+    window.scrollTo(0, 0);
+
     // Determine the base name of the law:
     // 1. data.title (parsed from HTML)
     // 2. LAWS entry label (if known key)
@@ -403,17 +493,34 @@ function LawViewer() {
         <div className="min-w-0 flex-1 order-2 md:order-1">
           <section className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]">
             <div className="flex items-baseline justify-between mb-1">
-              <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight">
-                {selected.kind === "article" && `Article ${selected.id || ""}`}
-                {selected.kind === "recital" && `Recital ${selected.id || ""}`}
-                {selected.kind === "annex" && `Annex ${selected.id || ""}`}
-                {!selected.id && "No selection"}
-              </h2>
-              {loading && <span className="text-xs text-gray-500 animate-pulse">Loading content...</span>}
+              <div className="flex-1 min-w-0 pr-4">
+                <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate">
+                  {selected.kind === "article" && `Article ${selected.id || ""}`}
+                  {selected.kind === "recital" && `Recital ${selected.id || ""}`}
+                  {selected.kind === "annex" && `Annex ${selected.id || ""}`}
+                  {!selected.id && "No selection"}
+                </h2>
+                {loading && <span className="text-xs text-gray-500 animate-pulse">Loading content...</span>}
+              </div>
+
+              {/* Back to Article Button */}
+              {selected.kind === "recital" && returnToArticle && (
+                 <Button 
+                   variant="outline" 
+                   onClick={() => {
+                     const article = data.articles.find(a => a.article_number === returnToArticle.id);
+                     if (article) onClickArticle(article);
+                   }}
+                   className="flex-shrink-0 flex items-center gap-2 text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm font-semibold px-4 py-2 h-auto"
+                 >
+                   <ChevronUp className="h-4 w-4 rotate-[-90deg]" />
+                   Back to Article {returnToArticle.id}
+                 </Button>
+              )}
             </div>
 
             <article
-              className="prose prose-slate max-w-none md:prose-lg"
+              className="prose prose-slate max-w-none md:prose-lg mt-4"
               dangerouslySetInnerHTML={{
                 __html:
                   selected.html ||
@@ -421,6 +528,13 @@ function LawViewer() {
               }}
             />
           </section>
+
+            {selected.kind === "article" && (
+            <RelatedRecitals
+              recitals={recitalMap.get(selected.id) || []}
+              onSelectRecital={(r) => onClickRecital(r, selected.id)}
+            />
+          )}
 
           {error && (
             <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
