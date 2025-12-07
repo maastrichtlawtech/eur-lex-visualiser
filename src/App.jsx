@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Routes, Route, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LAWS } from "./constants/laws.js";
 import { fetchText } from "./utils/fetch.js";
@@ -8,6 +8,57 @@ import { Button } from "./components/Button.jsx";
 import { Accordion } from "./components/Accordion.jsx";
 import { Landing } from "./components/Landing.jsx";
 import { TopBar } from "./components/TopBar.jsx";
+import { ChevronDown, ChevronUp } from "lucide-react";
+
+function NumberSelector({ label, total, onSelect }) {
+  const [val, setVal] = useState("");
+  const [error, setError] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const num = parseInt(val, 10);
+    if (!isNaN(num) && num >= 1 && num <= total) {
+      onSelect(num);
+      // setVal(""); // Kept as per user request
+      setError(false);
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <span className="font-semibold text-gray-900">{label}</span>
+        <span className="text-xs text-gray-500 font-medium bg-gray-200 px-2 py-0.5 rounded-full">1–{total}</span>
+      </div>
+      <div className="p-4">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <input
+            type="number"
+            min="1"
+            max={total}
+            value={val}
+            onChange={(e) => {
+              setVal(e.target.value);
+              setError(false);
+            }}
+            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition ${
+              error
+                ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
+                : "border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+            }`}
+            placeholder={`Enter 1-${total}...`}
+          />
+          <Button type="submit" variant="default" disabled={!val}>
+            Go
+          </Button>
+        </form>
+        {error && <p className="mt-2 text-xs text-red-600">Please enter a valid number between 1 and {total}.</p>}
+      </div>
+    </div>
+  );
+}
 
 // ---------------- Law Viewer Component ----------------
 function LawViewer() {
@@ -20,8 +71,7 @@ function LawViewer() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isExtensionMode, setIsExtensionMode] = useState(false);
-
-  const contentRef = useRef(null); // used to jump the page to the content block
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const loadLaw = React.useCallback(async (path) => {
     if (!path) return;
@@ -304,11 +354,6 @@ function LawViewer() {
   const onClickAnnex = (ax) =>
     selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
 
-  // When selection changes, jump to the content display
-  useEffect(() => {
-    if (contentRef.current) contentRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, [selected.kind, selected.id]);
-
   // Update document title based on current law and selection
   useEffect(() => {
     if (isExtensionMode) {
@@ -344,128 +389,160 @@ function LawViewer() {
         isExtensionMode={isExtensionMode}
       />
 
-      <main className="w-full px-6 py-6">
-        {/* Top grid: TOC | Annexes | Recitals */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* TOC */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-4">
-            <h2 className="text-base font-semibold">Table of Contents</h2>
-            <p className="mt-1 text-sm text-gray-600">Chapters and Articles.</p>
-            <div className="mt-3 space-y-2">
-              {toc.map((ch) => (
-                <Accordion key={ch.label} title={ch.label || "(Untitled Chapter)"}>
-                  {ch.items?.length > 0 && (
-                    <ul className="space-y-1">
-                      {ch.items.map((a) => (
-                        <li key={`toc-${a.article_number}`}>
-                          <Button
-                            variant="ghost"
-                            className="w-full justify-start text-left"
-                            onClick={() => onClickArticle(a)}
-                          >
-                            <span className="truncate text-left">
-                              Article {a.article_number}: {a.article_title}
-                            </span>
-                            <span className="text-xs text-gray-500">›</span>
-                          </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {ch.sections?.map((sec) => (
-                    <div key={sec.label} className="mt-3">
-                      <div className="border-t border-gray-100 pt-2 text-center text-sm font-semibold text-gray-700">
-                        {sec.label}
-                      </div>
-                      <ul className="mt-1 space-y-1">
-                        {sec.items.map((a) => (
-                          <li key={`toc-${a.article_number}`}>
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-left"
-                              onClick={() => onClickArticle(a)}
-                            >
-                              <span className="truncate text-left">
-                                Article {a.article_number}: {a.article_title}
-                              </span>
-                              <span className="text-xs text-gray-500">›</span>
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
-                </Accordion>
-              ))}
-              {toc.length === 0 && <div className="text-sm text-gray-600">No articles detected.</div>}
+      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
+        {/* Main Content Area (Left/Center) */}
+        <div className="min-w-0 flex-1 order-2 md:order-1">
+          <section className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]">
+            <div className="flex items-baseline justify-between mb-1">
+              <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight">
+                {selected.kind === "article" && `Article ${selected.id || ""}`}
+                {selected.kind === "recital" && `Recital ${selected.id || ""}`}
+                {selected.kind === "annex" && `Annex ${selected.id || ""}`}
+                {!selected.id && "No selection"}
+              </h2>
+              {loading && <span className="text-xs text-gray-500 animate-pulse">Loading content...</span>}
             </div>
+
+            <article
+              className="prose prose-slate max-w-none md:prose-lg"
+              dangerouslySetInnerHTML={{
+                __html:
+                  selected.html ||
+                  "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
+              }}
+            />
           </section>
 
-          {/* Annexes */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-4">
-            <h2 className="text-base font-semibold">Annexes</h2>
-            <p className="mt-1 text-sm text-gray-600">Supplementary material.</p>
-            <div className="mt-3 space-y-2">
-              {data.annexes?.length ? (
-                data.annexes.map((ax, i) => (
-                  <Button
-                    key={`annex-${i}`}
-                    variant="outline"
-                    className="w-full justify-between"
-                    onClick={() => onClickAnnex(ax)}
-                  >
-                    <span className="truncate text-left">{ax.annex_title || ax.annex_id}</span>
-                    <span className="text-xs text-gray-500">›</span>
-                  </Button>
-                ))
-              ) : (
-                <div className="text-sm text-gray-600">No annexes detected.</div>
-              )}
+          {error && (
+            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              {error}
             </div>
-          </section>
-
-          {/* Recitals grid */}
-          <section className="rounded-2xl border border-gray-200 bg-white p-4">
-            <h2 className="text-base font-semibold">Recitals</h2>
-            <p className="mt-1 text-sm text-gray-600">Context for interpretation.</p>
-            <div className="mt-3 grid grid-cols-8 gap-2 md:grid-cols-10">
-              {data.recitals?.map((r) => (
-                <Button
-                  key={`rbtn-${r.recital_number}`}
-                  variant="outline"
-                  className="px-2 py-1"
-                  onClick={() => onClickRecital(r)}
-                >
-                  {r.recital_number}
-                </Button>
-              ))}
-              {(!data.recitals || data.recitals.length === 0) && (
-                <div className="col-span-full text-sm text-gray-600">No recitals.</div>
-              )}
-            </div>
-          </section>
+          )}
         </div>
 
-        {/* Selected content viewer */}
-        <section ref={contentRef} className="mt-6 rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="article-header">
-            Selected: {selected.kind} {selected.id || "–"}
-            {loading && <span className="ml-2 text-xs text-gray-500">(loading…)</span>}
+        {/* Sidebar (Right) */}
+        <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2">
+          {/* Mobile Toggle */}
+          <div className="mb-4 md:hidden">
+            <Button
+              variant="outline"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="w-full justify-between text-gray-900"
+            >
+              <span className="font-medium">Contents & Navigation</span>
+              {mobileMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </Button>
           </div>
-          <article
-            className="prose prose-base mx-auto max-w-3xl md:prose-lg"
-            dangerouslySetInnerHTML={{
-              __html: selected.html || "<em>Select an article, recital, or annex.</em>",
-            }}
-          />
-        </section>
 
-        {error && (
-          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            {error}
+          <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
+            {/* TOC */}
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 font-semibold text-gray-900 border-b border-gray-200">
+                Table of Contents
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-2">
+                {toc.length > 0 ? (
+                  <div className="space-y-2">
+                    {toc.map((ch) => (
+                      <Accordion key={ch.label} title={ch.label || "(Untitled Chapter)"}>
+                        {ch.items?.length > 0 && (
+                          <ul className="space-y-1">
+                            {ch.items.map((a) => (
+                              <li key={`toc-${a.article_number}`}>
+                                <Button
+                                  variant="ghost"
+                                  className={`w-full justify-start text-left ${
+                                    selected.kind === "article" && selected.id === a.article_number
+                                      ? "bg-blue-50 text-blue-700"
+                                      : ""
+                                  }`}
+                                  onClick={() => {
+                                    onClickArticle(a);
+                                    setMobileMenuOpen(false);
+                                  }}
+                                >
+                                  <span className="truncate text-left w-full">
+                                    <span className="font-medium">Art. {a.article_number}</span>
+                                    {a.article_title && (
+                                      <span className="ml-1 text-gray-500 font-normal opacity-80">
+                                        - {a.article_title}
+                                      </span>
+                                    )}
+                                  </span>
+                                </Button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+
+                        {ch.sections?.map((sec) => (
+                          <div key={sec.label} className="mt-3">
+                            <div className="border-t border-gray-100 pt-2 pb-1 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              {sec.label}
+                            </div>
+                            <ul className="space-y-1">
+                              {sec.items.map((a) => (
+                                <li key={`toc-${a.article_number}`}>
+                                  <Button
+                                    variant="ghost"
+                                    className={`w-full justify-start text-left ${
+                                      selected.kind === "article" && selected.id === a.article_number
+                                        ? "bg-blue-50 text-blue-700"
+                                        : ""
+                                    }`}
+                                    onClick={() => {
+                                      onClickArticle(a);
+                                      setMobileMenuOpen(false);
+                                    }}
+                                  >
+                                    <span className="truncate text-left w-full">
+                                      <span className="font-medium">Art. {a.article_number}</span>
+                                      {a.article_title && (
+                                        <span className="ml-1 text-gray-500 font-normal opacity-80">
+                                          - {a.article_title}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </Button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </Accordion>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>
+                )}
+              </div>
+            </div>
+
+            {/* Recitals Input */}
+            {data.recitals?.length > 0 && (
+              <NumberSelector
+                label="Recitals"
+                total={data.recitals.length}
+                onSelect={(n) => {
+                  selectRecitalIdx(n - 1);
+                  setMobileMenuOpen(false);
+                }}
+              />
+            )}
+
+            {/* Annexes Input */}
+            {data.annexes?.length > 0 && (
+              <NumberSelector
+                label="Annexes"
+                total={data.annexes.length}
+                onSelect={(n) => {
+                  selectAnnexIdx(n - 1);
+                  setMobileMenuOpen(false);
+                }}
+              />
+            )}
           </div>
-        )}
+        </aside>
       </main>
     </div>
   );

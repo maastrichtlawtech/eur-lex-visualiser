@@ -136,14 +136,46 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
       if (looksLikeAnnex) {
         // Title
         let title = t;
-        const titleP = el.parentElement?.querySelector("div.eli-title p, p.oj-ti-annex-2, p.stitle-annex-norm");
+        let titleP = el.parentElement?.querySelector("div.eli-title p, p.oj-ti-annex-2, p.stitle-annex-norm");
+        
+        // Extended logic: check next sibling for subtitle (common in some layouts like oj-doc-ti)
+        if (!titleP) {
+          const next = el.nextElementSibling;
+          if (next && next.tagName === "P" && (next.classList.contains("oj-doc-ti") || next.classList.contains("oj-normal"))) {
+             titleP = next;
+          }
+        }
+
         if (titleP) title = `${t} — ${getText(titleP)}`;
+        
         // Container: nearest subdivision, else the parent block
         let container = el.parentElement;
         while (container && !(container.tagName === "DIV" && container.classList.contains("eli-subdivision"))) {
           container = container.parentElement;
         }
-        const annex_html = innerHTML(container || el.parentElement || el);
+        const root = container || el.parentElement || el;
+
+        // Clone and clean up (remove duplicate header, highlight subtitle)
+        const markId = "ax-" + Math.random().toString(36).slice(2);
+        el.setAttribute("data-ax-id", markId);
+        if (titleP) titleP.setAttribute("data-ax-sub", markId);
+
+        const clone = root.cloneNode(true);
+        
+        el.removeAttribute("data-ax-id");
+        if (titleP) titleP.removeAttribute("data-ax-sub");
+
+        const headerNode = clone.querySelector(`[data-ax-id="${markId}"]`);
+        if (headerNode) headerNode.remove();
+
+        const subNode = clone.querySelector(`[data-ax-sub="${markId}"]`);
+        if (subNode) {
+          subNode.classList.add("oj-sti-art");
+          subNode.removeAttribute("data-ax-sub");
+        }
+
+        const annex_html = innerHTML(clone);
+        
         // Id/number if present
         const m = t.match(/^ANNEX\s*([IVXLC]+|\d+)?/i);
         const annex_id = (m && (m[1] || "").trim()) || title;

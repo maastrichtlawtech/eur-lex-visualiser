@@ -1,8 +1,8 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { LAWS } from "../constants/laws.js";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./Button.jsx";
 
-export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = false }) {
+export function TopBar({ lawKey, lists, selected, onPrevNext }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -24,41 +24,31 @@ export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = 
 
   const { kind, index, list, label } = getListAndIndex();
 
-  const handleLawChange = (e) => {
-    const selectedLaw = LAWS.find(l => l.value === e.target.value);
-    if (selectedLaw) {
-      navigate(`/law/${selectedLaw.key}`);
-    }
-  };
-
-  const currentLaw = LAWS.find(l => l.key === lawKey);
-
   return (
-    <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
-      <div className="mx-auto flex w-full flex-wrap items-center justify-between gap-3 px-6 py-3">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            className="ml-2 hidden text-xs md:inline-flex"
-            onClick={() => navigate("/")}
-          >
-            ← Overview of Laws
-          </Button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="text-base font-semibold hover:underline"
-          >
+    <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
+      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-6">
+        {/* Left: Branding */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+        >
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-white shadow-sm">
+            <span className="font-serif text-lg font-bold leading-none pb-0.5">§</span>
+          </div>
+          <span className="text-lg font-bold tracking-tight text-gray-900">
             EU Law Visualiser
-          </button>
+          </span>
+        </button>
 
-          <span className="hidden rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700 md:inline">
+        {/* Right: Navigation Controls */}
+        <div className="flex items-center gap-4">
+          <span className="hidden text-xs text-gray-500 md:inline-block">
+            Made by{" "}
             <a
               href="https://kollnig.net"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-900 hover:underline"
+              className="font-medium text-gray-700 hover:text-gray-900 hover:underline"
             >
               Konrad Kollnig
             </a>
@@ -67,57 +57,43 @@ export function TopBar({ lawKey, lists, selected, onPrevNext, isExtensionMode = 
               href="https://www.maastrichtuniversity.nl/law-tech-lab"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-gray-900 hover:underline"
+              className="font-medium text-gray-700 hover:text-gray-900 hover:underline"
             >
-              Law &amp; Tech Lab
-            </a>{" "}
-            Maastricht
+              Maastricht Law & Tech Lab
+            </a>
           </span>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* --- Unified navigation control --- */}
           {kind && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 rounded-lg bg-gray-50 p-1 ring-1 ring-gray-200">
               <Button
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
                 disabled={index <= 0}
                 onClick={() => onPrevNext(kind, index - 1)}
-                title={`Previous ${label.toLowerCase()}`}
+                title={`Previous ${label}`}
               >
-                ← Prev {label}
+                <ChevronLeft size={18} />
               </Button>
-              <span className="text-sm text-gray-600">
-                {label} {index + 1} of {list.length}
+
+              <span className="min-w-[100px] px-2 text-center text-sm font-medium text-gray-600">
+                <span className="text-gray-900">{label} {index + 1}</span>
+                <span className="mx-1 text-gray-400">/</span>
+                {list.length}
               </span>
+
               <Button
-                variant="outline"
+                variant="ghost"
+                className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900"
                 disabled={index === -1 || index >= list.length - 1}
                 onClick={() => onPrevNext(kind, index + 1)}
-                title={`Next ${label.toLowerCase()}`}
+                title={`Next ${label}`}
               >
-                Next {label} →
+                <ChevronRight size={18} />
               </Button>
             </div>
-          )}
-
-          {/* --- Law selection --- */}
-          {!isExtensionMode && (
-            <select
-              value={currentLaw?.value || ""}
-              onChange={handleLawChange}
-              className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
-            >
-              {LAWS.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label}
-                </option>
-              ))}
-            </select>
           )}
         </div>
       </div>
     </header>
   );
 }
-

@@ -6,21 +6,25 @@
 
 /* Article typography */
 .prose {
-  line-height: 1.75;
+  font-family: 'Merriweather', serif;
+  line-height: 1.8;
+  color: #1f2937; /* gray-800 - softer than pure black */
 }
 .prose .oj-ti-art {
-  display: block;
+  display: none; /* Hide duplicate article title */
   margin-top: 1rem;
   margin-bottom: .25rem;
   font-weight: 700;
   font-size: 1.375rem; /* ~22px */
   letter-spacing: .005em;
 }
+.prose .oj-sti-art,
 .prose .eli-title .oj-sti-art {
-  margin: 0 0 .75rem 0;
-  font-weight: 600;
+  margin: 0 0 1.25rem 0;
+  font-weight: 500;
   font-size: 1.125rem; /* ~18px */
-  color: #374151; /* gray-700 */
+  color: #374151; /* gray-700 - slightly lighter than header */
+  line-height: 1.4;
 }
 
 /* Paragraphs */
@@ -47,7 +51,8 @@
 .prose table td:last-child {
   vertical-align: top;
 }
-.prose table td:last-child p {
+.prose table td p,
+.prose table td p.oj-normal {
   margin: 0;                         /* keep list items tight */
 }
 
