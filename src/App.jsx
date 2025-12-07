@@ -443,9 +443,20 @@ function LawViewer() {
               <div className="max-h-[60vh] overflow-y-auto p-2">
                 {toc.length > 0 ? (
                   <div className="space-y-2">
-                    {toc.map((ch) => (
-                      <Accordion key={ch.label} title={ch.label || "(Untitled Chapter)"}>
-                        {ch.items?.length > 0 && (
+                    {toc.map((ch) => {
+                      const isExpanded =
+                        selected.kind === "article" &&
+                        (ch.items.some((a) => a.article_number === selected.id) ||
+                          ch.sections.some((s) =>
+                            s.items.some((a) => a.article_number === selected.id)
+                          ));
+                      return (
+                        <Accordion
+                          key={ch.label}
+                          title={ch.label || "(Untitled Chapter)"}
+                          isOpen={isExpanded}
+                        >
+                          {ch.items?.length > 0 && (
                           <ul className="space-y-1">
                             {ch.items.map((a) => (
                               <li key={`toc-${a.article_number}`}>
@@ -510,7 +521,8 @@ function LawViewer() {
                           </div>
                         ))}
                       </Accordion>
-                    ))}
+                    );
+                  })}
                   </div>
                 ) : (
                   <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>

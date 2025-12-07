@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
-export function Accordion({ title, children, defaultOpen = false }) {
+export function Accordion({ title, children, defaultOpen = false, isOpen }) {
   const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (isOpen !== undefined) {
+      setOpen(isOpen);
+    }
+  }, [isOpen]);
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white">
       <button
