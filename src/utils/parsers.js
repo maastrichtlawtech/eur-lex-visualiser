@@ -14,6 +14,60 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   const articles = [];
   const recitals = [];
   const annexes = [];
+  let title = "";
+
+  // Helper to format title (cut after "of" and Title Case)
+  const formatTitle = (t) => {
+    if (!t) return "";
+    // Cut after " of " (case insensitive)
+    let short = t.split(/\s+of\s+/i)[0];
+    
+    // Convert to Title Case logic
+    // 1. Lowercase everything
+    // 2. Capitalize first letter of each word
+    // 3. Fix specific acronyms like (EU), (EC)
+    return short.toLowerCase()
+      .replace(/(?:^|\s)\S/g, (a) => a.toUpperCase())
+      .replace(/\b(Eu|Ec|Eec|Euratom)\b/gi, (match) => match.toUpperCase());
+  };
+
+  // Extract title (first occurrence of title classes)
+  const titleEl = doc.querySelector(".oj-doc-ti, .doc-ti, .title-doc-first");
+  let mainTitle = "";
+  if (titleEl) {
+    mainTitle = formatTitle(titleEl.textContent.replace(/\s+/g, " ").trim());
+  }
+
+  // Look for short title in parentheses (e.g. "Artificial Intelligence Act")
+  let shortTitle = "";
+  const docTitles = doc.querySelectorAll(".oj-doc-ti, .doc-ti");
+  for (const el of docTitles) {
+    const txt = el.textContent.trim();
+    // Match pattern like "... (Artificial Intelligence Act)" at end of string
+    const match = txt.match(/\(([^)]+)\)$/);
+    if (match) {
+      const candidate = match[1].trim();
+      // Heuristic: Short titles are usually Capitalized Words, not "Text with EEA relevance"
+      if (
+        !candidate.toLowerCase().includes("text with eea relevance") &&
+        !candidate.match(/^\d{4}\/\d+$/) && // not just a number
+        candidate.length > 3 &&
+        candidate.length < 100
+      ) {
+        // Found a likely short title -> prioritize it
+        shortTitle = candidate;
+        break; 
+      }
+    }
+  }
+
+  // Combine titles if both exist and are different
+  if (shortTitle && mainTitle && !mainTitle.includes(shortTitle)) {
+    title = `${shortTitle} — ${mainTitle}`;
+  } else {
+    title = shortTitle || mainTitle;
+  }
+
   let currentDivNum, currentDivTitle;
 
   const norm = (s = "") => s.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
@@ -187,14 +241,19 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   // Sorts
   const asNum = (s) => (s == null ? NaN : parseInt(String(s).replace(/\D+/g, ""), 10));
   recitals.sort((a, b) => (asNum(a.recital_number) || 0) - (asNum(b.recital_number) || 0));
-  return { articles, recitals, annexes };
+  return { title, articles, recitals, annexes };
 }
 
 export function parseAnyToCombined(text) {
   try {
     const obj = JSON.parse(text);
     if (obj && (Array.isArray(obj.articles) || Array.isArray(obj.recitals) || Array.isArray(obj.annexes))) {
-      return { articles: obj.articles || [], recitals: obj.recitals || [], annexes: obj.annexes || [] };
+      return { 
+        title: obj.title || "", 
+        articles: obj.articles || [], 
+        recitals: obj.recitals || [], 
+        annexes: obj.annexes || [] 
+      };
     }
   } catch {
     /* not JSON */

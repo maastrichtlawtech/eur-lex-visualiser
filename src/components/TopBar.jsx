@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "./Button.jsx";
 
-export function TopBar({ lawKey, lists, selected, onPrevNext }) {
+export function TopBar({ lawKey, title, lists, selected, onPrevNext }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -26,11 +26,11 @@ export function TopBar({ lawKey, lists, selected, onPrevNext }) {
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-6">
+      <div className="relative mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-6">
         {/* Left: Branding */}
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2.5 transition-opacity hover:opacity-80"
+          className="relative z-10 flex items-center gap-2.5 transition-opacity hover:opacity-80"
         >
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-white shadow-sm">
             <span className="font-serif text-lg font-bold leading-none pb-0.5">§</span>
@@ -40,29 +40,22 @@ export function TopBar({ lawKey, lists, selected, onPrevNext }) {
           </span>
         </button>
 
-        {/* Right: Navigation Controls */}
-        <div className="flex items-center gap-4">
-          <span className="hidden text-xs text-gray-500 md:inline-block">
-            Made by{" "}
-            <a
-              href="https://kollnig.net"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-gray-700 hover:text-gray-900 hover:underline"
-            >
-              Konrad Kollnig
-            </a>
-            ,{" "}
-            <a
-              href="https://www.maastrichtuniversity.nl/law-tech-lab"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-medium text-gray-700 hover:text-gray-900 hover:underline"
-            >
-              Maastricht Law & Tech Lab
-            </a>
-          </span>
+        {/* Center: Title */}
+        {title && (
+          <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
+            <div className="flex items-center justify-center rounded-full bg-gray-100/80 px-4 py-1.5 backdrop-blur-md">
+              <span
+                className="max-w-xl truncate text-sm font-medium text-gray-700"
+                title={title}
+              >
+                {title}
+              </span>
+            </div>
+          </div>
+        )}
 
+        {/* Right: Navigation Controls */}
+        <div className="relative z-10 flex items-center gap-4">
           {kind && (
             <div className="flex items-center gap-1 rounded-lg bg-gray-50 p-1 ring-1 ring-gray-200">
               <Button

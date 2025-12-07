@@ -66,7 +66,7 @@ function LawViewer() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const lawPath = getLawPathFromKey(key);
-  const [data, setData] = useState({ articles: [], recitals: [], annexes: [] });
+  const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [] });
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -84,7 +84,7 @@ function LawViewer() {
       setData(combined);
     } catch (e) {
       setError(String(e.message || e));
-      setData({ articles: [], recitals: [], annexes: [] });
+      setData({ title: "", articles: [], recitals: [], annexes: [] });
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ function LawViewer() {
     } catch (e) {
       console.error('Error parsing HTML from extension:', e);
       setError(String(e.message || e));
-      setData({ articles: [], recitals: [], annexes: [] });
+      setData({ title: "", articles: [], recitals: [], annexes: [] });
     } finally {
       setLoading(false);
     }
@@ -383,6 +383,7 @@ function LawViewer() {
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TopBar
         lawKey={isExtensionMode ? "extension" : key}
+        title={data.title}
         lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
         selected={selected}
         onPrevNext={onPrevNext}
@@ -418,6 +419,30 @@ function LawViewer() {
               {error}
             </div>
           )}
+
+          <div className="mt-8 flex flex-col items-center gap-2 text-xs text-gray-500">
+            <p>
+              Built by{" "}
+              <a
+                href="https://kollnig.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-700 hover:text-gray-900 underline"
+              >
+                Konrad Kollnig
+              </a>{" "}
+              at the{" "}
+              <a
+                href="https://www.maastrichtuniversity.nl/law-tech-lab"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-700 hover:text-gray-900 underline"
+              >
+                Law &amp; Tech Lab
+              </a>
+              , Maastricht University.
+            </p>
+          </div>
         </div>
 
         {/* Sidebar (Right) */}
