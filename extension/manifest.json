@@ -48,7 +48,7 @@
         "http://127.0.0.1/*",
         "http://127.0.0.1:5173/*"
       ],
-      "js": ["localhost-inject.js"],
+      "js": ["app-bridge.js"],
       "run_at": "document_start"
     }
   ],

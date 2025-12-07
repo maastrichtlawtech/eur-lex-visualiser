@@ -111,6 +111,12 @@
       console.log('Not a EUR-Lex legal-content page, skipping auto-capture');
       return;
     }
+
+    // Only work on specific HTML view pages (must contain /TXT/HTML/)
+    if (!window.location.href.includes('/TXT/HTML/')) {
+      console.log('Not a EUR-Lex HTML view (missing /TXT/HTML/), skipping auto-capture');
+      return;
+    }
     
     // Check if page is fully loaded
     if (document.readyState !== 'complete') {
@@ -121,7 +127,8 @@
     // Small delay to ensure all content is rendered
     setTimeout(() => {
       const html = document.documentElement.outerHTML;
-      const url = window.location.href;
+      // Remove /HTML/ from URL to link to the main text view instead of the HTML view
+      const url = window.location.href.replace(/\/TXT\/HTML\//, '/TXT/');
       
       console.log('Auto-capturing EUR-Lex page, URL:', url);
       

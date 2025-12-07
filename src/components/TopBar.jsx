@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, X, ExternalLink } from "lucide-react";
 import { Button } from "./Button.jsx";
 import { searchContent } from "../utils/nlp.js";
 
@@ -225,7 +225,7 @@ function SearchBox({ lists, onNavigate }) {
   );
 }
 
-export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtensionMode }) {
+export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtensionMode, eurlexUrl }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -281,13 +281,24 @@ export function TopBar({ lawKey, title, lists, selected, onPrevNext, isExtension
         {/* Center: Title */}
         {title && (
           <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
-            <div className="flex items-center justify-center rounded-full bg-gray-100/80 px-4 py-1.5 backdrop-blur-md">
+            <div className="flex items-center justify-center rounded-full bg-gray-100/80 px-4 py-1.5 backdrop-blur-md gap-2">
               <span
                 className="max-w-xl truncate text-sm font-medium text-gray-700"
                 title={title}
               >
                 {title}
               </span>
+              {eurlexUrl && (
+                <a
+                  href={eurlexUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center text-gray-400 hover:text-[#003399] transition-colors"
+                  title="View on EUR-Lex"
+                >
+                  <ExternalLink size={14} />
+                </a>
+              )}
             </div>
           </div>
         )}

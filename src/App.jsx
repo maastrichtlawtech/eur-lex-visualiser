@@ -169,6 +169,12 @@ function LawViewer() {
       if (metadata?.title && (!combined.title || combined.title === 'Untitled Law')) {
         combined.title = metadata.title;
       }
+
+      // Use metadata url if available
+      if (metadata?.url) {
+        // Ensure we link to the main text view, not the HTML-specific view
+        combined.eurlex = metadata.url.replace(/\/TXT\/HTML\//, '/TXT/');
+      }
       
       console.log('Parsed result:', {
         articles: combined.articles?.length || 0,
@@ -503,6 +509,12 @@ function LawViewer() {
     }
   }, [key, selected.kind, selected.id, isExtensionMode, data.title]);
 
+  const eurlexUrl = useMemo(() => {
+    if (isExtensionMode) return data.eurlex || null;
+    const law = LAWS.find(l => l.key === key);
+    return law ? law.eurlex : null;
+  }, [key, isExtensionMode, data.eurlex]);
+
   // --------- Main visualiser UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -513,6 +525,7 @@ function LawViewer() {
         selected={selected}
         onPrevNext={onPrevNext}
         isExtensionMode={isExtensionMode}
+        eurlexUrl={eurlexUrl}
       />
 
       <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
