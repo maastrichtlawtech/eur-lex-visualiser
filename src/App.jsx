@@ -20,7 +20,7 @@ function NumberSelector({ label, total, onSelect }) {
     const num = parseInt(val, 10);
     if (!isNaN(num) && num >= 1 && num <= total) {
       onSelect(num);
-      // setVal(""); // Kept as per user request
+      setVal("");
       setError(false);
     } else {
       setError(true);
@@ -28,13 +28,9 @@ function NumberSelector({ label, total, onSelect }) {
   };
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <span className="font-semibold text-gray-900">{label}</span>
-        <span className="text-xs text-gray-500 font-medium bg-gray-200 px-2 py-0.5 rounded-full">1–{total}</span>
-      </div>
-      <div className="p-4">
-        <form onSubmit={handleSubmit} className="flex gap-2">
+    <div className="flex-1 min-w-[140px]">
+      <form onSubmit={handleSubmit} className="relative">
+        <div className="relative flex items-center">
           <input
             type="number"
             min="1"
@@ -44,19 +40,23 @@ function NumberSelector({ label, total, onSelect }) {
               setVal(e.target.value);
               setError(false);
             }}
-            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition ${
+            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition pr-12 ${
               error
                 ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
                 : "border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             }`}
-            placeholder={`Enter 1-${total}...`}
+            placeholder={`${label} (1-${total})`}
           />
-          <Button type="submit" variant="default" disabled={!val}>
+          <button
+            type="submit"
+            disabled={!val}
+            className="absolute right-1 top-1 bottom-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Go
-          </Button>
-        </form>
-        {error && <p className="mt-2 text-xs text-red-600">Please enter a valid number between 1 and {total}.</p>}
-      </div>
+          </button>
+        </div>
+        {error && <p className="absolute top-full left-0 mt-1 text-[10px] text-red-600">Invalid range</p>}
+      </form>
     </div>
   );
 }
@@ -492,31 +492,30 @@ function LawViewer() {
         {/* Main Content Area (Left/Center) */}
         <div className="min-w-0 flex-1 order-2 md:order-1">
           <section className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]">
-            <div className="flex items-baseline justify-between mb-1">
-              <div className="flex-1 min-w-0 pr-4">
-                <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate">
-                  {selected.kind === "article" && `Article ${selected.id || ""}`}
-                  {selected.kind === "recital" && `Recital ${selected.id || ""}`}
-                  {selected.kind === "annex" && `Annex ${selected.id || ""}`}
-                  {!selected.id && "No selection"}
-                </h2>
-                {loading && <span className="text-xs text-gray-500 animate-pulse">Loading content...</span>}
-              </div>
+            <div className="flex items-center justify-between mb-4 gap-4">
+              <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0">
+                {selected.kind === "article" && `Article ${selected.id || ""}`}
+                {selected.kind === "recital" && `Recital ${selected.id || ""}`}
+                {selected.kind === "annex" && `Annex ${selected.id || ""}`}
+                {!selected.id && "No selection"}
+              </h2>
 
-              {/* Back to Article Button */}
-              {selected.kind === "recital" && returnToArticle && (
-                 <Button 
-                   variant="outline" 
-                   onClick={() => {
-                     const article = data.articles.find(a => a.article_number === returnToArticle.id);
-                     if (article) onClickArticle(article);
-                   }}
-                   className="flex-shrink-0 flex items-center gap-2 text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm font-semibold px-4 py-2 h-auto"
-                 >
-                   <ChevronUp className="h-4 w-4 rotate-[-90deg]" />
-                   Back to Article {returnToArticle.id}
-                 </Button>
-              )}
+              <div className="flex items-center gap-3 flex-shrink-0">
+                {/* Back to Article Button */}
+                {selected.kind === "recital" && returnToArticle && (
+                   <Button 
+                     variant="outline" 
+                     onClick={() => {
+                       const article = data.articles.find(a => a.article_number === returnToArticle.id);
+                       if (article) onClickArticle(article);
+                     }}
+                     className="flex-shrink-0 flex items-center gap-2 text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm font-semibold px-4 py-2 h-auto"
+                   >
+                     <ChevronUp className="h-4 w-4 rotate-[-90deg]" />
+                     Back to Article {returnToArticle.id}
+                   </Button>
+                )}
+              </div>
             </div>
 
             <article
@@ -582,6 +581,47 @@ function LawViewer() {
           </div>
 
           <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
+            {/* Combined Navigation Input Box */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+              <div className="text-sm font-semibold text-gray-900 mb-2">Quick Navigation</div>
+              <div className="flex flex-wrap gap-3">
+                {data.articles?.length > 0 && (
+                  <NumberSelector
+                    label="Article"
+                    total={data.articles.length}
+                    onSelect={(n) => {
+                      const idx = data.articles.findIndex(a => parseInt(a.article_number) === n);
+                      if (idx !== -1) selectArticleIdx(idx);
+                      else selectArticleIdx(n - 1);
+                      setMobileMenuOpen(false);
+                    }}
+                  />
+                )}
+
+                {data.recitals?.length > 0 && (
+                  <NumberSelector
+                    label="Recital"
+                    total={data.recitals.length}
+                    onSelect={(n) => {
+                      selectRecitalIdx(n - 1);
+                      setMobileMenuOpen(false);
+                    }}
+                  />
+                )}
+
+                {data.annexes?.length > 0 && (
+                  <NumberSelector
+                    label="Annex"
+                    total={data.annexes.length}
+                    onSelect={(n) => {
+                      selectAnnexIdx(n - 1);
+                      setMobileMenuOpen(false);
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+
             {/* TOC */}
             <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
               <div className="bg-gray-50 px-4 py-3 font-semibold text-gray-900 border-b border-gray-200">
@@ -676,30 +716,6 @@ function LawViewer() {
                 )}
               </div>
             </div>
-
-            {/* Recitals Input */}
-            {data.recitals?.length > 0 && (
-              <NumberSelector
-                label="Recitals"
-                total={data.recitals.length}
-                onSelect={(n) => {
-                  selectRecitalIdx(n - 1);
-                  setMobileMenuOpen(false);
-                }}
-              />
-            )}
-
-            {/* Annexes Input */}
-            {data.annexes?.length > 0 && (
-              <NumberSelector
-                label="Annexes"
-                total={data.annexes.length}
-                onSelect={(n) => {
-                  selectAnnexIdx(n - 1);
-                  setMobileMenuOpen(false);
-                }}
-              />
-            )}
           </div>
         </aside>
       </main>

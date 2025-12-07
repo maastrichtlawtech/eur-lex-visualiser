@@ -1,6 +1,6 @@
 // Basic stop words list for EU law context (English)
 const STOP_WORDS = new Set([
-  "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "befolat", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "heatere", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "don", "should", "now",
+  "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "don", "should", "now",
   "union", "member", "states", "commission", "regulation", "directive", "decision", "article", "paragraph", "eu", "european", "law", "act", "provisions", "measures", "shall", "may", "accordance", "order", "laying", "establishing", "regarding", "whereas"
 ]);
 
@@ -98,6 +98,19 @@ function cosineSimilarity(vec1Obj, vec2Obj) {
 }
 
 /**
+ * Helper to strip HTML tags and normalize whitespace
+ */
+const stripTags = (html) => {
+  if (!html) return "";
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#160;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+/**
  * Map recitals to articles based on TF-IDF Cosine Similarity.
  * 
  * @param {Array} recitals - Array of { recital_number, recital_text, ... }
@@ -105,8 +118,6 @@ function cosineSimilarity(vec1Obj, vec2Obj) {
  * @returns {Map} - Map where key is article_number, value is array of matching recitals
  */
 export function mapRecitalsToArticles(recitals, articles) {
-  const stripTags = (html) => html ? html.replace(/<[^>]+>/g, " ") : "";
-
   // 1. Prepare Article Documents (Corpus)
   const articleDocs = articles.map(a => ({
     id: a.article_number,
@@ -151,4 +162,124 @@ export function mapRecitalsToArticles(recitals, articles) {
   });
 
   return articleToRecitals;
+}
+
+/**
+ * Simple search function using TF-IDF and cosine similarity.
+ * 
+ * For better relevance, this treats the query as a "document" and compares it 
+ * against all content (articles, recitals, annexes) using the same TF-IDF model.
+ */
+export function searchContent(query, data) {
+  if (!query || query.length < 2) return [];
+
+  const q = query.toLowerCase();
+  const qTokens = tokenize(q);
+  
+  // If query is too short/stopwords only, fallback to simple matching
+  if (qTokens.length === 0) {
+    // Very basic substring match fallback
+    return simpleSearch(query, data);
+  }
+
+  // 1. Prepare Corpus (All searchable items)
+  const docs = [];
+  
+  data.articles.forEach(a => {
+    const text = stripTags(a.article_html);
+    docs.push({
+      type: 'article',
+      id: a.article_number,
+      title: a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`,
+      text: text,
+      tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number),
+      preview: text.substring(0, 150) + "..."
+    });
+  });
+
+  data.recitals.forEach(r => {
+    const text = stripTags(r.recital_html);
+    docs.push({
+      type: 'recital',
+      id: r.recital_number,
+      title: `Recital ${r.recital_number}`,
+      text: text,
+      tokens: tokenize(text + " Recital " + r.recital_number),
+      preview: text.substring(0, 150) + "..."
+    });
+  });
+
+  data.annexes.forEach(a => {
+    const text = stripTags(a.annex_html);
+    docs.push({
+      type: 'annex',
+      id: a.annex_id,
+      title: `Annex ${a.annex_id} - ${a.annex_title}`,
+      text: text,
+      tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id),
+      preview: text.substring(0, 150) + "..."
+    });
+  });
+
+  // 2. Compute IDF for the entire corpus
+  const idf = computeIDF(docs);
+
+  // 3. Vectorize Query
+  const queryVec = computeTFIDFVector(qTokens, idf);
+
+  // 4. Compute Similarity & Score
+  const results = docs.map(doc => {
+    const docVec = computeTFIDFVector(doc.tokens, idf);
+    let score = cosineSimilarity(queryVec, docVec) * 100; // Base score
+
+    // Boost exact matches significantly
+    const titleLower = doc.title.toLowerCase();
+    const idStr = String(doc.id).toLowerCase();
+    
+    // Exact ID match (e.g. query "5" matches Article 5)
+    if (q === idStr) score += 200;
+    
+    // "Article X" type match
+    if (doc.type === 'article' && q.replace(/\s/g, '') === `article${idStr}`) score += 200;
+    if (doc.type === 'recital' && q.replace(/\s/g, '') === `recital${idStr}`) score += 200;
+
+    // Title substring match
+    if (titleLower.includes(q)) score += 50;
+
+    return {
+      ...doc,
+      score
+    };
+  });
+
+  // Filter and sort
+  return results
+    .filter(r => r.score > 0.5) // Threshold to remove noise
+    .sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Fallback simple search if tokenization yields nothing useful (e.g. stopwords only)
+ */
+function simpleSearch(query, data) {
+  const q = query.toLowerCase();
+  const results = [];
+  
+  const addItem = (type, id, title, text) => {
+    if (text.toLowerCase().includes(q) || title.toLowerCase().includes(q)) {
+      results.push({
+        type,
+        id,
+        title,
+        preview: text.substring(0, 150) + "...",
+        score: 1 // low score
+      });
+    }
+  };
+
+  data.articles.forEach(a => addItem('article', a.article_number, a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`, stripTags(a.article_html)));
+  data.recitals.forEach(r => addItem('recital', r.recital_number, `Recital ${r.recital_number}`, stripTags(r.recital_html)));
+  data.annexes.forEach(a => addItem('annex', a.annex_id, `Annex ${a.annex_id}`, stripTags(a.annex_html)));
+
+  return results;
 }

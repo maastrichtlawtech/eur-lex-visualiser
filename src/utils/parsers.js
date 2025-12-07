@@ -145,7 +145,6 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
       const article_number = n ? n[1] : getText(el);
       const titleBlock = container ? container.querySelector("div.eli-title p.oj-sti-art") : null;
       const article_title = titleBlock ? getText(titleBlock) : "";
-      console.log({ number: currentDivNum, title: currentDivTitle });
       articles.push({
         article_number,
         article_title,
@@ -166,7 +165,6 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
         const article_number = m ? m[1] : numP.textContent.trim();
         const titleP = el.querySelector("p.stitle-article-norm");
         const article_title = titleP ? getText(titleP) : "";
-        console.log({ number: currentDivNum, title: currentDivTitle });
         articles.push({
           article_number,
           article_title,
