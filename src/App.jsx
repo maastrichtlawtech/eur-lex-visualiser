@@ -13,6 +13,7 @@ import { TopBar } from "./components/TopBar.jsx";
 import { NavigationControls } from "./components/NavigationControls.jsx";
 import { PrintModal } from "./components/PrintModal.jsx";
 import { PrintView } from "./components/PrintView.jsx";
+import { SEO } from "./components/SEO.jsx";
 import { Info, Menu } from "lucide-react";
 
 function NumberSelector({ label, total, onSelect }) {
@@ -614,13 +615,9 @@ function LawViewer() {
     selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
   };
 
-  // Update document title based on current law and selection
-  useEffect(() => {
+  // Determine SEO metadata
+  const seoData = useMemo(() => {
     // Determine the base name of the law:
-    // 1. data.title (parsed from HTML)
-    // 2. LAWS entry label (if known key)
-    // 3. "Custom Law" (if extension mode)
-    // 4. key (fallback)
     let lawName = data.title;
     if (!lawName) {
       if (isExtensionMode) {
@@ -633,6 +630,9 @@ function LawViewer() {
       }
     }
 
+    let title = lawName;
+    let description = "Interactive visualisation of EU laws. Navigate articles, recitals, and annexes with ease.";
+    
     if (selected.id) {
       const kindLabel =
         selected.kind === "article"
@@ -640,10 +640,14 @@ function LawViewer() {
           : selected.kind === "recital"
           ? "Recital"
           : "Annex";
-      document.title = `${lawName} - ${kindLabel} ${selected.id} | LegalViz.EU`;
-    } else {
-      document.title = `${lawName} | LegalViz.EU`;
+      title = `${kindLabel} ${selected.id} - ${lawName}`;
+      description = `Read ${kindLabel} ${selected.id} of ${lawName} on LegalViz.EU.`;
+      
+      // Try to add a bit of content preview to description if available
+      // Note: HTML might need stripping, but keeping it simple for now
     }
+
+    return { title, description };
   }, [key, selected.kind, selected.id, isExtensionMode, data.title]);
 
   const eurlexUrl = useMemo(() => {
@@ -705,6 +709,11 @@ function LawViewer() {
   // --------- Main visualiser UI ----------
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white print:bg-white">
+      <SEO 
+        title={seoData.title} 
+        description={seoData.description}
+        type="article"
+      />
       <div className="print:hidden">
         <TopBar
           lawKey={isExtensionMode ? "extension" : key}

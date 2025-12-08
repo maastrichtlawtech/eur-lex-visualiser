@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Github, Trash, Clock } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
 import { TopBar } from "./TopBar.jsx";
+import { SEO } from "./SEO.jsx";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
 
@@ -170,10 +171,8 @@ export function Landing() {
   };
   
   // Update document title
-  useEffect(() => {
-    document.title = "LegalViz.EU";
-  }, []);
-  
+  // Handled by SEO component
+
   // Save last opened update when clicking a law
   const handleLawClick = (key, isCustom) => {
     // For custom laws, the timestamp is already in the law object from extension
@@ -279,6 +278,10 @@ export function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <SEO 
+        title="Interactive EU Law Visualiser" 
+        description="Read and navigate EU laws (GDPR, AI Act, DMA, DSA) efficiently with interactive visualisations. View articles and related recitals side-by-side."
+      />
       <TopBar 
         lawKey="" 
         title=""
@@ -501,7 +504,7 @@ export function Landing() {
                         </li>
                         <li className="mt-2">
                           <img
-                            src={`${import.meta.env.BASE_URL}/language-selector.png`}
+                            src={`${import.meta.env.BASE_URL}language-selector.png`}
                             alt="EUR-Lex language selector showing available languages"
                             className="w-full rounded-lg border border-gray-200 shadow-sm"
                           />
