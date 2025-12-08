@@ -19,7 +19,7 @@ export function Landing() {
     }
   });
 
-  const [showExtensionInfo, setShowExtensionInfo] = useState(!instructionsDismissed);
+  const [showExtensionInfo, setShowExtensionInfo] = useState(false);
 
   const dismissInstructions = (e) => {
     e.stopPropagation();
@@ -299,9 +299,13 @@ export function Landing() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
-            Read EU law beautifully,
-            <span className="block text-gray-600">one at a time.</span>
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium tracking-tight text-gray-700 ring-1 ring-gray-200 mb-6">
+            <span>LegalViz.EU</span>
+            <span className="mx-2 text-gray-400">|</span>
+            <span className="font-normal text-gray-500">EU Law Vizualiser</span>
+          </span>
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+            Read EU law beautifully.
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600 sm:text-base">
             Choose the instrument you are working with. You will then see an interactive view with
