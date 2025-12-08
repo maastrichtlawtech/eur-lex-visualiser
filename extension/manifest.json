@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "EUR-Lex Visualiser",
+  "name": "EU Law Visualiser",
   "version": "1.0.1",
-  "description": "Capture EUR-Lex HTML and send to visualiser",
+  "description": "Read EU law more beautifully",
   "browser_specific_settings": {
     "gecko": {
       "id": "eur-lex-visualiser@maastrichtlawtech.github.io",
