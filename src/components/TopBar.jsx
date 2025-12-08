@@ -234,7 +234,7 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                           <span className="flex-shrink-0 text-[10px] bg-green-100 text-green-700 px-1.5 rounded-full font-medium">Best Match</span>
                         )}
                         {item.law_label && (
-                          <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded-full font-medium truncate max-w-[120px]">
+                          <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
                             {item.law_label}
                           </span>
                         )}
