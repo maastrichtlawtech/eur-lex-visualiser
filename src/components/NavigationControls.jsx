@@ -25,7 +25,7 @@ export function NavigationControls({ selected, lists, onPrevNext, className = ""
   if (!kind || !list || list.length === 0) return null;
 
   return (
-    <div className={`flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-1 ring-1 ring-gray-200 ${className}`}>
+    <div className={`flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-1 border border-gray-200 ${className}`}>
       <Button
         variant="ghost"
         className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 flex-shrink-0"

@@ -44,17 +44,17 @@ function NumberSelector({ label, total, onSelect }) {
               setVal(e.target.value);
               setError(false);
             }}
-            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition pr-12 ${
+            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition pr-14 bg-gray-50 ${
               error
-                ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500"
-                : "border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50"
+                : "border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:bg-white"
             }`}
             placeholder={`${label} (1-${total})`}
           />
           <button
             type="submit"
             disabled={!val}
-            className="absolute right-1 top-1 bottom-1 px-2 bg-gray-100 hover:bg-gray-200 text-gray-600 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white hover:bg-gray-100 text-gray-600 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 shadow-sm"
           >
             Go
           </button>
@@ -724,7 +724,7 @@ function LawViewer() {
         </div>
 
         {/* Sidebar (Right) */}
-        <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2">
+        <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto">
           {/* Mobile Navigation */}
           <div className="md:hidden mb-4">
             <NavigationControls
@@ -750,7 +750,15 @@ function LawViewer() {
           <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
             {/* Quick Navigation */}
             <div>
-              <div className="px-1 mb-2 text-sm font-semibold text-gray-900">Quick Navigation</div>
+              <div className="px-1 mb-2 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-900">Quick Navigation</span>
+                <div className="group relative">
+                   <Info size={14} className="text-gray-400 cursor-help" />
+                   <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                     Use arrow keys (←/→) or swipe on mobile to navigate between articles/recitals/annexes.
+                   </div>
+                </div>
+              </div>
               
               {/* Desktop Navigation */}
               <div className="hidden md:block mb-4">
@@ -891,32 +899,6 @@ function LawViewer() {
           </div>
         </aside>
       </main>
-
-      <footer className="mt-auto border-t border-gray-100 bg-white py-8">
-        <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-2 px-6 text-xs text-gray-500">
-          <p>
-            Built by{" "}
-            <a
-              href="https://kollnig.net"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-700 hover:text-gray-900 underline"
-            >
-              Konrad Kollnig
-            </a>{" "}
-            at the{" "}
-            <a
-              href="https://www.maastrichtuniversity.nl/law-tech-lab"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-700 hover:text-gray-900 underline"
-            >
-              Law &amp; Tech Lab
-            </a>
-            , Maastricht University.
-          </p>
-        </div>
-      </footer>
       </div>
 
       {/* Print View (Hidden unless printing) */}

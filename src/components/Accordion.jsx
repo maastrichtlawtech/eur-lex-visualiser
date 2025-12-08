@@ -34,6 +34,7 @@ export function Accordion({ title, children, defaultOpen = false, isOpen, onTogg
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
             className="border-t p-2"
           >
             {children}

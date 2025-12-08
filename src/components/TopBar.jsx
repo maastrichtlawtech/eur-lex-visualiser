@@ -248,17 +248,42 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
     <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
       <div className="relative mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-6">
         {/* Left: Branding */}
-        <button
-          onClick={() => navigate("/")}
-          className="relative z-10 flex items-center gap-2.5 transition-opacity hover:opacity-80"
-        >
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#003399] text-white shadow-sm">
+        <div className="relative z-10 flex items-center gap-3">
+          <button
+            onClick={() => navigate("/")}
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#003399] text-white shadow-sm transition-opacity hover:opacity-80"
+          >
             <span className="font-serif text-lg font-bold leading-none pb-0.5">§</span>
+          </button>
+          <div className="flex flex-col">
+            <button
+              onClick={() => navigate("/")}
+              className="text-left text-lg font-bold tracking-tight text-gray-900 leading-none transition-opacity hover:opacity-80"
+            >
+              EU Law Visualiser
+            </button>
+            <span className="text-[10px] text-gray-500 leading-tight mt-0.5">
+              Built by{" "}
+              <a
+                href="https://kollnig.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-blue-700 hover:underline"
+              >
+                Konrad Kollnig
+              </a>{" "}
+              at the{" "}
+              <a
+                href="https://www.maastrichtuniversity.nl/law-tech-lab"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-blue-700 hover:underline"
+              >
+                Law & Tech Lab
+              </a>
+            </span>
           </div>
-          <span className="text-lg font-bold tracking-tight text-gray-900">
-            EU Law Visualiser
-          </span>
-        </button>
+        </div>
 
         {/* Center: Title */}
         {title && (
