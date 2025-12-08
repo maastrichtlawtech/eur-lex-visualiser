@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Routes, Route, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { createBrowserRouter, RouterProvider, Outlet, ScrollRestoration, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { LAWS } from "./constants/laws.js";
 import { fetchText } from "./utils/fetch.js";
 import { parseAnyToCombined } from "./utils/parsers.js";
@@ -460,11 +460,105 @@ function LawViewer() {
     }
   };
 
-  const onPrevNext = (kind, nextIndex) => {
+  const onPrevNext = React.useCallback((kind, nextIndex) => {
     if (kind === "article") return selectArticleIdx(nextIndex);
     if (kind === "recital") return selectRecitalIdx(nextIndex);
     if (kind === "annex") return selectAnnexIdx(nextIndex);
+  }, [selectArticleIdx, selectRecitalIdx, selectAnnexIdx]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignore if user is typing in an input or textarea
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+      if (e.key === "ArrowLeft") {
+        const { articles, recitals, annexes } = data;
+        let currentList = [];
+        let currentId = selected.id;
+        
+        if (selected.kind === "article") currentList = articles;
+        else if (selected.kind === "recital") currentList = recitals;
+        else if (selected.kind === "annex") currentList = annexes;
+
+        if (currentList && currentList.length > 0) {
+           const idx = currentList.findIndex(item => 
+             (item.article_number === currentId) || 
+             (item.recital_number === currentId) || 
+             (item.annex_id === currentId)
+           );
+           if (idx > 0) onPrevNext(selected.kind, idx - 1);
+        }
+      } else if (e.key === "ArrowRight") {
+        const { articles, recitals, annexes } = data;
+        let currentList = [];
+        let currentId = selected.id;
+        
+        if (selected.kind === "article") currentList = articles;
+        else if (selected.kind === "recital") currentList = recitals;
+        else if (selected.kind === "annex") currentList = annexes;
+
+        if (currentList && currentList.length > 0) {
+           const idx = currentList.findIndex(item => 
+             (item.article_number === currentId) || 
+             (item.recital_number === currentId) || 
+             (item.annex_id === currentId)
+           );
+           if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selected, data, onPrevNext]);
+
+  // Touch swipe navigation
+  const touchStartRef = React.useRef(null);
+  const touchEndRef = React.useRef(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    touchEndRef.current = null; 
+    touchStartRef.current = e.targetTouches[0].clientX;
   };
+
+  const onTouchMove = (e) => {
+    touchEndRef.current = e.targetTouches[0].clientX;
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartRef.current || !touchEndRef.current) return;
+    const distance = touchStartRef.current - touchEndRef.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    const { articles, recitals, annexes } = data;
+    let currentList = [];
+    let currentId = selected.id;
+    
+    if (selected.kind === "article") currentList = articles;
+    else if (selected.kind === "recital") currentList = recitals;
+    else if (selected.kind === "annex") currentList = annexes;
+
+    if (currentList && currentList.length > 0) {
+       const idx = currentList.findIndex(item => 
+         (item.article_number === currentId) || 
+         (item.recital_number === currentId) || 
+         (item.annex_id === currentId)
+       );
+       
+       if (isLeftSwipe) {
+         // Swipe Left -> Next Article
+         if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
+       } 
+       if (isRightSwipe) {
+         // Swipe Right -> Prev Article
+         if (idx > 0) onPrevNext(selected.kind, idx - 1);
+       }
+    }
+  };
+
 
   const onClickArticle = (a) => {
     setReturnToArticle(null); // Clear return path when explicitly selecting an article
@@ -486,11 +580,8 @@ function LawViewer() {
     selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
   };
 
-  // Update document title and scroll to top based on current law and selection
+  // Update document title based on current law and selection
   useEffect(() => {
-    // Scroll to top when selection changes
-    window.scrollTo(0, 0);
-
     // Determine the base name of the law:
     // 1. data.title (parsed from HTML)
     // 2. LAWS entry label (if known key)
@@ -593,7 +684,12 @@ function LawViewer() {
         <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
         {/* Main Content Area (Left/Center) */}
         <div className="min-w-0 flex-1 order-2 md:order-1">
-          <section className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]">
+          <section 
+            className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <div className="flex items-center justify-between mb-4 gap-4">
               <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0">
                 {selected.kind === "article" && `Article ${selected.id || ""}`}
@@ -601,23 +697,6 @@ function LawViewer() {
                 {selected.kind === "annex" && `Annex ${selected.id || ""}`}
                 {!selected.id && "No selection"}
               </h2>
-
-              <div className="flex items-center gap-3 flex-shrink-0">
-                {/* Back to Article Button */}
-                {selected.kind === "recital" && returnToArticle && (
-                   <Button 
-                     variant="outline" 
-                     onClick={() => {
-                       const article = data.articles.find(a => a.article_number === returnToArticle.id);
-                       if (article) onClickArticle(article);
-                     }}
-                     className="flex-shrink-0 flex items-center gap-2 text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 shadow-sm font-semibold px-4 py-2 h-auto"
-                   >
-                     <ChevronUp className="h-4 w-4 rotate-[-90deg]" />
-                     Back to Article {returnToArticle.id}
-                   </Button>
-                )}
-              </div>
             </div>
 
             <article
@@ -863,15 +942,47 @@ function LawViewer() {
 }
 
 // ---------------- App ----------------
-export default function App() {
+
+function Layout() {
   return (
-    <Routes>
-      <Route path="/" element={<Landing />} />
-      <Route path="/law/:key" element={<LawViewer />} />
-      <Route path="/law/:key/:kind/:id" element={<LawViewer />} />
-      {/* Extension routes - no key needed */}
-      <Route path="/extension" element={<LawViewer />} />
-      <Route path="/extension/:kind/:id" element={<LawViewer />} />
-    </Routes>
+    <>
+      <ScrollRestoration />
+      <Outlet />
+    </>
   );
+}
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: <Layout />,
+    children: [
+      {
+        index: true,
+        element: <Landing />,
+      },
+      {
+        path: "law/:key",
+        element: <LawViewer />,
+      },
+      {
+        path: "law/:key/:kind/:id",
+        element: <LawViewer />,
+      },
+      {
+        path: "extension",
+        element: <LawViewer />,
+      },
+      {
+        path: "extension/:kind/:id",
+        element: <LawViewer />,
+      },
+    ],
+  },
+], {
+  basename: "/eur-lex-visualiser",
+});
+
+export default function App() {
+  return <RouterProvider router={router} />;
 }
