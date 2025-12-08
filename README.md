@@ -10,14 +10,35 @@ A beautiful, interactive web application for reading and navigating European Uni
 
 **[Open LegalViz.EU](https://legalviz.eu)**
 
-## Features
+## ✨ Key Features
 
-- 📖 **Interactive Table of Contents**: Navigate through chapters, sections, and articles with an organized, collapsible structure
-- 📝 **Recitals Viewer**: Quick access to all recitals with a grid-based navigation interface
-- 📎 **Annexes Browser**: Easy browsing of supplementary materials and annexes
-- 🔍 **Article Navigation**: Seamless navigation between articles, recitals, and annexes with Previous/Next controls
-- 🔗 **Shareable Links**: Bookmark and share links to specific articles, recitals, or annexes
-- 📱 **Responsive Design**: Works beautifully on desktop, tablet, and mobile devices
+### 📖 Interactive Reading Experience
+- **Smart Table of Contents**: Navigate through chapters, sections, and articles with an organized, collapsible structure.
+- **Recitals Viewer**: Quick access to all recitals with a grid-based navigation interface.
+- **Annexes Browser**: Easy browsing of supplementary materials and annexes.
+- **Responsive Design**: Optimized for reading on desktop, tablet, and mobile devices.
+
+### 🔍 Powerful Search & Navigation
+- **Instant Search**: Full-text search across articles, recitals, and annexes.
+- **Keyboard Shortcuts**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows) to jump to any section instantly.
+- **Deep Linking**: Share exact locations in the text. URLs automatically update as you scroll or navigate.
+- **Article Navigation**: Seamlessly move between articles with Previous/Next controls.
+
+### 🤖 AI-Powered Context
+- **Related Recitals**: The tool automatically analyzes the text to find connections between articles and recitals.
+- **Inline Context**: View relevant recitals side-by-side with articles to better understand the legislative intent.
+- **TF-IDF Analysis**: Uses transparent, client-side text analysis (TF-IDF & Cosine Similarity) to suggest relationships without external API calls.
+
+### 🖨️ Professional Export
+- **Customizable Printing**: Create clean, print-ready documents or PDFs.
+- **Selective Export**: Choose exactly what to include—Articles, Recitals, Annexes, or specific combinations.
+- **Inline Context in PDF**: Option to include "Related Recitals" directly next to articles in the printed output.
+
+### 📚 Personal Library (Extension)
+- **Universal Support**: Open **any** recent EU law directly from EUR-Lex using the browser extension.
+- **Auto-Save**: Laws opened via the extension are automatically saved to your local library.
+- **Offline Access**: Once loaded, documents are stored locally in your browser for instant access.
+- **Privacy First**: All processing happens in your browser. No legal text is sent to our servers.
 
 ## How to Use
 
@@ -31,8 +52,6 @@ Visit [LegalViz.EU](https://legalviz.eu) and select from the pre-loaded legal in
 - **DSA** (EU 2022/2065)
 - **Data Act** (EU 2023/2854)
 - **Data Governance Act** (EU 2022/868)
-
-Simply click on any law to open it in an interactive viewer with a table of contents, recitals, and annexes.
 
 ### Option 2: Visualize Any EU Law from EUR-Lex (Extension Required)
 
@@ -57,9 +76,7 @@ The visualiser can open **any EU law** (at least newer ones) directly from EUR-L
 
 ![EUR-Lex language selector showing available languages](public/language-selector.png)
 
-> 💡 **Pro tip:** once the law has opened in the visualiser, bookmark the page to jump back to the same document later.
-
-The extension works automatically—no need to click anything. Just browse EUR-Lex as usual, and when you visit a legal document page, it will open in the visualiser.
+> 💡 **Pro tip:** laws opened via the extension are saved to your "Library" on the LegalViz homepage.
 
 ## Browser Support
 
@@ -128,21 +145,21 @@ eu-law-visualiser/
 ├── src/
 │   ├── components/        # React components
 │   │   ├── Accordion.jsx   # Collapsible accordion component
-│   │   ├── Button.jsx      # Reusable button component
-│   │   ├── Landing.jsx     # Landing page component
-│   │   └── TopBar.jsx      # Top navigation bar
+│   │   ├── Landing.jsx     # Landing page & Library
+│   │   ├── LawViewer.jsx   # Main document viewer
+│   │   ├── PrintModal.jsx  # Printing configuration
+│   │   ├── RelatedRecitals.jsx # AI context viewer
+│   │   └── TopBar.jsx      # Navigation & Search
 │   ├── constants/
 │   │   └── laws.js         # Supported laws configuration
 │   ├── utils/
-│   │   ├── fetch.js        # HTTP fetch utilities
+│   │   ├── nlp.js          # TF-IDF & Search logic
 │   │   ├── parsers.js      # XHTML/XML parsing logic
 │   │   └── url.js          # URL state management
 │   ├── App.jsx             # Main application component
-│   ├── main.jsx            # Application entry point
-│   └── index.css           # Global styles
+│   └── main.jsx            # Application entry point
 ├── extension/              # Browser extension files
 ├── package.json
-├── vite.config.js
 └── README.md
 ```
 
@@ -156,23 +173,11 @@ eu-law-visualiser/
 
 ### How It Works
 
-1. **Parsing**: The application parses EU legal documents (typically in XHTML format from EUR-Lex) to extract:
-   - Articles (with chapter/section hierarchy)
-   - Recitals
-   - Annexes
-
-2. **Navigation**: Users can navigate through the document using:
-   - The table of contents (organized by chapters and sections)
-   - Recital grid (numbered buttons)
-   - Annex list
-   - Previous/Next buttons in the top bar
-
-3. **State Management**: The selected law and current view are synchronized with the URL, allowing for:
-   - Bookmarkable links
-   - Browser back/forward navigation
-   - Direct linking to specific laws
-
-4. **Extension Integration**: The browser extension captures HTML from EUR-Lex pages and passes it to the visualiser, which parses and displays it in the same interactive format.
+1. **Parsing**: The application parses EU legal documents (typically in XHTML format from EUR-Lex) to extract structure (Articles, Chapters, Sections), Recitals, and Annexes.
+2. **Indexing**: A client-side inverted index is built on the fly to enable instant full-text search.
+3. **Analysis**: The `nlp.js` module computes TF-IDF vectors for all articles and recitals to find semantic similarities, linking recitals to relevant articles automatically.
+4. **State Management**: The selected law and current view are synchronized with the URL, allowing for bookmarkable links and browser back/forward navigation.
+5. **Extension Integration**: The browser extension captures HTML from EUR-Lex pages and passes it to the visualiser via window messaging and local storage, bypassing CORS restrictions and enabling the "Save to Library" feature.
 
 ## Contributing
 
