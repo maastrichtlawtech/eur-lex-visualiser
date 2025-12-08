@@ -2,11 +2,11 @@ import { LAWS } from "../constants/laws.js";
 
 /**
  * Get the law key from the current URL path
- * Expects format: /eur-lex-visualiser/law/:key
+ * Expects format: /law/:key
  */
 export const getLawKeyFromPath = (pathname) => {
   // Remove base path and extract law key
-  const basePath = "/eur-lex-visualiser";
+  const basePath = "";
   const pathWithoutBase = pathname.replace(basePath, "");
   const match = pathWithoutBase.match(/^\/law\/([^/]+)/);
   return match ? match[1] : null;

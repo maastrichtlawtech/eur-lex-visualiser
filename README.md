@@ -1,10 +1,10 @@
-# EU Law Visualiser
+# LegalViz.EU
 
 A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://kollnig.net) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/law-tech-lab).
 
 ## 🌐 Try It Now
 
-**[Open the EU Law Visualiser](https://maastrichtlawtech.github.io/eur-lex-visualiser)**
+**[Open LegalViz.EU](https://legalviz.eu)**
 
 ## Features
 
@@ -19,7 +19,7 @@ A beautiful, interactive web application for reading and navigating European Uni
 
 ### Option 1: Use Pre-loaded Laws (No Extension Required)
 
-Visit the [EU Law Visualiser](https://maastrichtlawtech.github.io/eur-lex-visualiser) and select from the pre-loaded legal instruments:
+Visit [LegalViz.EU](https://legalviz.eu) and select from the pre-loaded legal instruments:
 
 - **AI Act** (EU 2024/1689)
 - **GDPR** (EU 2016/679) – Unconsolidated

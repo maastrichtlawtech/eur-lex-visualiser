@@ -315,10 +315,10 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
               onClick={() => navigate("/")}
               className="text-left text-lg font-bold tracking-tight text-gray-900 leading-none transition-opacity hover:opacity-80"
             >
-              EU Law Visualiser
+              LegalViz.EU
             </button>
             <span className="text-[10px] text-gray-500 leading-tight mt-0.5">
-              Built by{" "}
+              By{" "}
               <a
                 href="https://kollnig.net"
                 target="_blank"
@@ -326,15 +326,15 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
                 className="hover:text-blue-700 hover:underline"
               >
                 Konrad Kollnig
-              </a>{" "}
-              at the{" "}
+              </a>
+              ,{" "}
               <a
                 href="https://www.maastrichtuniversity.nl/law-tech-lab"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-blue-700 hover:underline"
               >
-                Law & Tech Lab
+                Law & Tech Lab Maastricht
               </a>
             </span>
           </div>

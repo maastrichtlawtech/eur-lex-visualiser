@@ -5,7 +5,7 @@
 (function() {
   'use strict';
   
-  console.log('EUR-Lex Visualiser Bridge loaded');
+  console.log('LegalViz.EU Bridge loaded');
   
   // Listen for messages from the web app
   window.addEventListener('message', (event) => {

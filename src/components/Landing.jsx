@@ -171,7 +171,7 @@ export function Landing() {
   
   // Update document title
   useEffect(() => {
-    document.title = "EU Law Visualiser";
+    document.title = "LegalViz.EU";
   }, []);
   
   // Save last opened update when clicking a law
@@ -296,9 +296,6 @@ export function Landing() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium tracking-tight text-gray-700 ring-1 ring-gray-200">
-            EU Law Visualiser
-          </span>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
             Read EU law beautifully,
             <span className="block text-gray-600">one at a time.</span>

@@ -629,7 +629,7 @@ function LawViewer() {
         const law = LAWS.find((l) => l.key === key);
         lawName = law ? law.label : key;
       } else {
-        lawName = "EU Law Visualiser";
+        lawName = "LegalViz.EU";
       }
     }
 
@@ -640,9 +640,9 @@ function LawViewer() {
           : selected.kind === "recital"
           ? "Recital"
           : "Annex";
-      document.title = `${lawName} - ${kindLabel} ${selected.id} | EU Law Visualiser`;
+      document.title = `${lawName} - ${kindLabel} ${selected.id} | LegalViz.EU`;
     } else {
-      document.title = `${lawName} | EU Law Visualiser`;
+      document.title = `${lawName} | LegalViz.EU`;
     }
   }, [key, selected.kind, selected.id, isExtensionMode, data.title]);
 
@@ -994,7 +994,7 @@ const router = createBrowserRouter([
     ],
   },
 ], {
-  basename: "/eur-lex-visualiser",
+  basename: "/",
 });
 
 export default function App() {

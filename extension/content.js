@@ -9,9 +9,9 @@
     chrome.storage.local.get(['eurlexConfig'], (result) => {
       const config = result.eurlexConfig || {
         useLocalhost: false,
-        baseUrl: 'https://maastrichtlawtech.github.io/eur-lex-visualiser',
-        localhostUrl: 'http://localhost:5173/eur-lex-visualiser',
-        productionUrl: 'https://maastrichtlawtech.github.io/eur-lex-visualiser'
+        baseUrl: 'https://legalviz.eu',
+        localhostUrl: 'http://localhost:5173',
+        productionUrl: 'https://legalviz.eu'
       };
       callback(config);
     });

@@ -9,8 +9,8 @@
 // ============================================================================
 
 const USE_LOCALHOST = false;
-const LOCALHOST_URL = 'http://localhost:5173/eur-lex-visualiser';
-const PRODUCTION_URL = 'https://maastrichtlawtech.github.io/eur-lex-visualiser';
+const LOCALHOST_URL = 'http://localhost:5173';
+const PRODUCTION_URL = 'https://legalviz.eu';
 
 const config = {
   useLocalhost: USE_LOCALHOST,
@@ -63,7 +63,7 @@ async function updateIconState(tabId) {
       chrome.action.setBadgeText({ tabId: tabId, text: '' });
       chrome.action.setTitle({ 
         tabId: tabId, 
-        title: 'EUR-Lex Visualiser - Click to capture and visualise this page' 
+        title: 'LegalViz.EU - Click to capture and visualise this page' 
       });
     } else {
       // Disable icon - use greyscale icons (default)
@@ -78,7 +78,7 @@ async function updateIconState(tabId) {
       chrome.action.setBadgeText({ tabId: tabId, text: '' });
       chrome.action.setTitle({ 
         tabId: tabId, 
-        title: 'EUR-Lex Visualiser - Navigate to a EUR-Lex legal-content page to use this extension' 
+        title: 'LegalViz.EU - Navigate to a EUR-Lex legal-content page to use this extension' 
       });
     }
   } catch (error) {
@@ -87,7 +87,7 @@ async function updateIconState(tabId) {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('EUR-Lex Visualiser extension installed');
+  console.log('LegalViz.EU extension installed');
   // Ensure config is initialized
   chrome.storage.local.set({ eurlexConfig: config });
   // Initialize icons for all open tabs
