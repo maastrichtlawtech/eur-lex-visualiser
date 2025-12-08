@@ -306,9 +306,13 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
         <div className="relative z-10 flex items-center gap-3">
           <button
             onClick={() => navigate("/")}
-            className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#003399] text-white shadow-sm transition-opacity hover:opacity-80"
+            className="flex items-center justify-center transition-opacity hover:opacity-80"
           >
-            <span className="font-serif text-lg font-bold leading-none pb-0.5">§</span>
+            <img 
+              src={`${import.meta.env.BASE_URL}wizard.png`} 
+              alt="LegalViz Wizard" 
+              className="h-10 w-auto" 
+            />
           </button>
           <div className="hidden md:flex flex-col">
             <button

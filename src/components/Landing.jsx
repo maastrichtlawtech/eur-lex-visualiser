@@ -279,7 +279,6 @@ export function Landing() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <SEO 
-        title="Interactive EU Law Visualiser" 
         description="Read and navigate EU laws (GDPR, AI Act, DMA, DSA) efficiently with interactive visualisations. View articles and related recitals side-by-side."
       />
       <TopBar 
@@ -302,10 +301,11 @@ export function Landing() {
           <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium tracking-tight text-gray-700 ring-1 ring-gray-200 mb-6">
             <span>LegalViz.EU</span>
             <span className="mx-2 text-gray-400">|</span>
-            <span className="font-normal text-gray-500">EU Law Vizualiser</span>
+            <span className="font-normal text-gray-500">EU Law Visualizer</span>
           </span>
           <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
-            Read EU law beautifully.
+            Read EU law beautifully,
+            <span className="block text-gray-600">and with ease.</span>
           </h1>
           <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600 sm:text-base">
             Choose the instrument you are working with. You will then see an interactive view with
