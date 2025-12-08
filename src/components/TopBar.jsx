@@ -5,7 +5,7 @@ import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2 } from "lucide-r
 import { Button } from "./Button.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 
-function SearchBox({ lists, onNavigate }) {
+function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +16,13 @@ function SearchBox({ lists, onNavigate }) {
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
+
+  // Trigger search data loading on open
+  useEffect(() => {
+    if (isOpen) {
+      onSearchOpen?.();
+    }
+  }, [isOpen, onSearchOpen]);
 
   // Reset index when law changes
   useEffect(() => {
@@ -171,15 +178,15 @@ function SearchBox({ lists, onNavigate }) {
                    type="text"
                    value={query}
                    onChange={handleSearch}
-                   placeholder={isBuilding ? "Initializing search..." : "Search..."}
-                   disabled={isBuilding}
-                   className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50"
-                 />
-                 {isBuilding ? (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                      <Loader2 className="animate-spin text-blue-600" size={20} />
-                    </div>
-                 ) : query && (
+                  placeholder={isBuilding || isSearchLoading ? "Initializing search..." : "Search..."}
+                  disabled={isBuilding || isSearchLoading}
+                  className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50"
+                />
+                {isBuilding || isSearchLoading ? (
+                   <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                     <Loader2 className="animate-spin text-blue-600" size={20} />
+                   </div>
+                ) : query && (
                    <button 
                      onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
                      className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
@@ -226,6 +233,11 @@ function SearchBox({ lists, onNavigate }) {
                         {item.score > 100 && (
                           <span className="flex-shrink-0 text-[10px] bg-green-100 text-green-700 px-1.5 rounded-full font-medium">Best Match</span>
                         )}
+                        {item.law_label && (
+                          <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-1.5 rounded-full font-medium truncate max-w-[120px]">
+                            {item.law_label}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-500 line-clamp-2 pl-1 leading-relaxed">
                         <span className="opacity-70">...</span>
@@ -267,7 +279,7 @@ function SearchBox({ lists, onNavigate }) {
   );
 }
 
-export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPrint }) {
+export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPrint, showPrint = true, onSearchOpen, isSearchLoading }) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -278,11 +290,12 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
     
     // Ensure ID is a string before encoding
     const safeId = encodeURIComponent(String(item.id));
+    const targetLawKey = item.law_key || lawKey;
 
     if (isExtensionMode) {
       navigate(`/extension/${item.type}/${safeId}${extensionParams}`);
     } else {
-      navigate(`/law/${lawKey}/${item.type}/${safeId}`);
+      navigate(`/law/${targetLawKey}/${item.type}/${safeId}`);
     }
   };
 
@@ -354,18 +367,20 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
 
         {/* Right: Navigation Controls */}
         <div className="relative z-10 flex items-center gap-2 md:gap-4">
-          <div className="hidden md:block">
-            <Button
-              variant="ghost"
-              onClick={onPrint}
-              className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-              title="Print / PDF"
-            >
-              <Printer size={20} />
-            </Button>
-          </div>
+          {showPrint && (
+            <div className="hidden md:block">
+              <Button
+                variant="ghost"
+                onClick={onPrint}
+                className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                title="Print / PDF"
+              >
+                <Printer size={20} />
+              </Button>
+            </div>
+          )}
 
-          <SearchBox lists={lists} onNavigate={onNavigate} />
+          <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
           
         </div>
       </div>

@@ -204,7 +204,9 @@ export function buildSearchIndex(data) {
         title: a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`,
         text: text,
         tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number),
-        preview: text.substring(0, 150) + "..."
+        preview: text.substring(0, 150) + "...",
+        law_label: a.law_label, // Add law context
+        law_key: a.law_key     // Add law context
       });
     });
   }
@@ -218,7 +220,9 @@ export function buildSearchIndex(data) {
         title: `Recital ${r.recital_number}`,
         text: text,
         tokens: tokenize(text + " Recital " + r.recital_number),
-        preview: text.substring(0, 150) + "..."
+        preview: text.substring(0, 150) + "...",
+        law_label: r.law_label,
+        law_key: r.law_key
       });
     });
   }
@@ -232,7 +236,9 @@ export function buildSearchIndex(data) {
         title: `Annex ${a.annex_id} - ${a.annex_title}`,
         text: text,
         tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id),
-        preview: text.substring(0, 150) + "..."
+        preview: text.substring(0, 150) + "...",
+        law_label: a.law_label,
+        law_key: a.law_key
       });
     });
   }
