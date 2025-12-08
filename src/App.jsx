@@ -205,16 +205,55 @@ function LawViewer() {
 
   useEffect(() => {
     if (data.articles?.length > 0 && data.recitals?.length > 0) {
-      // Run NLP mapping in a timeout to not block initial render
+      
+      // Generate a cache key for NLP results
+      let cacheKey = null;
+      if (key && !isExtensionMode) {
+        cacheKey = `nlp_map_${key}`;
+      } else if (isExtensionMode && data.title) {
+        // Fallback for extension mode if title exists
+        // Simple hash of title + lengths to identify specific content
+        const safeTitle = data.title.replace(/\s+/g, '_').substring(0, 50);
+        cacheKey = `nlp_map_ext_${safeTitle}_${data.articles.length}_${data.recitals.length}`;
+      }
+
+      // 1. Try to load from cache
+      if (cacheKey) {
+        try {
+          const cached = localStorage.getItem(cacheKey);
+          if (cached) {
+            // console.log("Loaded NLP mapping from cache:", cacheKey);
+            const entries = JSON.parse(cached);
+            setRecitalMap(new Map(entries));
+            return;
+          }
+        } catch (e) {
+          console.warn('Error reading NLP cache', e);
+        }
+      }
+
+      // 2. If not cached, compute in background (setTimeout)
       const timer = setTimeout(() => {
+        // console.time("NLP Calculation");
         const map = mapRecitalsToArticles(data.recitals, data.articles);
+        // console.timeEnd("NLP Calculation");
         setRecitalMap(map);
+        
+        // 3. Save to cache
+        if (cacheKey) {
+          try {
+            // Map entries -> Array of [key, value] for JSON
+            localStorage.setItem(cacheKey, JSON.stringify(Array.from(map.entries())));
+          } catch (e) {
+            console.warn('Error writing NLP cache', e);
+          }
+        }
       }, 100);
       return () => clearTimeout(timer);
     } else {
       setRecitalMap(new Map());
     }
-  }, [data.articles, data.recitals]);
+  }, [data.articles, data.recitals, key, isExtensionMode, data.title]);
 
   // Ref to track the currently loaded law key to prevent re-loading on navigation
   const loadedKeyRef = React.useRef(null);

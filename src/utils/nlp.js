@@ -188,78 +188,92 @@ export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
 }
 
 /**
- * Simple search function using TF-IDF and cosine similarity.
- * 
- * For better relevance, this treats the query as a "document" and compares it 
- * against all content (articles, recitals, annexes) using the same TF-IDF model.
+ * Pre-compute search index for a given law data.
+ * @param {Object} data - { articles, recitals, annexes }
+ * @returns {Object} - Index object containing docs with vectors and IDF
  */
-export function searchContent(query, data) {
+export function buildSearchIndex(data) {
+  const docs = [];
+  
+  if (data.articles) {
+    data.articles.forEach(a => {
+      const text = stripTags(a.article_html);
+      docs.push({
+        type: 'article',
+        id: a.article_number,
+        title: a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`,
+        text: text,
+        tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number),
+        preview: text.substring(0, 150) + "..."
+      });
+    });
+  }
+
+  if (data.recitals) {
+    data.recitals.forEach(r => {
+      const text = stripTags(r.recital_html);
+      docs.push({
+        type: 'recital',
+        id: r.recital_number,
+        title: `Recital ${r.recital_number}`,
+        text: text,
+        tokens: tokenize(text + " Recital " + r.recital_number),
+        preview: text.substring(0, 150) + "..."
+      });
+    });
+  }
+
+  if (data.annexes) {
+    data.annexes.forEach(a => {
+      const text = stripTags(a.annex_html);
+      docs.push({
+        type: 'annex',
+        id: a.annex_id,
+        title: `Annex ${a.annex_id} - ${a.annex_title}`,
+        text: text,
+        tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id),
+        preview: text.substring(0, 150) + "..."
+      });
+    });
+  }
+
+  const idf = computeIDF(docs);
+  
+  // Pre-compute vectors for all docs
+  const docVectors = docs.map(doc => ({
+    ...doc,
+    vec: computeTFIDFVector(doc.tokens, idf)
+  }));
+
+  return { docs: docVectors, idf };
+}
+
+/**
+ * Search using a pre-computed index.
+ * @param {string} query 
+ * @param {Object} index 
+ */
+export function searchIndex(query, index) {
   if (!query || query.length < 2) return [];
+  if (!index || !index.docs) return [];
 
   const q = query.toLowerCase();
   const qTokens = tokenize(q);
-  
-  // If query is too short/stopwords only, fallback to simple matching
+
   if (qTokens.length === 0) {
-    // Very basic substring match fallback
-    return simpleSearch(query, data);
+    // Fallback to simple substring match on pre-processed docs
+    return simpleSearchDocs(query, index.docs);
   }
 
-  // 1. Prepare Corpus (All searchable items)
-  const docs = [];
-  
-  data.articles.forEach(a => {
-    const text = stripTags(a.article_html);
-    docs.push({
-      type: 'article',
-      id: a.article_number,
-      title: a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`,
-      text: text,
-      tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number),
-      preview: text.substring(0, 150) + "..."
-    });
-  });
+  const queryVec = computeTFIDFVector(qTokens, index.idf);
 
-  data.recitals.forEach(r => {
-    const text = stripTags(r.recital_html);
-    docs.push({
-      type: 'recital',
-      id: r.recital_number,
-      title: `Recital ${r.recital_number}`,
-      text: text,
-      tokens: tokenize(text + " Recital " + r.recital_number),
-      preview: text.substring(0, 150) + "..."
-    });
-  });
+  const results = index.docs.map(doc => {
+    let score = cosineSimilarity(queryVec, doc.vec) * 100;
 
-  data.annexes.forEach(a => {
-    const text = stripTags(a.annex_html);
-    docs.push({
-      type: 'annex',
-      id: a.annex_id,
-      title: `Annex ${a.annex_id} - ${a.annex_title}`,
-      text: text,
-      tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id),
-      preview: text.substring(0, 150) + "..."
-    });
-  });
-
-  // 2. Compute IDF for the entire corpus
-  const idf = computeIDF(docs);
-
-  // 3. Vectorize Query
-  const queryVec = computeTFIDFVector(qTokens, idf);
-
-  // 4. Compute Similarity & Score
-  const results = docs.map(doc => {
-    const docVec = computeTFIDFVector(doc.tokens, idf);
-    let score = cosineSimilarity(queryVec, docVec) * 100; // Base score
-
-    // Boost exact matches significantly
     const titleLower = doc.title.toLowerCase();
     const idStr = String(doc.id).toLowerCase();
     
-    // Exact ID match (e.g. query "5" matches Article 5)
+    // Exact ID match
     if (q === idStr) score += 200;
     
     // "Article X" type match
@@ -275,34 +289,28 @@ export function searchContent(query, data) {
     };
   });
 
-  // Filter and sort
   return results
-    .filter(r => r.score > 0.5) // Threshold to remove noise
-    .sort((a, b) => b.score - a.score);
+    .filter(r => r.score > 0.5)
+    .sort((a, b) => b.score - a.score)
+    .map(r => ({ ...r, vec: undefined })); // Clean up output
+}
+
+function simpleSearchDocs(query, docs) {
+   const q = query.toLowerCase();
+   return docs
+     .filter(doc => doc.text.toLowerCase().includes(q) || doc.title.toLowerCase().includes(q))
+     .map(doc => ({
+       ...doc,
+       score: 1,
+       vec: undefined
+     }));
 }
 
 /**
- * Fallback simple search if tokenization yields nothing useful (e.g. stopwords only)
+ * Simple search function using TF-IDF and cosine similarity.
+ * Now a wrapper around buildSearchIndex and searchIndex.
  */
-function simpleSearch(query, data) {
-  const q = query.toLowerCase();
-  const results = [];
-  
-  const addItem = (type, id, title, text) => {
-    if (text.toLowerCase().includes(q) || title.toLowerCase().includes(q)) {
-      results.push({
-        type,
-        id,
-        title,
-        preview: text.substring(0, 150) + "...",
-        score: 1 // low score
-      });
-    }
-  };
-
-  data.articles.forEach(a => addItem('article', a.article_number, a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`, stripTags(a.article_html)));
-  data.recitals.forEach(r => addItem('recital', r.recital_number, `Recital ${r.recital_number}`, stripTags(r.recital_html)));
-  data.annexes.forEach(a => addItem('annex', a.annex_id, `Annex ${a.annex_id}`, stripTags(a.annex_html)));
-
-  return results;
+export function searchContent(query, data) {
+  const index = buildSearchIndex(data);
+  return searchIndex(query, index);
 }

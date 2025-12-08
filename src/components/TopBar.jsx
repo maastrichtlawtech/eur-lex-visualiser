@@ -1,18 +1,46 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Search, X, ExternalLink, Printer } from "lucide-react";
+import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2 } from "lucide-react";
 import { Button } from "./Button.jsx";
-import { searchContent } from "../utils/nlp.js";
+import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 
 function SearchBox({ lists, onNavigate }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [searchIndex, setSearchIndex] = useState(null);
+  const [isBuilding, setIsBuilding] = useState(false);
+
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
+
+  // Reset index when law changes
+  useEffect(() => {
+    setSearchIndex(null);
+    setQuery("");
+    setResults([]);
+  }, [lists]);
+
+  // Build index on open if needed
+  useEffect(() => {
+    if (isOpen && !searchIndex && !isBuilding) {
+      setIsBuilding(true);
+      // Timeout to allow UI to render loading state
+      setTimeout(() => {
+        try {
+          const idx = buildSearchIndex(lists);
+          setSearchIndex(idx);
+        } catch (e) {
+          console.error("Failed to build search index", e);
+        } finally {
+          setIsBuilding(false);
+        }
+      }, 100);
+    }
+  }, [isOpen, searchIndex, isBuilding, lists]);
 
   // Close when pressing Escape
   useEffect(() => {
@@ -69,8 +97,17 @@ function SearchBox({ lists, onNavigate }) {
   const handleSearch = (e) => {
     const q = e.target.value;
     setQuery(q);
+    
+    if (isBuilding) return;
+
     if (q.length >= 2) {
-      const res = searchContent(q, lists);
+      let res;
+      if (searchIndex) {
+        res = searchWithIndex(q, searchIndex);
+      } else {
+        // Fallback if index missing for some reason
+        res = searchContent(q, lists);
+      }
       setResults(res);
     } else {
       setResults([]);
@@ -134,10 +171,15 @@ function SearchBox({ lists, onNavigate }) {
                    type="text"
                    value={query}
                    onChange={handleSearch}
-                   placeholder="Search..."
-                   className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8"
+                   placeholder={isBuilding ? "Initializing search..." : "Search..."}
+                   disabled={isBuilding}
+                   className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50"
                  />
-                 {query && (
+                 {isBuilding ? (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                      <Loader2 className="animate-spin text-blue-600" size={20} />
+                    </div>
+                 ) : query && (
                    <button 
                      onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
                      className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
