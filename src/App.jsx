@@ -81,7 +81,7 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 px-6 md:px-12">
           <p className="text-sm text-gray-500">
-            These recitals appear to be related to this article based text analysis using simple AI. They do not have the quality of manually curated legal databases but exist for any EU law loaded in this visualiser.
+            These recitals appear to be related to this article based text analysis using simple AI (known as <a href="https://ebooks.iospress.nl/volumearticle/56169" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">TF-IDF similarity</a>). This approach does not have the quality of manually curated legal databases but exist for any EU law loaded in this visualiser.
           </p>
         </div>
 
