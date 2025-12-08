@@ -297,7 +297,7 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
           >
             <span className="font-serif text-lg font-bold leading-none pb-0.5">§</span>
           </button>
-          <div className="flex flex-col">
+          <div className="hidden md:flex flex-col">
             <button
               onClick={() => navigate("/")}
               className="text-left text-lg font-bold tracking-tight text-gray-900 leading-none transition-opacity hover:opacity-80"
@@ -329,10 +329,10 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
 
         {/* Center: Title */}
         {title && (
-          <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
-            <div className="flex items-center justify-center rounded-full bg-gray-100/80 px-4 py-1.5 backdrop-blur-md gap-2">
+          <div className="absolute left-14 right-14 top-1/2 -translate-y-1/2 md:left-1/2 md:right-auto md:-translate-x-1/2">
+            <div className="flex items-center justify-center gap-2 w-full md:w-auto">
               <span
-                className="max-w-xl truncate text-sm font-medium text-gray-700"
+                className="truncate text-sm font-medium text-gray-700 min-w-0 md:max-w-xl"
                 title={title}
               >
                 {title}
@@ -342,7 +342,7 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
                   href={eurlexUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center text-gray-400 hover:text-[#003399] transition-colors"
+                  className="flex items-center text-gray-400 hover:text-[#003399] transition-colors flex-shrink-0"
                   title="View on EUR-Lex"
                 >
                   <ExternalLink size={14} />
@@ -354,15 +354,16 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
 
         {/* Right: Navigation Controls */}
         <div className="relative z-10 flex items-center gap-2 md:gap-4">
-          <Button
-            variant="ghost"
-            onClick={onPrint}
-            className="hidden md:flex h-9 px-3 gap-2 items-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm font-medium"
-            title="Create a print-ready view or PDF"
-          >
-            <Printer size={16} />
-            <span>Print / PDF</span>
-          </Button>
+          <div className="hidden md:block">
+            <Button
+              variant="ghost"
+              onClick={onPrint}
+              className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+              title="Print / PDF"
+            >
+              <Printer size={20} />
+            </Button>
+          </div>
 
           <SearchBox lists={lists} onNavigate={onNavigate} />
           

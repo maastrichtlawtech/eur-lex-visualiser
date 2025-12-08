@@ -36,7 +36,7 @@ export function NavigationControls({ selected, lists, onPrevNext, className = ""
         <ChevronLeft size={18} />
       </Button>
 
-      <span className="min-w-[100px] px-2 text-center text-sm font-medium text-gray-600 truncate">
+      <span className="flex-1 px-2 text-center text-sm font-medium text-gray-600 truncate min-w-0">
         <span className="text-gray-900">{label} {index + 1}</span>
         <span className="mx-1 text-gray-400">/</span>
         {list.length}

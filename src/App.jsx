@@ -13,7 +13,7 @@ import { TopBar } from "./components/TopBar.jsx";
 import { NavigationControls } from "./components/NavigationControls.jsx";
 import { PrintModal } from "./components/PrintModal.jsx";
 import { PrintView } from "./components/PrintView.jsx";
-import { ChevronDown, ChevronUp, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Menu } from "lucide-react";
 
 function NumberSelector({ label, total, onSelect }) {
   const [val, setVal] = useState("");
@@ -97,8 +97,11 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
           </p>
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 flex gap-2 items-start">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span>
+            <span className="hidden md:inline">
               <strong>Pro Tip:</strong> Use the <strong>Print / PDF</strong> button in the top bar to generate a document with these related recitals included next to their articles.
+            </span>
+            <span className="md:hidden">
+              <strong>Pro Tip:</strong> Switch to a desktop computer to generate a PDF with these related recitals included next to their articles.
             </span>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -720,11 +723,11 @@ function LawViewer() {
           onPrint={() => setPrintModalOpen(true)}
         />
 
-        <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 px-4 py-6 md:flex-row md:px-6">
+        <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:flex-row md:px-6 md:py-6 md:gap-6">
         {/* Main Content Area (Left/Center) */}
         <div className="min-w-0 flex-1 order-2 md:order-1">
           <section 
-            className="rounded-2xl border border-gray-200 bg-white p-8 md:p-12 shadow-sm min-h-[50vh]"
+            className="rounded-2xl border border-gray-200 bg-white p-6 md:p-12 shadow-sm min-h-[50vh]"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -764,26 +767,24 @@ function LawViewer() {
 
         {/* Sidebar (Right) */}
         <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto">
-          {/* Mobile Navigation */}
-          <div className="md:hidden mb-4">
-            <NavigationControls
-              selected={selected}
-              lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
-              onPrevNext={onPrevNext}
-              className="w-full"
-            />
-          </div>
-
-          {/* Mobile Toggle */}
-          <div className="mb-4 md:hidden">
-            <Button
-              variant="outline"
+          {/* Mobile Navigation & Toggle */}
+          <div className="flex gap-2 mb-4 md:hidden">
+            <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="w-full justify-between text-gray-900"
+              className="flex items-center justify-center p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
+              title="Toggle Contents"
             >
-              <span className="font-medium">Contents & Navigation</span>
-              {mobileMenuOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </Button>
+              <Menu size={20} />
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <NavigationControls
+                selected={selected}
+                lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+                onPrevNext={onPrevNext}
+                className="w-full h-full"
+              />
+            </div>
           </div>
 
           <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
