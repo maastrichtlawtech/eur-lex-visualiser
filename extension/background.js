@@ -2,33 +2,87 @@
 // Handles storage retrieval for content scripts and opening tabs
 
 // ============================================================================
-// CONFIGURATION - TOGGLE BETWEEN LOCALHOST AND PRODUCTION
-// ============================================================================
-// Change USE_LOCALHOST below - that's it! All other files read from storage.
-// Set to true for localhost, false for production
+// CONFIGURATION - AUTOMATIC DETECTION
 // ============================================================================
 
-const USE_LOCALHOST = false;
 const LOCALHOST_URL = 'http://localhost:5173';
 const PRODUCTION_URL = 'https://legalviz.eu';
 
-const config = {
-  useLocalhost: USE_LOCALHOST,
-  baseUrl: USE_LOCALHOST ? LOCALHOST_URL : PRODUCTION_URL,
+// Helper to check if localhost is reachable and is the correct app
+async function checkLocalhost() {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000); // 1s timeout to allow for body read
+    
+    const response = await fetch(LOCALHOST_URL, { method: 'GET', signal: controller.signal }).catch(() => null);
+    clearTimeout(timeoutId);
+    
+    if (response && response.ok) {
+      const text = await response.text();
+      // Verify it's our app by checking the title
+      return text.includes('<title>LegalViz.EU</title>');
+    }
+    return false;
+  } catch (e) {
+    return false;
+  }
+}
+
+// Determine environment and initialize config
+async function initializeConfig() {
+  // Simply check if localhost is reachable
+  const useLocalhost = await checkLocalhost();
+  
+  if (useLocalhost) {
+    console.log('*** DEBUGGING MODE: Localhost detected, using development server ***');
+  } else {
+    console.log('Environment: Production (Localhost not reachable)');
+  }
+
+  const config = {
+    useLocalhost: useLocalhost,
+    baseUrl: useLocalhost ? LOCALHOST_URL : PRODUCTION_URL,
+    localhostUrl: LOCALHOST_URL,
+    productionUrl: PRODUCTION_URL,
+    lastChecked: Date.now()
+  };
+
+  await chrome.storage.local.set({ eurlexConfig: config });
+  return config;
+}
+
+// Default config for fallback
+const defaultConfig = {
+  useLocalhost: false,
+  baseUrl: PRODUCTION_URL,
   localhostUrl: LOCALHOST_URL,
   productionUrl: PRODUCTION_URL
 };
 
-// Initialize config in storage
-chrome.storage.local.set({ eurlexConfig: config }, () => {
-  console.log('Config initialized:', config);
+// Initialize on install or update
+chrome.runtime.onInstalled.addListener(() => {
+  console.log('LegalViz.EU extension installed/updated');
+  initializeConfig();
+  // Initialize icons for all open tabs
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      if (tab.id) {
+        updateIconState(tab.id);
+      }
+    });
+  });
+});
+
+// Re-check on browser startup
+chrome.runtime.onStartup.addListener(() => {
+  initializeConfig();
 });
 
 // Helper to get config from storage
 async function getConfig() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['eurlexConfig'], (result) => {
-      resolve(result.eurlexConfig || config);
+      resolve(result.eurlexConfig || defaultConfig);
     });
   });
 }
@@ -86,19 +140,8 @@ async function updateIconState(tabId) {
   }
 }
 
-chrome.runtime.onInstalled.addListener(() => {
-  console.log('LegalViz.EU extension installed');
-  // Ensure config is initialized
-  chrome.storage.local.set({ eurlexConfig: config });
-  // Initialize icons for all open tabs
-  chrome.tabs.query({}, (tabs) => {
-    tabs.forEach(tab => {
-      if (tab.id) {
-        updateIconState(tab.id);
-      }
-    });
-  });
-});
+
+
 
 // Update icon when tab is updated
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
