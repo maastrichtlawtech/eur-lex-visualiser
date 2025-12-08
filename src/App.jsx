@@ -13,7 +13,7 @@ import { TopBar } from "./components/TopBar.jsx";
 import { NavigationControls } from "./components/NavigationControls.jsx";
 import { PrintModal } from "./components/PrintModal.jsx";
 import { PrintView } from "./components/PrintView.jsx";
-import { ChevronDown, ChevronUp, Info, Menu } from "lucide-react";
+import { Info, Menu } from "lucide-react";
 
 function NumberSelector({ label, total, onSelect }) {
   const [val, setVal] = useState("");
@@ -67,34 +67,48 @@ function NumberSelector({ label, total, onSelect }) {
 
 // ---------------- Related Recitals Component ----------------
 function RelatedRecitals({ recitals, onSelectRecital }) {
-  const [isOpen, setIsOpen] = useState(true);
-
   if (!recitals || recitals.length === 0) return null;
 
   return (
-    <div className="mt-8 rounded-xl border border-blue-100 bg-white overflow-hidden shadow-sm">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-8 py-5 text-left transition hover:bg-gray-50"
-      >
-        <div className="flex items-center gap-2 text-blue-900">
-          <span className="font-semibold">Related Recitals</span>
-          <span className="bg-blue-200 text-blue-800 text-xs px-2 py-0.5 rounded-full font-medium">
-            {recitals.length}
-          </span>
-        </div>
-        {isOpen ? (
-          <ChevronUp className="h-5 w-5 text-blue-500" />
-        ) : (
-          <ChevronDown className="h-5 w-5 text-blue-500" />
-        )}
-      </button>
+    <div className="mt-8">
+      <div className="flex items-center gap-2 text-blue-900 mb-4 px-6 md:px-12">
+        <span className="font-semibold text-xl">Related Recitals</span>
+        <span className="bg-blue-100 text-blue-800 text-sm px-2.5 py-0.5 rounded-full font-medium">
+          {recitals.length}
+        </span>
+      </div>
 
-        {isOpen && (
-        <div className="px-8 pb-8 pt-2 space-y-4 border-t border-gray-100">
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 px-6 md:px-12">
           <p className="text-sm text-gray-500">
             These recitals appear to be related to this article based text analysis using simple AI. They do not have the quality of manually curated legal databases but exist for any EU law loaded in this visualiser.
           </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 px-6 md:px-12">
+          {recitals.map((r) => (
+            <div
+              key={r.recital_number}
+              className="group relative flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-md cursor-pointer"
+              onClick={() => onSelectRecital(r)}
+            >
+              <div className="flex items-center justify-between">
+                <span className="font-serif font-bold text-gray-900">
+                  Recital {r.recital_number}
+                </span>
+                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 font-medium">
+                  Read →
+                </span>
+              </div>
+              <div 
+                className="text-sm text-gray-600 line-clamp-3 font-serif"
+                dangerouslySetInnerHTML={{ __html: r.recital_html }}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="px-6 md:px-12">
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 flex gap-2 items-start">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
             <span className="hidden md:inline">
@@ -104,30 +118,8 @@ function RelatedRecitals({ recitals, onSelectRecital }) {
               <strong>Pro Tip:</strong> Switch to a desktop computer to generate a PDF with these related recitals included next to their articles.
             </span>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {recitals.map((r) => (
-              <div
-                key={r.recital_number}
-                className="group relative flex flex-col gap-3 rounded-lg border border-gray-200 bg-gray-50 p-5 transition hover:border-blue-300 hover:bg-white hover:shadow-md cursor-pointer"
-                onClick={() => onSelectRecital(r)}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-serif font-bold text-gray-900">
-                    Recital {r.recital_number}
-                  </span>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 font-medium">
-                    Read →
-                  </span>
-                </div>
-                <div 
-                  className="text-sm text-gray-600 line-clamp-3"
-                  dangerouslySetInnerHTML={{ __html: r.recital_html }}
-                />
-              </div>
-            ))}
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
