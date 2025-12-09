@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2 } from "lucide-react";
+import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose, PanelLeftOpen, Minus, Plus } from "lucide-react";
 import { Button } from "./Button.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 
@@ -131,9 +131,9 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   return (
     <>
       {/* Search Input Trigger */}
-      <div className="relative md:w-64 transition-all" ref={containerRef}>
-        {/* Desktop Input */}
-        <div className="relative w-full hidden md:block">
+      <div className="relative lg:w-64 transition-all" ref={containerRef}>
+        {/* Desktop Input (Large screens only) */}
+        <div className="relative w-full hidden lg:block">
           <input
             ref={inputRef}
             type="text"
@@ -145,8 +145,8 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
         </div>
 
-        {/* Mobile Icon Button */}
-        <div className="md:hidden">
+        {/* Mobile/Tablet Icon Button (Small & Medium screens) */}
+        <div className="lg:hidden">
           <button 
             onClick={() => setIsOpen(true)}
             className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
@@ -279,7 +279,22 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   );
 }
 
-export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPrint, showPrint = true, onSearchOpen, isSearchLoading }) {
+export function TopBar({ 
+  lawKey, 
+  title, 
+  lists, 
+  isExtensionMode, 
+  eurlexUrl, 
+  onPrint, 
+  showPrint = true, 
+  onSearchOpen, 
+  isSearchLoading,
+  onToggleSidebar,
+  isSidebarOpen,
+  onIncreaseFont,
+  onDecreaseFont,
+  fontSize
+}) {
   const navigate = useNavigate();
   const { articles, recitals, annexes } = lists;
 
@@ -301,9 +316,9 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
 
   return (
     <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
-      <div className="relative mx-auto flex h-16 max-w-[1600px] items-center justify-between px-4 md:px-6">
+      <div className="relative mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 md:px-6">
         {/* Left: Branding */}
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="flex-shrink-0 flex items-center gap-3">
           <button
             onClick={() => navigate("/")}
             className="flex items-center justify-center transition-opacity hover:opacity-80"
@@ -345,11 +360,11 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
         </div>
 
         {/* Center: Title */}
-        {title && (
-          <div className="absolute left-14 right-14 top-1/2 -translate-y-1/2 md:left-1/2 md:right-auto md:-translate-x-1/2">
-            <div className="flex items-center justify-center gap-2 w-full md:w-auto">
+        <div className="flex-1 min-w-0 flex items-center justify-center">
+          {title && (
+            <div className="flex items-center gap-2 min-w-0 max-w-full">
               <span
-                className="truncate text-sm font-medium text-gray-700 min-w-0 md:max-w-xl"
+                className="truncate text-sm font-medium text-gray-700"
                 title={title}
               >
                 {title}
@@ -366,23 +381,61 @@ export function TopBar({ lawKey, title, lists, isExtensionMode, eurlexUrl, onPri
                 </a>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Right: Navigation Controls */}
-        <div className="relative z-10 flex items-center gap-2 md:gap-4">
-          {showPrint && (
-            <div className="hidden md:block">
+        <div className="flex-shrink-0 flex items-center gap-2 md:gap-3">
+          
+          {/* Desktop Tools Group */}
+          <div className="hidden md:flex items-center gap-1">
+            {showPrint && (
               <Button
                 variant="ghost"
                 onClick={onPrint}
-                className="flex h-9 w-9 items-center justify-center text-gray-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                 title="Print / PDF"
               >
-                <Printer size={20} />
+                <Printer size={22} />
               </Button>
-            </div>
-          )}
+            )}
+
+            {onIncreaseFont && (
+              <div className="flex items-center gap-0.5 mx-1">
+                <Button 
+                  variant="ghost" 
+                  onClick={onDecreaseFont} 
+                  title={`Decrease font size (${fontSize}%)`}
+                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Minus size={20} />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={onIncreaseFont} 
+                  title={`Increase font size (${fontSize}%)`}
+                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Plus size={20} />
+                </Button>
+              </div>
+            )}
+            
+            {onToggleSidebar && (
+              <Button
+                variant="ghost"
+                onClick={onToggleSidebar}
+                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+                  !isSidebarOpen 
+                    ? 'bg-blue-50 text-blue-700' 
+                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
+                }`}
+                title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
+              >
+                {isSidebarOpen ? <PanelLeftClose size={22} /> : <PanelLeftOpen size={22} />}
+              </Button>
+            )}
+          </div>
 
           <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
           

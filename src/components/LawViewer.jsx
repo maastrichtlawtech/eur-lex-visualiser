@@ -36,6 +36,69 @@ export function LawViewer() {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
 
+  // View Settings
+  const [fontScale, setFontScale] = useState(() => {
+    try {
+      return parseInt(localStorage.getItem("legalviz-fontscale") || "3");
+    } catch {
+      return 3;
+    }
+  });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    try {
+      const stored = localStorage.getItem("legalviz-sidebar");
+      return stored !== "false"; // Default to true if not set
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("legalviz-fontscale", fontScale);
+  }, [fontScale]);
+
+  useEffect(() => {
+    localStorage.setItem("legalviz-sidebar", isSidebarOpen);
+  }, [isSidebarOpen]);
+
+  const onIncreaseFont = () => setFontScale(s => Math.min(s + 1, 5));
+  const onDecreaseFont = () => setFontScale(s => Math.max(s - 1, 1));
+  const onToggleSidebar = () => setIsSidebarOpen(s => !s);
+
+  // Map scale to prose class and percentage for display
+  const getProseClass = (s) => {
+    switch(s) {
+      case 1: return "prose-sm";
+      case 2: return "prose-base";
+      case 3: return "prose-lg";
+      case 4: return "prose-xl";
+      case 5: return "prose-2xl";
+      default: return "prose-lg";
+    }
+  };
+
+  const getTextClass = (s) => {
+    switch(s) {
+      case 1: return "text-sm";
+      case 2: return "text-base";
+      case 3: return "text-lg";
+      case 4: return "text-xl";
+      case 5: return "text-2xl";
+      default: return "text-lg";
+    }
+  };
+  
+  const getFontPercent = (s) => {
+    switch(s) {
+      case 1: return 75;
+      case 2: return 100;
+      case 3: return 125;
+      case 4: return 150;
+      case 5: return 200;
+      default: return 125;
+    }
+  };
+
   const loadLaw = React.useCallback(async (path) => {
     if (!path) return;
     setLoading(true);
@@ -615,11 +678,16 @@ export function LawViewer() {
           isExtensionMode={isExtensionMode}
           eurlexUrl={eurlexUrl}
           onPrint={() => setPrintModalOpen(true)}
+          onToggleSidebar={onToggleSidebar}
+          isSidebarOpen={isSidebarOpen}
+          onIncreaseFont={onIncreaseFont}
+          onDecreaseFont={onDecreaseFont}
+          fontSize={getFontPercent(fontScale)}
         />
 
-        <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:flex-row md:px-6 md:py-6 md:gap-6">
+        <main className={`mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:flex-row md:px-6 md:py-6 md:gap-6 justify-center`}>
         {/* Main Content Area (Left/Center) */}
-        <div className="min-w-0 flex-1 order-2 md:order-1">
+        <div className={`min-w-0 w-full max-w-5xl order-2 md:order-1 transition-all duration-300`}>
           <section 
             className="rounded-2xl border border-gray-200 bg-white p-6 md:p-12 shadow-sm min-h-[50vh]"
             onTouchStart={onTouchStart}
@@ -636,7 +704,7 @@ export function LawViewer() {
             </div>
 
             <article
-              className="prose prose-slate max-w-none md:prose-lg mt-4"
+              className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
               dangerouslySetInnerHTML={{
                 __html:
                   selected.html ||
@@ -660,7 +728,7 @@ export function LawViewer() {
         </div>
 
         {/* Sidebar (Right) */}
-        <aside className="w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto">
+        <aside className={`w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto transition-all duration-300 ${!isSidebarOpen ? 'md:hidden' : ''}`}>
           {/* Mobile Navigation & Toggle */}
           <div className="flex gap-2 mb-4 md:hidden">
             <button
