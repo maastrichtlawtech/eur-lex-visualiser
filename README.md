@@ -139,7 +139,7 @@ The parser automatically handles:
 ### Project Structure
 
 ```
-eu-law-visualiser/
+legalviz.eu/
 ├── public/
 │   └── data/              # Legal instrument files (XHTML, XML, HTML)
 ├── src/
