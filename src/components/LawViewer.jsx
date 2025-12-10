@@ -39,9 +39,9 @@ export function LawViewer() {
   // View Settings
   const [fontScale, setFontScale] = useState(() => {
     try {
-      return parseInt(localStorage.getItem("legalviz-fontscale") || "3");
+      return parseInt(localStorage.getItem("legalviz-fontscale") || "2");
     } catch {
-      return 3;
+      return 2;
     }
   });
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
@@ -687,7 +687,7 @@ export function LawViewer() {
 
         <main className={`mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:flex-row md:px-6 md:py-6 md:gap-6 justify-center`}>
         {/* Main Content Area (Left/Center) */}
-        <div className={`min-w-0 w-full max-w-5xl order-2 md:order-1 transition-all duration-300`}>
+        <div className={`min-w-0 w-full max-w-4xl order-2 md:order-1 transition-all duration-300`}>
           <section 
             className="rounded-2xl border border-gray-200 bg-white p-6 md:p-12 shadow-sm min-h-[50vh]"
             onTouchStart={onTouchStart}
