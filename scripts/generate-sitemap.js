@@ -6,9 +6,6 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Import laws data - we need to read it as text since we can't easily import from src in a script without compilation or type:module
-// Actually we can import it if package.json has type: module (which it does)
-// BUT we'd need to make sure the import path is correct relative to this script
 import { LAWS } from '../src/constants/laws.js';
 
 const DOMAIN = 'https://legalviz.eu';
