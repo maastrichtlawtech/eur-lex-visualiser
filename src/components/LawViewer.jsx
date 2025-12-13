@@ -18,6 +18,8 @@ import { PrintView } from "./PrintView.jsx";
 import { SEO } from "./SEO.jsx";
 import { NumberSelector } from "./NumberSelector.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
+import { ArticleSummary } from "./ArticleSummary.jsx";
+import { useSummarizer } from "../hooks/useSummarizer.js";
 
 export function LawViewer() {
   const { key, kind, id } = useParams();
@@ -35,6 +37,25 @@ export function LawViewer() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
+
+  // AI Summarizer - cache key based on law identifier
+  const summarizerCacheKey = useMemo(() => {
+    if (isExtensionMode && data.title) {
+      const safeTitle = data.title.replace(/\s+/g, '_').substring(0, 50);
+      return `ext_${safeTitle}_${data.articles?.length || 0}`;
+    }
+    return key || null;
+  }, [key, isExtensionMode, data.title, data.articles?.length]);
+
+  const {
+    isAvailable: isAiAvailable,
+    recitalTitles,
+    articleSummaries,
+    generateSingleRecitalTitle,
+    generateSingleArticleSummary,
+    error: aiError,
+    clearError: clearAiError,
+  } = useSummarizer(data, summarizerCacheKey);
 
   // View Settings
   const [fontScale, setFontScale] = useState(() => {
@@ -703,6 +724,18 @@ export function LawViewer() {
               </h2>
             </div>
 
+            {/* AI Summary for articles */}
+            {selected.kind === "article" && selected.id && (
+              <ArticleSummary
+                article={data.articles?.find(a => a.article_number === selected.id)}
+                summary={articleSummaries.get(selected.id)}
+                onGenerateSummary={generateSingleArticleSummary}
+                isAiAvailable={isAiAvailable}
+                error={aiError}
+                onClearError={clearAiError}
+              />
+            )}
+
             <article
               className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
               dangerouslySetInnerHTML={{
@@ -717,6 +750,9 @@ export function LawViewer() {
             <RelatedRecitals
               recitals={recitalMap.get(selected.id) || []}
               onSelectRecital={(r) => onClickRecital(r, selected.id)}
+              recitalTitles={recitalTitles}
+              onGenerateTitle={generateSingleRecitalTitle}
+              isAiAvailable={isAiAvailable}
             />
           )}
 
