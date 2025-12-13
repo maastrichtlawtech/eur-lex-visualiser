@@ -16,7 +16,13 @@ export default defineConfig({
         short_name: 'LegalViz',
         description: 'Interactive visualisation of EU laws',
         theme_color: '#003399',
+        background_color: '#003399',
         icons: [
+          {
+            src: 'favicon.ico',
+            sizes: '48x48',
+            type: 'image/x-icon'
+          },
           {
             src: 'android-chrome-192x192.png',
             sizes: '192x192',
