@@ -46,11 +46,8 @@ export function RelatedRecitals({ recitals, onSelectRecital }) {
         <div className="px-6 md:px-12">
           <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800 flex gap-2 items-start dark:bg-blue-950/30 dark:border-blue-900/50 dark:text-blue-200">
             <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-            <span className="hidden md:inline">
+            <span className="inline">
               <strong>Pro Tip:</strong> Use the <strong>Print / PDF</strong> button in the top bar to generate a document with these related recitals included next to their articles.
-            </span>
-            <span className="md:hidden">
-              <strong>Pro Tip:</strong> Switch to a desktop computer to generate a PDF with these related recitals included next to their articles.
             </span>
           </div>
         </div>

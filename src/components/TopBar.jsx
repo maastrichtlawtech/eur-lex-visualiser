@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose, PanelLeftOpen, Minus, Plus } from "lucide-react";
+import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose, PanelLeftOpen, Minus, Plus, MoreVertical } from "lucide-react";
 import { Button } from "./Button.jsx";
 import { ThemeToggle } from "./ThemeToggle.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
@@ -215,14 +215,14 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                       key={`${item.type}-${item.id}-${idx}`}
                       onClick={() => handleSelect(item)}
                       className={`group flex flex-col gap-1 p-3 text-left rounded-xl transition-all w-full ${idx === selectedIndex
-                          ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm dark:bg-blue-900/30 dark:ring-blue-700"
-                          : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent dark:bg-gray-800 md:dark:bg-transparent dark:hover:ring-blue-800 dark:hover:bg-blue-900/20"
+                        ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm dark:bg-blue-900/30 dark:ring-blue-700"
+                        : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent dark:bg-gray-800 md:dark:bg-transparent dark:hover:ring-blue-800 dark:hover:bg-blue-900/20"
                         }`}
                     >
                       <div className="flex items-center gap-2.5 w-full min-w-0">
                         <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${item.type === 'article' ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800' :
-                            item.type === 'recital' ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-800' :
-                              'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-800'
+                          item.type === 'recital' ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-800' :
+                            'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-800'
                           }`}>
                           {item.type}
                         </span>
@@ -373,7 +373,7 @@ export function TopBar({
                   href={eurlexUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center text-gray-400 hover:text-[#003399] transition-colors flex-shrink-0"
+                  className="hidden md:flex items-center text-gray-400 hover:text-[#003399] transition-colors flex-shrink-0"
                   title="View on EUR-Lex"
                 >
                   <ExternalLink size={14} />
@@ -386,55 +386,70 @@ export function TopBar({
         {/* Right: Navigation Controls */}
         <div className="flex-shrink-0 flex items-center gap-2 md:gap-3">
 
-          {/* Desktop Tools Group */}
-          <div className="hidden md:flex items-center gap-1">
-            {showPrint && (
-              <Button
-                variant="ghost"
-                onClick={onPrint}
-                className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-gray-800"
-                title="Print / PDF"
-              >
-                <Printer size={22} />
-              </Button>
-            )}
-
-            <ThemeToggle />
-
-            {onIncreaseFont && (
-              <div className="flex items-center gap-0.5 mx-1">
+          {/* Tools Group (Desktop + Mobile Menu) */}
+          <div className="relative flex items-center">
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-1">
+              {showPrint && (
                 <Button
                   variant="ghost"
-                  onClick={onDecreaseFont}
-                  title={`Decrease font size (${fontSize}%)`}
-                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  onClick={onPrint}
+                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-gray-800"
+                  title="Print / PDF"
                 >
-                  <Minus size={20} />
+                  <Printer size={22} />
                 </Button>
+              )}
+
+              <ThemeToggle />
+
+              {onIncreaseFont && (
+                <div className="flex items-center gap-0.5 mx-1">
+                  <Button
+                    variant="ghost"
+                    onClick={onDecreaseFont}
+                    title={`Decrease font size (${fontSize}%)`}
+                    className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Minus size={20} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={onIncreaseFont}
+                    title={`Increase font size (${fontSize}%)`}
+                    className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Plus size={20} />
+                  </Button>
+                </div>
+              )}
+
+              {onToggleSidebar && (
                 <Button
                   variant="ghost"
-                  onClick={onIncreaseFont}
-                  title={`Increase font size (${fontSize}%)`}
-                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                  onClick={onToggleSidebar}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${!isSidebarOpen
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
+                    }`}
+                  title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
                 >
-                  <Plus size={20} />
+                  {isSidebarOpen ? <PanelLeftClose size={22} /> : <PanelLeftOpen size={22} />}
                 </Button>
-              </div>
-            )}
+              )}
+            </div>
 
-            {onToggleSidebar && (
-              <Button
-                variant="ghost"
-                onClick={onToggleSidebar}
-                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${!isSidebarOpen
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
-                  }`}
-                title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
-              >
-                {isSidebarOpen ? <PanelLeftClose size={22} /> : <PanelLeftOpen size={22} />}
-              </Button>
-            )}
+            {/* Mobile Actions Menu Trigger */}
+            <div className="md:hidden">
+              <MobileToolsMenu
+                onPrint={onPrint}
+                showPrint={showPrint}
+                onIncreaseFont={onIncreaseFont}
+                onDecreaseFont={onDecreaseFont}
+                fontSize={fontSize}
+                eurlexUrl={eurlexUrl}
+              />
+            </div>
           </div>
 
           <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
@@ -442,5 +457,94 @@ export function TopBar({
         </div>
       </div>
     </header>
+  );
+}
+
+function MobileToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, fontSize, eurlexUrl }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  // Close menu when actions are clicked
+  const handleAction = (action) => {
+    action();
+    // setIsOpen(false); // Optional: close on action? Maybe not for zoom controls.
+  };
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`p-2 rounded-lg transition-colors ${isOpen ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'}`}
+        title="More tools"
+      >
+        <MoreVertical size={20} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-2 w-56 p-2 bg-white rounded-xl shadow-xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+
+          {/* Print */}
+          {showPrint && (
+            <button
+              onClick={() => { onPrint(); setIsOpen(false); }}
+              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              <Printer size={18} />
+              <span>Print / PDF</span>
+            </button>
+          )}
+
+          {/* EUR-Lex Link */}
+          {eurlexUrl && (
+            <a
+              href={eurlexUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              <ExternalLink size={18} />
+              <span>View on EUR-Lex</span>
+            </a>
+          )}
+
+          {/* Theme */}
+          <div className="px-3 py-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700 dark:text-gray-200">Theme</span>
+              <ThemeToggle />
+            </div>
+          </div>
+
+          {/* Font Size */}
+          {onIncreaseFont && (
+            <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
+              <div className="mb-1.5 text-xs text-gray-500 uppercase font-semibold">Text Size</div>
+              <div className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg p-1 dark:bg-gray-800">
+                <button onClick={onDecreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700">
+                  <Minus size={16} />
+                </button>
+                <span className="text-xs font-mono w-8 text-center">{fontSize}%</span>
+                <button onClick={onIncreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700">
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
