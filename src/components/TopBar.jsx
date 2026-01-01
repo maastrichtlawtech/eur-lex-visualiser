@@ -368,17 +368,7 @@ export function TopBar({
               >
                 {title}
               </span>
-              {eurlexUrl && (
-                <a
-                  href={eurlexUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden md:flex items-center text-gray-400 hover:text-[#003399] transition-colors flex-shrink-0"
-                  title="View on EUR-Lex"
-                >
-                  <ExternalLink size={14} />
-                </a>
-              )}
+
             </div>
           )}
         </div>
@@ -386,70 +376,18 @@ export function TopBar({
         {/* Right: Navigation Controls */}
         <div className="flex-shrink-0 flex items-center gap-2 md:gap-3">
 
-          {/* Tools Group (Desktop + Mobile Menu) */}
+          {/* Tools Group (Unified Menu) */}
           <div className="relative flex items-center">
-            {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-1">
-              {showPrint && (
-                <Button
-                  variant="ghost"
-                  onClick={onPrint}
-                  className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-gray-800"
-                  title="Print / PDF"
-                >
-                  <Printer size={22} />
-                </Button>
-              )}
-
-              <ThemeToggle />
-
-              {onIncreaseFont && (
-                <div className="flex items-center gap-0.5 mx-1">
-                  <Button
-                    variant="ghost"
-                    onClick={onDecreaseFont}
-                    title={`Decrease font size (${fontSize}%)`}
-                    className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Minus size={20} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={onIncreaseFont}
-                    title={`Increase font size (${fontSize}%)`}
-                    className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <Plus size={20} />
-                  </Button>
-                </div>
-              )}
-
-              {onToggleSidebar && (
-                <Button
-                  variant="ghost"
-                  onClick={onToggleSidebar}
-                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${!isSidebarOpen
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
-                    }`}
-                  title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
-                >
-                  {isSidebarOpen ? <PanelLeftClose size={22} /> : <PanelLeftOpen size={22} />}
-                </Button>
-              )}
-            </div>
-
-            {/* Mobile Actions Menu Trigger */}
-            <div className="md:hidden">
-              <MobileToolsMenu
-                onPrint={onPrint}
-                showPrint={showPrint}
-                onIncreaseFont={onIncreaseFont}
-                onDecreaseFont={onDecreaseFont}
-                fontSize={fontSize}
-                eurlexUrl={eurlexUrl}
-              />
-            </div>
+            <ToolsMenu
+              onPrint={onPrint}
+              showPrint={showPrint}
+              onIncreaseFont={onIncreaseFont}
+              onDecreaseFont={onDecreaseFont}
+              fontSize={fontSize}
+              eurlexUrl={eurlexUrl}
+              onToggleSidebar={onToggleSidebar}
+              isSidebarOpen={isSidebarOpen}
+            />
           </div>
 
           <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
@@ -460,7 +398,7 @@ export function TopBar({
   );
 }
 
-function MobileToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, fontSize, eurlexUrl }) {
+function ToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, fontSize, eurlexUrl, onToggleSidebar, isSidebarOpen }) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -494,6 +432,17 @@ function MobileToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, f
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-2 w-56 p-2 bg-white rounded-xl shadow-xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10 flex flex-col gap-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+
+          {/* Sidebar Toggle (Desktop Only) */}
+          {onToggleSidebar && (
+            <button
+              onClick={() => { onToggleSidebar(); setIsOpen(false); }}
+              className="hidden md:flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+            >
+              {isSidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+              <span>{isSidebarOpen ? "Hide sidebar" : "Show sidebar"}</span>
+            </button>
+          )}
 
           {/* Print */}
           {showPrint && (
