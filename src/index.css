@@ -1,30 +1,48 @@
 @import "tailwindcss";
 
-@theme {
+@variant dark (&:where(.dark, .dark *));
 
-}
+@theme {}
 
 /* Article typography */
 .prose {
   font-family: 'Merriweather', serif;
   line-height: 1.8;
-  color: #1f2937; /* gray-800 - softer than pure black */
+  color: #1f2937;
+  /* gray-800 - softer than pure black */
 }
+
+:root.dark .prose {
+  color: #e5e7eb;
+  /* gray-200 */
+}
+
 .prose .oj-ti-art {
-  display: none; /* Hide duplicate article title */
+  display: none;
+  /* Hide duplicate article title */
   margin-top: 1rem;
   margin-bottom: .25rem;
   font-weight: 700;
-  font-size: 1.375em; /* ~22px */
+  font-size: 1.375em;
+  /* ~22px */
   letter-spacing: .005em;
 }
+
 .prose .oj-sti-art,
 .prose .eli-title .oj-sti-art {
   margin: 0 0 1.25rem 0;
   font-weight: 500;
-  font-size: 1.125em; /* ~18px */
-  color: #374151; /* gray-700 - slightly lighter than header */
+  font-size: 1.125em;
+  /* ~18px */
+  color: #374151;
+  /* gray-700 - slightly lighter than header */
   line-height: 1.4;
+}
+
+:root.dark .prose .oj-sti-art,
+:root.dark .prose .eli-title .oj-sti-art {
+  color: #d1d5db;
+  /* gray-300 */
 }
 
 /* Paragraphs */
@@ -37,100 +55,117 @@
 .prose table {
   width: 100%;
   border-collapse: separate;
-  border-spacing: 0 .375rem;         /* vertical gap between rows */
+  border-spacing: 0 .375rem;
+  /* vertical gap between rows */
   margin: .25rem 0;
 }
+
 .prose table td:first-child {
-  width: 3rem;                       /* (a), (b) column */
+  width: 3rem;
+  /* (a), (b) column */
   vertical-align: top;
-  color: #6b7280;                    /* gray-500 */
+  color: #6b7280;
+  /* gray-500 */
   padding-right: .5rem;
   white-space: nowrap;
   text-align: left;
 }
+
 .prose table td:last-child {
   vertical-align: top;
 }
+
 .prose table td p,
 .prose table td p.oj-normal {
-  margin: 0;                         /* keep list items tight */
+  margin: 0;
+  /* keep list items tight */
 }
 
 /* Small spacing helpers for numbered blocks like #001.001 etc. */
-.prose div[id^="001"] { margin-top: .75rem; }
+.prose div[id^="001"] {
+  margin-top: .75rem;
+}
 
 /* Optional: nicer selection label */
 .article-header {
   font-size: .875rem;
-  color: #6b7280;                    /* gray-500 */
+  color: #6b7280;
+  /* gray-500 */
   margin-bottom: .5rem;
 }
 
 @media print {
+
   /* Hide everything by default */
   .print\:hidden {
     display: none !important;
   }
-  
+
   /* Show print-only elements */
   .print\:block {
     display: block !important;
   }
-  
+
   /* Reset background colors for printing */
   body {
     background: white;
   }
-  
+
   /* Ensure proper page breaks */
-  h1, h2, h3, h4, h5 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5 {
     page-break-after: avoid;
   }
-  
+
   .break-after-avoid {
     page-break-after: avoid;
   }
-  
+
   /* Reduce page margins */
   @page {
     margin: 1cm;
   }
-  
+
   .break-inside-avoid {
     page-break-inside: avoid;
   }
-  
+
   /* Reset margins for print */
   .print\:p-0 {
     padding: 0 !important;
   }
-  
+
   /* Compact prose for printing */
   .print-content p.oj-normal,
   .print-content p {
     margin: 0.25rem 0;
-    font-size: 0.8rem !important; /* ~12px */
+    font-size: 0.8rem !important;
+    /* ~12px */
     line-height: 1.4;
   }
-  
+
   .print-content table {
     border-spacing: 0 0.15rem;
     margin: 0.15rem 0;
   }
-  
+
   .print-content table td p {
     margin: 0;
     font-size: 0.8rem !important;
   }
-  
+
   .print-content .oj-ti-art,
   .print-content .oj-sti-art {
     display: none !important;
   }
-  
+
   /* Recital specific compactness */
   .prose-xs {
-    font-size: 0.75rem !important; /* ~12px */
+    font-size: 0.75rem !important;
+    /* ~12px */
     line-height: 1.3;
   }
 }

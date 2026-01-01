@@ -25,10 +25,10 @@ export function NavigationControls({ selected, lists, onPrevNext, className = ""
   if (!kind || !list || list.length === 0) return null;
 
   return (
-    <div className={`flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-1 border border-gray-200 ${className}`}>
+    <div className={`flex items-center justify-between gap-1 rounded-lg bg-gray-50 p-1 border border-gray-200 dark:bg-gray-800 dark:border-gray-700 ${className}`}>
       <Button
         variant="ghost"
-        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 flex-shrink-0"
+        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 flex-shrink-0 dark:text-gray-400 dark:hover:text-gray-200"
         disabled={index <= 0}
         onClick={() => onPrevNext(kind, index - 1)}
         title={`Previous ${label}`}
@@ -36,15 +36,15 @@ export function NavigationControls({ selected, lists, onPrevNext, className = ""
         <ChevronLeft size={18} />
       </Button>
 
-      <span className="flex-1 px-2 text-center text-sm font-medium text-gray-600 truncate min-w-0">
-        <span className="text-gray-900">{label} {index + 1}</span>
-        <span className="mx-1 text-gray-400">/</span>
+      <span className="flex-1 px-2 text-center text-sm font-medium text-gray-600 truncate min-w-0 dark:text-gray-300">
+        <span className="text-gray-900 dark:text-gray-100">{label} {index + 1}</span>
+        <span className="mx-1 text-gray-400 dark:text-gray-500">/</span>
         {list.length}
       </span>
 
       <Button
         variant="ghost"
-        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 flex-shrink-0"
+        className="h-8 w-8 p-0 text-gray-500 hover:text-gray-900 flex-shrink-0 dark:text-gray-400 dark:hover:text-gray-200"
         disabled={index === -1 || index >= list.length - 1}
         onClick={() => onPrevNext(kind, index + 1)}
         title={`Next ${label}`}

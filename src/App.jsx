@@ -2,6 +2,7 @@ import React from "react";
 import { createBrowserRouter, RouterProvider, Outlet, ScrollRestoration } from "react-router-dom";
 import { Landing } from "./components/Landing.jsx";
 import { LawViewer } from "./components/LawViewer.jsx";
+import { ThemeProvider } from "./components/ThemeProvider.jsx";
 
 function Layout() {
   return (
@@ -44,5 +45,9 @@ const router = createBrowserRouter([
 });
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  );
 }

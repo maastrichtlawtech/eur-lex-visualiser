@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose, PanelLeftOpen, Minus, Plus } from "lucide-react";
 import { Button } from "./Button.jsx";
+import { ThemeToggle } from "./ThemeToggle.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 
 function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
@@ -104,7 +105,7 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   const handleSearch = (e) => {
     const q = e.target.value;
     setQuery(q);
-    
+
     if (isBuilding) return;
 
     if (q.length >= 2) {
@@ -140,16 +141,16 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
             readOnly
             onClick={() => setIsOpen(true)}
             placeholder="Search (Cmd+K)..."
-            className="w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-4 text-sm outline-none hover:bg-white hover:border-blue-300 focus:ring-0 transition-all text-gray-500"
+            className="w-full cursor-pointer rounded-xl border border-gray-200 bg-gray-50 py-1.5 pl-9 pr-4 text-sm outline-none hover:bg-white hover:border-blue-300 focus:ring-0 transition-all text-gray-500 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700 dark:placeholder:text-gray-500"
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
         </div>
 
         {/* Mobile/Tablet Icon Button (Small & Medium screens) */}
         <div className="lg:hidden">
-          <button 
+          <button
             onClick={() => setIsOpen(true)}
-            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
           >
             <Search size={20} />
           </button>
@@ -159,53 +160,53 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
       {/* Spotlight Modal Overlay (Rendered in Portal to cover whole screen) */}
       {isOpen && createPortal(
         <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/20 transition-all md:p-4 md:pt-[15vh]">
-          <div 
-            className="w-full max-w-2xl flex flex-col h-full md:h-auto md:max-h-[70vh] bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden fixed inset-0 md:static md:inset-auto md:rounded-2xl"
+          <div
+            className="w-full max-w-2xl flex flex-col h-full md:h-auto md:max-h-[70vh] bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95 duration-100 overflow-hidden fixed inset-0 md:static md:inset-auto md:rounded-2xl dark:bg-gray-900 dark:ring-white/10"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Auto-focused Input */}
-            <div className="flex-none border-b border-gray-100 px-4 py-3 bg-white flex items-center gap-3">
-               <button 
-                 onClick={() => setIsOpen(false)} 
-                 className="md:hidden text-gray-500 hover:text-gray-900 p-1 -ml-1"
-               >
-                 <ChevronLeft size={24} />
-               </button>
-               <Search size={20} className="text-gray-400 hidden md:block" />
-               <div className="flex-1 relative">
-                 <input 
-                   autoFocus
-                   type="text"
-                   value={query}
-                   onChange={handleSearch}
+            <div className="flex-none border-b border-gray-100 px-4 py-3 bg-white flex items-center gap-3 dark:bg-gray-900 dark:border-gray-800">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="md:hidden text-gray-500 hover:text-gray-900 p-1 -ml-1"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <Search size={20} className="text-gray-400 hidden md:block" />
+              <div className="flex-1 relative">
+                <input
+                  autoFocus
+                  type="text"
+                  value={query}
+                  onChange={handleSearch}
                   placeholder={isBuilding || isSearchLoading ? "Initializing search..." : "Search..."}
                   disabled={isBuilding || isSearchLoading}
-                  className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50"
+                  className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50 dark:text-white dark:placeholder:text-gray-600"
                 />
                 {isBuilding || isSearchLoading ? (
-                   <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                     <Loader2 className="animate-spin text-blue-600" size={20} />
-                   </div>
+                  <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                    <Loader2 className="animate-spin text-blue-600" size={20} />
+                  </div>
                 ) : query && (
-                   <button 
-                     onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
-                     className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                     title="Clear search"
-                   >
-                     <X size={16} />
-                   </button>
-                 )}
-               </div>
-               <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block"></div>
-               <button 
-                 onClick={() => setIsOpen(false)} 
-                 className="hidden md:block text-sm font-medium text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-               >
-                 Close
-               </button>
+                  <button
+                    onClick={() => { setQuery(""); setResults([]); inputRef.current?.focus(); }}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
+                    title="Clear search"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+              <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block dark:bg-gray-700"></div>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="hidden md:block text-sm font-medium text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
+              >
+                Close
+              </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 scroll-smooth bg-gray-50/30">
+            <div className="flex-1 overflow-y-auto p-2 scroll-smooth bg-gray-50/30 dark:bg-gray-950/50">
               {results.length > 0 ? (
                 <div className="flex flex-col gap-2 p-2 w-full" ref={resultsRef}>
                   {results.map((item, idx) => (
@@ -213,18 +214,16 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                       type="button"
                       key={`${item.type}-${item.id}-${idx}`}
                       onClick={() => handleSelect(item)}
-                      className={`group flex flex-col gap-1 p-3 text-left rounded-xl transition-all w-full ${
-                        idx === selectedIndex 
-                          ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm" 
-                          : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent"
-                      }`}
+                      className={`group flex flex-col gap-1 p-3 text-left rounded-xl transition-all w-full ${idx === selectedIndex
+                          ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm dark:bg-blue-900/30 dark:ring-blue-700"
+                          : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent dark:bg-gray-800 md:dark:bg-transparent dark:hover:ring-blue-800 dark:hover:bg-blue-900/20"
+                        }`}
                     >
                       <div className="flex items-center gap-2.5 w-full min-w-0">
-                        <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${
-                          item.type === 'article' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                          item.type === 'recital' ? 'bg-purple-50 text-purple-700 border-purple-100' :
-                          'bg-orange-50 text-orange-700 border-orange-100'
-                        }`}>
+                        <span className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${item.type === 'article' ? 'bg-blue-50 text-blue-700 border-blue-100 dark:bg-blue-900/40 dark:text-blue-200 dark:border-blue-800' :
+                            item.type === 'recital' ? 'bg-purple-50 text-purple-700 border-purple-100 dark:bg-purple-900/40 dark:text-purple-200 dark:border-purple-800' :
+                              'bg-orange-50 text-orange-700 border-orange-100 dark:bg-orange-900/40 dark:text-orange-200 dark:border-orange-800'
+                          }`}>
                           {item.type}
                         </span>
                         <span className="font-semibold text-gray-900 text-base truncate flex-1 min-w-0 group-hover:text-blue-700">
@@ -234,7 +233,7 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                           <span className="flex-shrink-0 text-[10px] bg-green-100 text-green-700 px-1.5 rounded-full font-medium">Best Match</span>
                         )}
                         {item.law_label && (
-                          <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">
+                          <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium dark:bg-gray-800 dark:text-gray-400">
                             {item.law_label}
                           </span>
                         )}
@@ -263,13 +262,13 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                 </div>
               )}
             </div>
-            
-            <div className="hidden md:flex flex-none border-t border-gray-100 px-4 py-2 bg-gray-50 text-[10px] text-gray-400 justify-between">
-               <span>Select to navigate</span>
-               <span>ESC to close</span>
+
+            <div className="hidden md:flex flex-none border-t border-gray-100 px-4 py-2 bg-gray-50 text-[10px] text-gray-400 justify-between dark:bg-gray-900 dark:border-gray-800 dark:text-gray-500">
+              <span>Select to navigate</span>
+              <span>ESC to close</span>
             </div>
           </div>
-          
+
           {/* Click backdrop to close */}
           <div className="absolute inset-0 -z-10" />
         </div>,
@@ -279,15 +278,15 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   );
 }
 
-export function TopBar({ 
-  lawKey, 
-  title, 
-  lists, 
-  isExtensionMode, 
-  eurlexUrl, 
-  onPrint, 
-  showPrint = true, 
-  onSearchOpen, 
+export function TopBar({
+  lawKey,
+  title,
+  lists,
+  isExtensionMode,
+  eurlexUrl,
+  onPrint,
+  showPrint = true,
+  onSearchOpen,
   isSearchLoading,
   onToggleSidebar,
   isSidebarOpen,
@@ -299,10 +298,10 @@ export function TopBar({
   const { articles, recitals, annexes } = lists;
 
   const onNavigate = (item) => {
-    const extensionParams = isExtensionMode && lawKey === 'extension' 
-      ? window.location.search 
+    const extensionParams = isExtensionMode && lawKey === 'extension'
+      ? window.location.search
       : '';
-    
+
     // Ensure ID is a string before encoding
     const safeId = encodeURIComponent(String(item.id));
     const targetLawKey = item.law_key || lawKey;
@@ -315,7 +314,7 @@ export function TopBar({
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80">
+    <header className="sticky top-0 z-20 border-b border-gray-100 bg-white/95 backdrop-blur-sm supports-[backdrop-filter]:bg-white/80 dark:bg-gray-900/95 dark:supports-[backdrop-filter]:bg-gray-900/80 dark:border-gray-800">
       <div className="relative mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 md:px-6">
         {/* Left: Branding */}
         <div className="flex-shrink-0 flex items-center gap-3">
@@ -323,16 +322,16 @@ export function TopBar({
             onClick={() => navigate("/")}
             className="flex items-center justify-center transition-opacity hover:opacity-80"
           >
-            <img 
-              src={`${import.meta.env.BASE_URL}wizard.png`} 
-              alt="LegalViz Wizard" 
-              className="h-10 w-auto" 
+            <img
+              src={`${import.meta.env.BASE_URL}wizard.png`}
+              alt="LegalViz Wizard"
+              className="h-10 w-auto"
             />
           </button>
           <div className="hidden md:flex flex-col">
             <button
               onClick={() => navigate("/")}
-              className="text-left text-lg font-bold tracking-tight text-gray-900 leading-none transition-opacity hover:opacity-80"
+              className="text-left text-lg font-bold tracking-tight text-gray-900 leading-none transition-opacity hover:opacity-80 dark:text-white"
             >
               LegalViz.EU
             </button>
@@ -364,7 +363,7 @@ export function TopBar({
           {title && (
             <div className="flex items-center gap-2 min-w-0 max-w-full">
               <span
-                className="truncate text-sm font-medium text-gray-700"
+                className="truncate text-sm font-medium text-gray-700 dark:text-gray-300"
                 title={title}
               >
                 {title}
@@ -386,33 +385,35 @@ export function TopBar({
 
         {/* Right: Navigation Controls */}
         <div className="flex-shrink-0 flex items-center gap-2 md:gap-3">
-          
+
           {/* Desktop Tools Group */}
           <div className="hidden md:flex items-center gap-1">
             {showPrint && (
               <Button
                 variant="ghost"
                 onClick={onPrint}
-                className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors dark:text-gray-400 dark:hover:text-blue-400 dark:hover:bg-gray-800"
                 title="Print / PDF"
               >
                 <Printer size={22} />
               </Button>
             )}
 
+            <ThemeToggle />
+
             {onIncreaseFont && (
               <div className="flex items-center gap-0.5 mx-1">
-                <Button 
-                  variant="ghost" 
-                  onClick={onDecreaseFont} 
+                <Button
+                  variant="ghost"
+                  onClick={onDecreaseFont}
                   title={`Decrease font size (${fontSize}%)`}
                   className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                 >
                   <Minus size={20} />
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  onClick={onIncreaseFont} 
+                <Button
+                  variant="ghost"
+                  onClick={onIncreaseFont}
                   title={`Increase font size (${fontSize}%)`}
                   className="flex h-10 w-10 items-center justify-center text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                 >
@@ -420,16 +421,15 @@ export function TopBar({
                 </Button>
               </div>
             )}
-            
+
             {onToggleSidebar && (
               <Button
                 variant="ghost"
                 onClick={onToggleSidebar}
-                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
-                  !isSidebarOpen 
-                    ? 'bg-blue-50 text-blue-700' 
-                    : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
-                }`}
+                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${!isSidebarOpen
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-500 hover:text-blue-700 hover:bg-blue-50'
+                  }`}
                 title={isSidebarOpen ? "Hide sidebar" : "Show sidebar"}
               >
                 {isSidebarOpen ? <PanelLeftClose size={22} /> : <PanelLeftOpen size={22} />}
@@ -438,7 +438,7 @@ export function TopBar({
           </div>
 
           <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
-          
+
         </div>
       </div>
     </header>

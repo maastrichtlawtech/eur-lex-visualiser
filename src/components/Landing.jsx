@@ -51,25 +51,25 @@ export function Landing() {
   // State for global search
   const [allLawsData, setAllLawsData] = useState({ articles: [], recitals: [], annexes: [] });
   const [isSearchLoading, setIsSearchLoading] = useState(false);
-  
+
   const fetchCustomLaw = (key) => {
     return new Promise((resolve) => {
       const handleMsg = (event) => {
-         if (event.source !== window) return;
-         if (event.data.type === 'EURLEX_LAW_DATA') {
-            // We blindly resolve the first LAW_DATA we get. 
-            // Since we request sequentially, this should be fine.
-            window.removeEventListener('message', handleMsg);
-            resolve(event.data.payload);
-         }
+        if (event.source !== window) return;
+        if (event.data.type === 'EURLEX_LAW_DATA') {
+          // We blindly resolve the first LAW_DATA we get. 
+          // Since we request sequentially, this should be fine.
+          window.removeEventListener('message', handleMsg);
+          resolve(event.data.payload);
+        }
       };
       window.addEventListener('message', handleMsg);
       window.postMessage({ type: 'EURLEX_GET_LAW', key }, '*');
-      
+
       // Timeout safety
       setTimeout(() => {
-          window.removeEventListener('message', handleMsg);
-          resolve(null);
+        window.removeEventListener('message', handleMsg);
+        resolve(null);
       }, 2000);
     });
   };
@@ -81,15 +81,15 @@ export function Landing() {
     setIsSearchLoading(true);
     try {
       const combined = { articles: [], recitals: [], annexes: [] };
-      
+
       // 1. Fetch Standard Laws
       const standardPromises = LAWS.map(async (law) => {
         try {
           if (hiddenLaws.includes(law.key)) return null;
-          
+
           const text = await fetchText(law.value);
           const parsed = parseAnyToCombined(text);
-          
+
           parsed.articles?.forEach(a => {
             a.law_key = law.key;
             a.law_label = law.label;
@@ -116,38 +116,38 @@ export function Landing() {
       if (customLaws.length > 0) {
         for (const l of customLaws) {
           try {
-             // Skip if hidden
-             if (hiddenLaws.includes(l.key)) continue;
+            // Skip if hidden
+            if (hiddenLaws.includes(l.key)) continue;
 
-             const data = await fetchCustomLaw(l.key);
-             if (data && data.html) {
-                 const parsed = parseAnyToCombined(data.html);
-                 
-                 // Use metadata title if available
-                 const title = data.metadata?.title || l.title || "Custom Law";
+            const data = await fetchCustomLaw(l.key);
+            if (data && data.html) {
+              const parsed = parseAnyToCombined(data.html);
 
-                 parsed.articles?.forEach(a => { 
-                   a.law_key = l.key; 
-                   a.law_label = title; 
-                 });
-                 parsed.recitals?.forEach(r => { 
-                   r.law_key = l.key; 
-                   r.law_label = title; 
-                 });
-                 parsed.annexes?.forEach(a => { 
-                   a.law_key = l.key; 
-                   a.law_label = title; 
-                 });
-                 customLawResults.push(parsed);
-             }
+              // Use metadata title if available
+              const title = data.metadata?.title || l.title || "Custom Law";
+
+              parsed.articles?.forEach(a => {
+                a.law_key = l.key;
+                a.law_label = title;
+              });
+              parsed.recitals?.forEach(r => {
+                r.law_key = l.key;
+                r.law_label = title;
+              });
+              parsed.annexes?.forEach(a => {
+                a.law_key = l.key;
+                a.law_label = title;
+              });
+              customLawResults.push(parsed);
+            }
           } catch (e) {
-             console.error("Failed to load custom law for search", l.key, e);
+            console.error("Failed to load custom law for search", l.key, e);
           }
         }
       }
 
       const standardResults = await Promise.allSettled(standardPromises);
-      
+
       standardResults.forEach((res) => {
         if (res.status === 'fulfilled' && res.value) {
           combined.articles.push(...(res.value.articles || []));
@@ -157,9 +157,9 @@ export function Landing() {
       });
 
       customLawResults.forEach((res) => {
-         combined.articles.push(...(res.articles || []));
-         combined.recitals.push(...(res.recitals || []));
-         combined.annexes.push(...(res.annexes || []));
+        combined.articles.push(...(res.articles || []));
+        combined.recitals.push(...(res.recitals || []));
+        combined.annexes.push(...(res.annexes || []));
       });
 
       setAllLawsData(combined);
@@ -169,7 +169,7 @@ export function Landing() {
       setIsSearchLoading(false);
     }
   };
-  
+
   // Update document title
   // Handled by SEO component
 
@@ -199,30 +199,30 @@ export function Landing() {
   useEffect(() => {
     const handleMessage = (event) => {
       if (event.source !== window) return;
-      
+
       if (event.data.type === 'EURLEX_LAW_LIST') {
         setCustomLaws(event.data.payload.laws || []);
         setIsExtensionReady(true);
       }
-      
+
       if (event.data.type === 'EURLEX_DELETE_SUCCESS') {
-         // Clear search cache so it rebuilds next time
-         setAllLawsData({ articles: [], recitals: [], annexes: [] });
-         // Refresh list
-         window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+        // Clear search cache so it rebuilds next time
+        setAllLawsData({ articles: [], recitals: [], annexes: [] });
+        // Refresh list
+        window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
       }
-      
+
       if (event.data.type === 'EURLEX_EXTENSION_READY') {
-         setIsExtensionReady(true);
-         window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
+        setIsExtensionReady(true);
+        window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
       }
     };
-    
+
     window.addEventListener('message', handleMessage);
-    
+
     // Initial fetch
     window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
-    
+
     // Poll for a bit to ensure we catch it if the extension script loads late
     let attempts = 0;
     const interval = setInterval(() => {
@@ -230,7 +230,7 @@ export function Landing() {
       if (attempts > 20) clearInterval(interval); // 10 seconds
       window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
     }, 500);
-    
+
     return () => {
       window.removeEventListener('message', handleMessage);
       clearInterval(interval);
@@ -251,7 +251,7 @@ export function Landing() {
       }
     }
   };
-  
+
   const formatDate = (ts) => {
     if (!ts) return "Never";
     return new Date(ts).toLocaleString(undefined, {
@@ -271,18 +271,18 @@ export function Landing() {
       timestamp: lastOpened[l.key] || null
     }))
   ]
-  .filter(l => !hiddenLaws.includes(l.key || l.value)) // Filter out hidden laws
-  .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by last opened
-  
+    .filter(l => !hiddenLaws.includes(l.key || l.value)) // Filter out hidden laws
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by last opened
+
   const hasCustomLaws = customLaws.length > 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <SEO 
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
+      <SEO
         description="Read and navigate EU laws (GDPR, AI Act, DMA, DSA) efficiently with interactive visualisations. View articles and related recitals side-by-side."
       />
-      <TopBar 
-        lawKey="" 
+      <TopBar
+        lawKey=""
         title=""
         lists={allLawsData}
         isExtensionMode={false}
@@ -291,23 +291,23 @@ export function Landing() {
         onSearchOpen={handleSearchOpen}
         isSearchLoading={isSearchLoading}
       />
-      
+
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center px-6 py-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium tracking-tight text-gray-700 ring-1 ring-gray-200 mb-6">
+          <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-medium tracking-tight text-gray-700 ring-1 ring-gray-200 mb-6 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700">
             <span>LegalViz.EU</span>
-            <span className="mx-2 text-gray-400">|</span>
-            <span className="font-normal text-gray-500">EU Law Visualizer</span>
+            <span className="mx-2 text-gray-400 dark:text-gray-500">|</span>
+            <span className="font-normal text-gray-500 dark:text-gray-400">EU Law Visualizer</span>
           </span>
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl lg:text-5xl dark:text-white">
             Read EU law beautifully,
-            <span className="block text-gray-600">and with ease.</span>
+            <span className="block text-gray-600 dark:text-gray-400">and with ease.</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600 sm:text-base">
+          <p className="mx-auto mt-3 max-w-xl text-sm text-gray-600 sm:text-base dark:text-gray-400">
             Choose the instrument you are working with. You will then see an interactive view with
             chapters, articles, recitals, and annexes side by side.
           </p>
@@ -320,7 +320,7 @@ export function Landing() {
           className="mt-8 w-full"
         >
           {!instructionsDismissed && !isExtensionReady && (
-            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
+            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
               Option 1 · Choose a popular EU law
             </h2>
           )}
@@ -339,7 +339,8 @@ export function Landing() {
                     navigate(`/law/${law.key}`);
                   }
                 }}
-                className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer"
+
+                className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
                 tabIndex={0}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
@@ -356,17 +357,17 @@ export function Landing() {
               >
                 <div className="flex items-start justify-between gap-2 w-full">
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-gray-900 truncate pr-6">
+                    <div className="text-sm font-semibold text-gray-900 truncate pr-6 dark:text-gray-100">
                       {law.label}
                     </div>
-                    
-                    
+
+
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
                       <Clock className="h-3 w-3" />
                       <span>Last opened: {formatDate(law.timestamp)}</span>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={(e) => handleDelete(e, law.key || law.value, law.isCustom)}
                     className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
@@ -380,153 +381,155 @@ export function Landing() {
           </div>
         </motion.div>
 
-        {!instructionsDismissed && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="mt-10 w-full"
-          >
-            {!isExtensionReady && (
-              <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500">
-                Option 2 · Visualise other EU laws
-              </h2>
-            )}
-            <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${!isExtensionReady ? "mt-4" : ""}`}>
-              <div className="flex w-full items-center justify-between px-6 py-4 text-left">
-                <button
-                  type="button"
-                  onClick={() => setShowExtensionInfo((prev) => !prev)}
-                  className="flex flex-1 items-center justify-between mr-4"
-                >
-                  <p className="text-sm font-semibold text-gray-900">
-                    Visualise other EU laws in 4 simple steps
-                  </p>
-                  <motion.span
-                    animate={{ rotate: showExtensionInfo ? 90 : 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-xl text-gray-600 shadow-sm"
+        {
+          !instructionsDismissed && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-10 w-full"
+            >
+              {!isExtensionReady && (
+                <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+                  Option 2 · Visualise other EU laws
+                </h2>
+              )}
+              <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${!isExtensionReady ? "mt-4" : ""} dark:bg-gray-900 dark:border-gray-800`}>
+                <div className="flex w-full items-center justify-between px-6 py-4 text-left">
+                  <button
+                    type="button"
+                    onClick={() => setShowExtensionInfo((prev) => !prev)}
+                    className="flex flex-1 items-center justify-between mr-4"
                   >
-                    ❯
-                  </motion.span>
-                </button>
-                
-                <button
-                  onClick={dismissInstructions}
-                  className="text-xs text-gray-400 hover:text-red-500 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                  title="Dismiss these instructions permanently"
-                >
-                  Dismiss
-                </button>
-              </div>
-              <AnimatePresence initial={false}>
-                {showExtensionInfo && (
-                  <motion.div
-                    initial="collapsed"
-                    animate="open"
-                    exit="collapsed"
-                    variants={{
-                      open: { height: "auto", opacity: 1 },
-                      collapsed: { height: 0, opacity: 0 },
-                    }}
-                    transition={{ duration: 0.25, ease: "easeInOut" }}
-                    className="overflow-hidden"
-                  >
-                  <div className="space-y-4 border-t border-gray-100 px-6 pb-6 pt-4 text-xs">
-                    <p className="text-gray-700">
-                      Want to visualise a different EU law? Install our browser extension to open <strong>any recent EU law</strong> from EUR-Lex in this visualiser.
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Visualise other EU laws in 4 simple steps
                     </p>
+                    <motion.span
+                      animate={{ rotate: showExtensionInfo ? 90 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-xl text-gray-600 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
+                    >
+                      ❯
+                    </motion.span>
+                  </button>
 
-                    <div>
-                      <p className="mb-3 font-medium text-gray-700">Install the extension:</p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <a
-                          href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
-                        >
-                          <span className="text-base">🌐</span>
-                          <span>Chrome</span>
-                        </a>
-                        <a
-                          href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
-                        >
-                          <span className="text-base">🦁</span>
-                          <span>Brave</span>
-                        </a>
-                        <a
-                          href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
-                        >
-                          <span className="text-base">🔷</span>
-                          <span>Edge</span>
-                        </a>
-                        <a
-                          href="https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-orange-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-orange-50 hover:shadow-sm"
-                        >
-                          <span className="text-base">🦊</span>
-                          <span>Firefox</span>
-                        </a>
-                      </div>
-                    </div>
+                  <button
+                    onClick={dismissInstructions}
+                    className="text-xs text-gray-400 hover:text-red-500 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                    title="Dismiss these instructions permanently"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <AnimatePresence initial={false}>
+                  {showExtensionInfo && (
+                    <motion.div
+                      initial="collapsed"
+                      animate="open"
+                      exit="collapsed"
+                      variants={{
+                        open: { height: "auto", opacity: 1 },
+                        collapsed: { height: 0, opacity: 0 },
+                      }}
+                      transition={{ duration: 0.25, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-4 border-t border-gray-100 px-6 pb-6 pt-4 text-xs dark:border-gray-800">
+                        <p className="text-gray-700 dark:text-gray-300">
+                          Want to visualise a different EU law? Install our browser extension to open <strong>any recent EU law</strong> from EUR-Lex in this visualiser.
+                        </p>
 
-                    <div className="rounded-lg bg-white p-3">
-                      <p className="font-medium text-gray-900">How it works:</p>
-                      <ol className="mt-2 space-y-1.5 text-gray-700">
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-gray-500">1.</span>
-                          <span>Install the extension for your browser (see links above)</span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-gray-500">2.</span>
-                          <span>
-                            Visit a EU law page on EUR-Lex{" "}
-                            (e.g.{" "}
+                        <div>
+                          <p className="mb-3 font-medium text-gray-700 dark:text-gray-300">Install the extension:</p>
+                          <div className="flex flex-wrap items-center gap-2">
                             <a
-                              href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+                              href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="break-all text-blue-600 hover:underline"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm"
                             >
-                              https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
+                              <span className="text-base">🌐</span>
+                              <span>Chrome</span>
                             </a>
-                            )
-                          </span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-gray-500">3.</span>
-                          <span>Open the law in the <strong>English</strong> language using the language selector on EUR-Lex</span>
-                        </li>
-                        <li className="mt-2">
-                          <img
-                            src={`${import.meta.env.BASE_URL}language-selector.png`}
-                            alt="EUR-Lex language selector showing available languages"
-                            className="w-full rounded-lg border border-gray-200 shadow-sm"
-                          />
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-semibold text-gray-500">4.</span>
-                          <span>The extension automatically opens the law in this visualiser</span>
-                        </li>
-                      </ol>
-                    </div>
+                            <a
+                              href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                              <span className="text-base">🦁</span>
+                              <span>Brave</span>
+                            </a>
+                            <a
+                              href="https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-50 hover:shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700"
+                            >
+                              <span className="text-base">🔷</span>
+                              <span>Edge</span>
+                            </a>
+                            <a
+                              href="https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-orange-300 bg-white px-3 py-1.5 font-medium text-gray-700 transition hover:bg-orange-50 hover:shadow-sm dark:bg-gray-800 dark:border-orange-900/50 dark:text-gray-200 dark:hover:bg-orange-900/20"
+                            >
+                              <span className="text-base">🦊</span>
+                              <span>Firefox</span>
+                            </a>
+                          </div>
+                        </div>
 
-                  </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
+                        <div className="rounded-lg bg-white p-3 dark:bg-gray-800/50">
+                          <p className="font-medium text-gray-900 dark:text-white">How it works:</p>
+                          <ol className="mt-2 space-y-1.5 text-gray-700 dark:text-gray-300">
+                            <li className="flex gap-2">
+                              <span className="font-semibold text-gray-500">1.</span>
+                              <span>Install the extension for your browser (see links above)</span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="font-semibold text-gray-500">2.</span>
+                              <span>
+                                Visit a EU law page on EUR-Lex{" "}
+                                (e.g.{" "}
+                                <a
+                                  href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="break-all text-blue-600 hover:underline"
+                                >
+                                  https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
+                                </a>
+                                )
+                              </span>
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="font-semibold text-gray-500">3.</span>
+                              <span>Open the law in the <strong>English</strong> language using the language selector on EUR-Lex</span>
+                            </li>
+                            <li className="mt-2">
+                              <img
+                                src={`${import.meta.env.BASE_URL}language-selector.png`}
+                                alt="EUR-Lex language selector showing available languages"
+                                className="w-full rounded-lg border border-gray-200 shadow-sm"
+                              />
+                            </li>
+                            <li className="flex gap-2">
+                              <span className="font-semibold text-gray-500">4.</span>
+                              <span>The extension automatically opens the law in this visualiser</span>
+                            </li>
+                          </ol>
+                        </div>
+
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          )
+        }
 
         <motion.div
           initial={{ opacity: 0 }}
@@ -559,13 +562,13 @@ export function Landing() {
             href="https://github.com/maastrichtlawtech/eur-lex-visualiser"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-gray-600 transition hover:text-gray-900"
+            className="inline-flex items-center gap-1.5 text-gray-600 transition hover:text-gray-900 dark:text-gray-500 dark:hover:text-gray-300"
           >
             <Github className="h-4 w-4" />
             <span>Source code and support on GitHub</span>
           </a>
         </motion.div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

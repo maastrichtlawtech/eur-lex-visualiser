@@ -67,7 +67,7 @@ export function LawViewer() {
 
   // Map scale to prose class and percentage for display
   const getProseClass = (s) => {
-    switch(s) {
+    switch (s) {
       case 1: return "prose-sm";
       case 2: return "prose-base";
       case 3: return "prose-lg";
@@ -78,7 +78,7 @@ export function LawViewer() {
   };
 
   const getTextClass = (s) => {
-    switch(s) {
+    switch (s) {
       case 1: return "text-sm";
       case 2: return "text-base";
       case 3: return "text-lg";
@@ -87,9 +87,9 @@ export function LawViewer() {
       default: return "text-lg";
     }
   };
-  
+
   const getFontPercent = (s) => {
-    switch(s) {
+    switch (s) {
       case 1: return 75;
       case 2: return 100;
       case 3: return 125;
@@ -128,7 +128,7 @@ export function LawViewer() {
     try {
       console.log('Parsing HTML from extension, length:', htmlString.length);
       const combined = parseAnyToCombined(htmlString);
-      
+
       // Use metadata title if available and parsed title is empty or generic
       if (metadata?.title && (!combined.title || combined.title === 'Untitled Law')) {
         combined.title = metadata.title;
@@ -139,7 +139,7 @@ export function LawViewer() {
         // Ensure we link to the main text view, not the HTML-specific view
         combined.eurlex = metadata.url.replace(/\/TXT\/HTML\//, '/TXT/');
       }
-      
+
       console.log('Parsed result:', {
         articles: combined.articles?.length || 0,
         recitals: combined.recitals?.length || 0,
@@ -157,7 +157,7 @@ export function LawViewer() {
 
   useEffect(() => {
     if (data.articles?.length > 0 && data.recitals?.length > 0) {
-      
+
       // Generate a cache key for NLP results
       let cacheKey = null;
       if (key && !isExtensionMode) {
@@ -190,7 +190,7 @@ export function LawViewer() {
         const map = mapRecitalsToArticles(data.recitals, data.articles);
         // console.timeEnd("NLP Calculation");
         setRecitalMap(map);
-        
+
         // 3. Save to cache
         if (cacheKey) {
           try {
@@ -214,7 +214,7 @@ export function LawViewer() {
   useEffect(() => {
     const isExtension = searchParams.get('extension') === 'true';
     const storageKey = searchParams.get('key');
-    
+
     if (isExtension && storageKey) {
       // If we already loaded this key and have data, don't reload.
       // This prevents reloading when navigating between articles of the same law.
@@ -226,12 +226,12 @@ export function LawViewer() {
       loadedKeyRef.current = storageKey;
       setIsExtensionMode(true);
       setLoading(true);
-      
+
       let isResponseReceived = false;
-      
+
       const handleMessage = (event) => {
         if (event.source !== window) return;
-        
+
         if (event.data.type === 'EURLEX_LAW_DATA') {
           const payload = event.data.payload;
           if (payload.error) {
@@ -250,10 +250,10 @@ export function LawViewer() {
       };
 
       window.addEventListener('message', handleMessage);
-      
+
       // Request data immediately
       window.postMessage({ type: 'EURLEX_GET_LAW', key: storageKey }, '*');
-      
+
       // Poll in case the extension bridge script hasn't loaded yet
       const pollInterval = setInterval(() => {
         if (isResponseReceived) {
@@ -263,16 +263,16 @@ export function LawViewer() {
         console.log('Polling for law data...');
         window.postMessage({ type: 'EURLEX_GET_LAW', key: storageKey }, '*');
       }, 500);
-      
+
       // Stop polling after 5 seconds to avoid infinite loops if something is wrong
       const timeout = setTimeout(() => {
         clearInterval(pollInterval);
         if (!isResponseReceived && !data.title) {
-           setError("Timed out waiting for extension data. Please ensure the extension is installed and active.");
-           setLoading(false);
+          setError("Timed out waiting for extension data. Please ensure the extension is installed and active.");
+          setLoading(false);
         }
       }, 5000);
-      
+
       return () => {
         window.removeEventListener('message', handleMessage);
         clearInterval(pollInterval);
@@ -284,7 +284,7 @@ export function LawViewer() {
   // Load law when path changes
   useEffect(() => {
     if (isExtensionMode) return; // Don't load from file if we're in extension mode
-    
+
     if (lawPath) {
       loadLaw(lawPath);
     } else if (key) {
@@ -322,7 +322,7 @@ export function LawViewer() {
           found = true;
         }
       }
-      
+
       if (found) {
         return;
       }
@@ -332,7 +332,7 @@ export function LawViewer() {
     if (!kind || !id) {
       const extensionKey = isExtensionMode ? searchParams.get('key') : null;
       const extensionParams = extensionKey ? `?extension=true&key=${extensionKey}` : '';
-      
+
       if (data.articles?.[0]) {
         const a0 = data.articles[0];
         setSelected({ kind: "article", id: a0.article_number, html: a0.article_html });
@@ -467,35 +467,35 @@ export function LawViewer() {
         const { articles, recitals, annexes } = data;
         let currentList = [];
         let currentId = selected.id;
-        
+
         if (selected.kind === "article") currentList = articles;
         else if (selected.kind === "recital") currentList = recitals;
         else if (selected.kind === "annex") currentList = annexes;
 
         if (currentList && currentList.length > 0) {
-           const idx = currentList.findIndex(item => 
-             (item.article_number === currentId) || 
-             (item.recital_number === currentId) || 
-             (item.annex_id === currentId)
-           );
-           if (idx > 0) onPrevNext(selected.kind, idx - 1);
+          const idx = currentList.findIndex(item =>
+            (item.article_number === currentId) ||
+            (item.recital_number === currentId) ||
+            (item.annex_id === currentId)
+          );
+          if (idx > 0) onPrevNext(selected.kind, idx - 1);
         }
       } else if (e.key === "ArrowRight") {
         const { articles, recitals, annexes } = data;
         let currentList = [];
         let currentId = selected.id;
-        
+
         if (selected.kind === "article") currentList = articles;
         else if (selected.kind === "recital") currentList = recitals;
         else if (selected.kind === "annex") currentList = annexes;
 
         if (currentList && currentList.length > 0) {
-           const idx = currentList.findIndex(item => 
-             (item.article_number === currentId) || 
-             (item.recital_number === currentId) || 
-             (item.annex_id === currentId)
-           );
-           if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
+          const idx = currentList.findIndex(item =>
+            (item.article_number === currentId) ||
+            (item.recital_number === currentId) ||
+            (item.annex_id === currentId)
+          );
+          if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
         }
       }
     };
@@ -510,7 +510,7 @@ export function LawViewer() {
   const minSwipeDistance = 50;
 
   const onTouchStart = (e) => {
-    touchEndRef.current = null; 
+    touchEndRef.current = null;
     touchStartRef.current = e.targetTouches[0].clientX;
   };
 
@@ -527,26 +527,26 @@ export function LawViewer() {
     const { articles, recitals, annexes } = data;
     let currentList = [];
     let currentId = selected.id;
-    
+
     if (selected.kind === "article") currentList = articles;
     else if (selected.kind === "recital") currentList = recitals;
     else if (selected.kind === "annex") currentList = annexes;
 
     if (currentList && currentList.length > 0) {
-       const idx = currentList.findIndex(item => 
-         (item.article_number === currentId) || 
-         (item.recital_number === currentId) || 
-         (item.annex_id === currentId)
-       );
-       
-       if (isLeftSwipe) {
-         // Swipe Left -> Next Article
-         if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
-       } 
-       if (isRightSwipe) {
-         // Swipe Right -> Prev Article
-         if (idx > 0) onPrevNext(selected.kind, idx - 1);
-       }
+      const idx = currentList.findIndex(item =>
+        (item.article_number === currentId) ||
+        (item.recital_number === currentId) ||
+        (item.annex_id === currentId)
+      );
+
+      if (isLeftSwipe) {
+        // Swipe Left -> Next Article
+        if (idx >= 0 && idx < currentList.length - 1) onPrevNext(selected.kind, idx + 1);
+      }
+      if (isRightSwipe) {
+        // Swipe Right -> Prev Article
+        if (idx > 0) onPrevNext(selected.kind, idx - 1);
+      }
     }
   };
 
@@ -558,12 +558,12 @@ export function LawViewer() {
   const onClickRecital = (r, fromArticleId = null) => {
     // If we're coming from an article, save that state so we can go back
     if (fromArticleId) {
-       setReturnToArticle({ id: fromArticleId });
+      setReturnToArticle({ id: fromArticleId });
     } else if (selected.kind !== "recital") {
-       // If we navigate away to something else (article/annex), clear the return path
-       setReturnToArticle(null);
+      // If we navigate away to something else (article/annex), clear the return path
+      setReturnToArticle(null);
     }
-    
+
     selectRecitalIdx(data.recitals.findIndex((x) => x.recital_number === r.recital_number));
   };
   const onClickAnnex = (ax) => {
@@ -588,17 +588,17 @@ export function LawViewer() {
 
     let title = lawName;
     let description = "Interactive visualisation of EU laws. Navigate articles, recitals, and annexes with ease.";
-    
+
     if (selected.id) {
       const kindLabel =
         selected.kind === "article"
           ? "Article"
           : selected.kind === "recital"
-          ? "Recital"
-          : "Annex";
+            ? "Recital"
+            : "Annex";
       title = `${kindLabel} ${selected.id} - ${lawName}`;
       description = `Read ${kindLabel} ${selected.id} of ${lawName} on LegalViz.EU.`;
-      
+
       // Try to add a bit of content preview to description if available
       // Note: HTML might need stripping, but keeping it simple for now
     }
@@ -644,7 +644,7 @@ export function LawViewer() {
         printWindow.document.body.appendChild(container);
 
         const root = createRoot(container);
-        
+
         // Wrap in a promise to wait for render? 
         // React 18 createRoot is async-ish but text rendering is usually fast.
         // We'll use a small timeout to ensure styles are applied.
@@ -664,9 +664,9 @@ export function LawViewer() {
 
   // --------- Main visualiser UI ----------
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white print:bg-white">
-      <SEO 
-        title={seoData.title} 
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white print:bg-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
+      <SEO
+        title={seoData.title}
         description={seoData.description}
         type="article"
       />
@@ -686,191 +686,156 @@ export function LawViewer() {
         />
 
         <main className={`mx-auto flex w-full max-w-[1600px] flex-col gap-4 px-4 py-4 md:flex-row md:px-6 md:py-6 md:gap-6 justify-center`}>
-        {/* Main Content Area (Left/Center) */}
-        <div className={`min-w-0 w-full max-w-4xl order-2 md:order-1 transition-all duration-300`}>
-          <section 
-            className="rounded-2xl border border-gray-200 bg-white p-6 md:p-12 shadow-sm min-h-[50vh]"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <div className="flex items-center justify-between mb-4 gap-4">
-              <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0">
-                {selected.kind === "article" && `Article ${selected.id || ""}`}
-                {selected.kind === "recital" && `Recital ${selected.id || ""}`}
-                {selected.kind === "annex" && `Annex ${selected.id || ""}`}
-                {!selected.id && "No selection"}
-              </h2>
-            </div>
+          {/* Main Content Area (Left/Center) */}
+          <div className={`min-w-0 w-full max-w-4xl order-2 md:order-1 transition-all duration-300`}>
+            <section
+              className="rounded-2xl border border-gray-200 bg-white p-6 md:p-12 shadow-sm min-h-[50vh] dark:bg-gray-900 dark:border-gray-800"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            >
+              <div className="flex items-center justify-between mb-4 gap-4">
+                <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0 dark:text-gray-100">
+                  {selected.kind === "article" && `Article ${selected.id || ""}`}
+                  {selected.kind === "recital" && `Recital ${selected.id || ""}`}
+                  {selected.kind === "annex" && `Annex ${selected.id || ""}`}
+                  {!selected.id && "No selection"}
+                </h2>
+              </div>
 
-            <article
-              className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
-              dangerouslySetInnerHTML={{
-                __html:
-                  selected.html ||
-                  "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
-              }}
-            />
-          </section>
+              <article
+                className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
+                dangerouslySetInnerHTML={{
+                  __html:
+                    selected.html ||
+                    "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
+                }}
+              />
+            </section>
 
             {selected.kind === "article" && (
-            <RelatedRecitals
-              recitals={recitalMap.get(selected.id) || []}
-              onSelectRecital={(r) => onClickRecital(r, selected.id)}
-            />
-          )}
-
-          {error && (
-            <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar (Right) */}
-        <aside className={`w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto transition-all duration-300 ${!isSidebarOpen ? 'md:hidden' : ''}`}>
-          {/* Mobile Navigation & Toggle */}
-          <div className="flex gap-2 mb-4 md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="flex items-center justify-center p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0"
-              title="Toggle Contents"
-            >
-              <Menu size={20} />
-            </button>
-
-            <div className="flex-1 min-w-0">
-              <NavigationControls
-                selected={selected}
-                lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
-                onPrevNext={onPrevNext}
-                className="w-full h-full"
+              <RelatedRecitals
+                recitals={recitalMap.get(selected.id) || []}
+                onSelectRecital={(r) => onClickRecital(r, selected.id)}
               />
-            </div>
+            )}
+
+            {error && (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                {error}
+              </div>
+            )}
           </div>
 
-          <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
-            {/* Quick Navigation */}
-            <div>
-              <div className="px-1 mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-900">Quick Navigation</span>
-                <div className="group relative">
-                   <Info size={14} className="text-gray-400 cursor-help" />
-                   <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
-                     Use arrow keys (←/→) or swipe on mobile to navigate between articles/recitals/annexes.
-                   </div>
-                </div>
-              </div>
-              
-              {/* Desktop Navigation */}
-              <div className="hidden md:block mb-4">
+          {/* Sidebar (Right) */}
+          <aside className={`w-full md:w-80 md:shrink-0 order-1 md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:overflow-y-auto transition-all duration-300 ${!isSidebarOpen ? 'md:hidden' : ''}`}>
+            {/* Mobile Navigation & Toggle */}
+            <div className="flex gap-2 mb-4 md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="flex items-center justify-center p-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100 transition-colors flex-shrink-0 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Toggle Contents"
+              >
+                <Menu size={20} />
+              </button>
+
+              <div className="flex-1 min-w-0">
                 <NavigationControls
                   selected={selected}
                   lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
                   onPrevNext={onPrevNext}
-                  className="w-full"
+                  className="w-full h-full"
                 />
-              </div>
-
-              <div className="flex flex-col gap-3">
-                {data.articles?.length > 0 && (
-                  <NumberSelector
-                    label="Article"
-                    total={data.articles.length}
-                    onSelect={(n) => {
-                      const idx = data.articles.findIndex(a => parseInt(a.article_number) === n);
-                      if (idx !== -1) selectArticleIdx(idx);
-                      else selectArticleIdx(n - 1);
-                      setMobileMenuOpen(false);
-                    }}
-                  />
-                )}
-
-                {data.recitals?.length > 0 && (
-                  <NumberSelector
-                    label="Recital"
-                    total={data.recitals.length}
-                    onSelect={(n) => {
-                      selectRecitalIdx(n - 1);
-                      setMobileMenuOpen(false);
-                    }}
-                  />
-                )}
-
-                {data.annexes?.length > 0 && (
-                  <NumberSelector
-                    label="Annex"
-                    total={data.annexes.length}
-                    onSelect={(n) => {
-                      selectAnnexIdx(n - 1);
-                      setMobileMenuOpen(false);
-                    }}
-                  />
-                )}
               </div>
             </div>
 
-            {/* TOC */}
-            <div className="pt-2">
-              <div className="px-1 mb-2 text-sm font-semibold text-gray-900">
-                Table of Contents
-              </div>
-              {toc.length > 0 ? (
-                <div className="space-y-2">
-                  {toc.map((ch) => {
-                    const isOpen = openChapter === ch.label;
-                    return (
-                      <Accordion
-                        key={ch.label}
-                        title={ch.label || "(Untitled Chapter)"}
-                        isOpen={isOpen}
-                        onToggle={() => setOpenChapter(isOpen ? null : ch.label)}
-                      >
-                        {ch.items?.length > 0 && (
-                          <ul className="space-y-1">
-                            {ch.items.map((a) => (
-                              <li key={`toc-${a.article_number}`}>
-                                <Button
-                                  variant="ghost"
-                                  className={`w-full justify-start text-left ${
-                                    selected.kind === "article" && selected.id === a.article_number
-                                      ? "bg-blue-50 text-blue-700"
-                                      : ""
-                                  }`}
-                                  onClick={() => {
-                                    onClickArticle(a);
-                                    setMobileMenuOpen(false);
-                                  }}
-                                >
-                                  <span className="truncate text-left w-full">
-                                    <span className="font-medium">Art. {a.article_number}</span>
-                                    {a.article_title && (
-                                      <span className="ml-1 text-gray-500 font-normal opacity-80">
-                                        - {a.article_title}
-                                      </span>
-                                    )}
-                                  </span>
-                                </Button>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+            <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
+              {/* Quick Navigation */}
+              <div>
+                <div className="px-1 mb-2 flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">Quick Navigation</span>
+                  <div className="group relative">
+                    <Info size={14} className="text-gray-400 cursor-help" />
+                    <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                      Use arrow keys (←/→) or swipe on mobile to navigate between articles/recitals/annexes.
+                    </div>
+                  </div>
+                </div>
 
-                        {ch.sections?.map((sec) => (
-                          <div key={sec.label} className="mt-3">
-                            <div className="border-t border-gray-100 pt-2 pb-1 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-                              {sec.label}
-                            </div>
+                {/* Desktop Navigation */}
+                <div className="hidden md:block mb-4">
+                  <NavigationControls
+                    selected={selected}
+                    lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+                    onPrevNext={onPrevNext}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {data.articles?.length > 0 && (
+                    <NumberSelector
+                      label="Article"
+                      total={data.articles.length}
+                      onSelect={(n) => {
+                        const idx = data.articles.findIndex(a => parseInt(a.article_number) === n);
+                        if (idx !== -1) selectArticleIdx(idx);
+                        else selectArticleIdx(n - 1);
+                        setMobileMenuOpen(false);
+                      }}
+                    />
+                  )}
+
+                  {data.recitals?.length > 0 && (
+                    <NumberSelector
+                      label="Recital"
+                      total={data.recitals.length}
+                      onSelect={(n) => {
+                        selectRecitalIdx(n - 1);
+                        setMobileMenuOpen(false);
+                      }}
+                    />
+                  )}
+
+                  {data.annexes?.length > 0 && (
+                    <NumberSelector
+                      label="Annex"
+                      total={data.annexes.length}
+                      onSelect={(n) => {
+                        selectAnnexIdx(n - 1);
+                        setMobileMenuOpen(false);
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* TOC */}
+              <div className="pt-2">
+                <div className="px-1 mb-2 text-sm font-semibold text-gray-900">
+                  Table of Contents
+                </div>
+                {toc.length > 0 ? (
+                  <div className="space-y-2">
+                    {toc.map((ch) => {
+                      const isOpen = openChapter === ch.label;
+                      return (
+                        <Accordion
+                          key={ch.label}
+                          title={ch.label || "(Untitled Chapter)"}
+                          isOpen={isOpen}
+                          onToggle={() => setOpenChapter(isOpen ? null : ch.label)}
+                        >
+                          {ch.items?.length > 0 && (
                             <ul className="space-y-1">
-                              {sec.items.map((a) => (
+                              {ch.items.map((a) => (
                                 <li key={`toc-${a.article_number}`}>
                                   <Button
                                     variant="ghost"
-                                    className={`w-full justify-start text-left ${
-                                      selected.kind === "article" && selected.id === a.article_number
+                                    className={`w-full justify-start text-left ${selected.kind === "article" && selected.id === a.article_number
                                         ? "bg-blue-50 text-blue-700"
                                         : ""
-                                    }`}
+                                      }`}
                                     onClick={() => {
                                       onClickArticle(a);
                                       setMobileMenuOpen(false);
@@ -888,19 +853,52 @@ export function LawViewer() {
                                 </li>
                               ))}
                             </ul>
-                          </div>
-                        ))}
-                      </Accordion>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>
-              )}
+                          )}
+
+                          {ch.sections?.map((sec) => (
+                            <div key={sec.label} className="mt-3">
+                              <div className="border-t border-gray-100 pt-2 pb-1 px-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                {sec.label}
+                              </div>
+                              <ul className="space-y-1">
+                                {sec.items.map((a) => (
+                                  <li key={`toc-${a.article_number}`}>
+                                    <Button
+                                      variant="ghost"
+                                      className={`w-full justify-start text-left ${selected.kind === "article" && selected.id === a.article_number
+                                          ? "bg-blue-50 text-blue-700"
+                                          : ""
+                                        }`}
+                                      onClick={() => {
+                                        onClickArticle(a);
+                                        setMobileMenuOpen(false);
+                                      }}
+                                    >
+                                      <span className="truncate text-left w-full">
+                                        <span className="font-medium">Art. {a.article_number}</span>
+                                        {a.article_title && (
+                                          <span className="ml-1 text-gray-500 font-normal opacity-80">
+                                            - {a.article_title}
+                                          </span>
+                                        )}
+                                      </span>
+                                    </Button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </Accordion>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 text-sm text-gray-500 text-center">No articles available.</div>
+                )}
+              </div>
             </div>
-          </div>
-        </aside>
-      </main>
+          </aside>
+        </main>
       </div>
 
       <PrintModal
