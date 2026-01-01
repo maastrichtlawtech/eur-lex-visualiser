@@ -752,11 +752,11 @@ export function LawViewer() {
             <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
               {/* Quick Navigation */}
               <div>
-                <div className="px-1 mb-2 flex items-center justify-between">
+                <div className="px-1 mb-2 flex items-center gap-2">
                   <span className="text-sm font-semibold text-gray-900 dark:text-gray-200">Quick Navigation</span>
                   <div className="group relative">
                     <Info size={14} className="text-gray-400 cursor-help" />
-                    <div className="absolute right-0 top-full mt-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                    <div className="absolute left-0 top-full mt-2 w-48 p-2 bg-gray-900 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
                       Use arrow keys (←/→) or swipe on mobile to navigate between articles/recitals/annexes.
                     </div>
                   </div>
