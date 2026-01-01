@@ -325,7 +325,7 @@ export function TopBar({
             <img
               src={`${import.meta.env.BASE_URL}wizard.png`}
               alt="LegalViz Wizard"
-              className="h-10 w-auto"
+              className="h-10 w-auto dark:invert dark:hue-rotate-180"
             />
           </button>
           <div className="hidden md:flex flex-col">
@@ -531,13 +531,13 @@ function MobileToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, f
           {/* Font Size */}
           {onIncreaseFont && (
             <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800">
-              <div className="mb-1.5 text-xs text-gray-500 uppercase font-semibold">Text Size</div>
+              <div className="mb-1.5 text-xs text-gray-500 uppercase font-semibold dark:text-gray-400">Text Size</div>
               <div className="flex items-center justify-between gap-2 bg-gray-50 rounded-lg p-1 dark:bg-gray-800">
-                <button onClick={onDecreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700">
+                <button onClick={onDecreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
                   <Minus size={16} />
                 </button>
-                <span className="text-xs font-mono w-8 text-center">{fontSize}%</span>
-                <button onClick={onIncreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700">
+                <span className="text-xs font-mono w-8 text-center text-gray-900 dark:text-gray-200">{fontSize}%</span>
+                <button onClick={onIncreaseFont} className="p-1 hover:bg-white rounded-md shadow-sm transition-all dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400">
                   <Plus size={16} />
                 </button>
               </div>

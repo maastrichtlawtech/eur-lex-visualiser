@@ -833,8 +833,8 @@ export function LawViewer() {
                                   <Button
                                     variant="ghost"
                                     className={`w-full justify-start text-left ${selected.kind === "article" && selected.id === a.article_number
-                                        ? "bg-blue-50 text-blue-700"
-                                        : ""
+                                      ? "bg-blue-50 text-blue-700"
+                                      : ""
                                       }`}
                                     onClick={() => {
                                       onClickArticle(a);
@@ -844,7 +844,7 @@ export function LawViewer() {
                                     <span className="truncate text-left w-full">
                                       <span className="font-medium">Art. {a.article_number}</span>
                                       {a.article_title && (
-                                        <span className="ml-1 text-gray-500 font-normal opacity-80">
+                                        <span className="ml-1 text-gray-500 font-normal opacity-80 dark:text-gray-400 dark:opacity-100">
                                           - {a.article_title}
                                         </span>
                                       )}
@@ -866,8 +866,8 @@ export function LawViewer() {
                                     <Button
                                       variant="ghost"
                                       className={`w-full justify-start text-left ${selected.kind === "article" && selected.id === a.article_number
-                                          ? "bg-blue-50 text-blue-700"
-                                          : ""
+                                        ? "bg-blue-50 text-blue-700"
+                                        : ""
                                         }`}
                                       onClick={() => {
                                         onClickArticle(a);
@@ -877,7 +877,7 @@ export function LawViewer() {
                                       <span className="truncate text-left w-full">
                                         <span className="font-medium">Art. {a.article_number}</span>
                                         {a.article_title && (
-                                          <span className="ml-1 text-gray-500 font-normal opacity-80">
+                                          <span className="ml-1 text-gray-500 font-normal opacity-80 dark:text-gray-400 dark:opacity-100">
                                             - {a.article_title}
                                           </span>
                                         )}
