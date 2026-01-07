@@ -1,20 +1,30 @@
 // NLP Algorithm Version - bump this when algorithm changes to invalidate cache
-export const NLP_VERSION = 8;
+export const NLP_VERSION = 9;
 
-// Expanded stop words list for EU law context (English)
-// Includes common legal boilerplate terms that appear frequently but don't indicate relevance
+// Stop words for EU law TF-IDF analysis
+// Only truly generic terms that don't indicate semantic relevance
 const STOP_WORDS = new Set([
   // Basic English stop words
-  "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "don", "should", "now",
-  // EU legal boilerplate terms
-  "union", "member", "states", "commission", "regulation", "directive", "decision", "article", "paragraph", "eu", "european", "law", "act", "provisions", "measures", "shall", "may", "accordance", "order", "laying", "establishing", "regarding", "whereas",
-  // Additional legal/procedural terms that are common but not semantically meaningful
-  "referred", "pursuant", "apply", "applicable", "applied", "competent", "provide", "provided", "provides", "providing",
-  "scope", "relevant", "appropriate", "ensure", "ensures", "ensuring", "without", "prejudice", "necessary",
-  "concerned", "respect", "taking", "account", "case", "cases", "particular", "given", "within", "meaning",
-  "set", "point", "points", "subject", "under", "upon", "therefore", "also", "including", "included",
-  "following", "follows", "accordance", "accordance", "need", "needs", "make", "made", "take", "taken",
-  "view", "purpose", "purposes", "context", "basis", "effect", "effects", "way", "ways", "manner", "involves", "typically", "always", "applies", "regardless", "ascertain", "lay"
+  "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with",
+  "about", "against", "between", "into", "through", "during", "before", "after", "above", "below",
+  "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "once",
+  "here", "there", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most",
+  "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very",
+  "can", "will", "just", "should", "now", "also", "therefore", "upon", "within", "without",
+  // EU legal structure terms (appear everywhere, don't differentiate content)
+  "union", "member", "states", "commission", "article", "paragraph", "eu", "european",
+  "regulation", "regulations", "directive", "directives", "decision", "decisions",
+  "law", "act", "provisions", "measures",
+  "shall", "may", "whereas", "pursuant", "accordance", "hereof", "thereof",
+  // Common legal verbs/procedural language
+  "apply", "applicable", "applied", "applies", "provide", "provided", "provides", "providing",
+  "ensure", "ensures", "ensuring", "establish", "establishing", "regard", "regarding",
+  "refer", "referred", "include", "including", "included", "follow", "following", "follows",
+  "make", "made", "take", "taken", "taking", "set", "given", "lay", "laying",
+  // Generic filler terms
+  "relevant", "appropriate", "necessary", "competent", "concerned", "particular",
+  "respect", "account", "case", "cases", "order", "view", "way", "ways", "manner",
+  "point", "points", "subject", "meaning", "need", "needs", "effect", "effects"
 ]);
 
 /**
