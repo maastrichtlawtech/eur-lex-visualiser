@@ -16,7 +16,7 @@ A beautiful, interactive web application for reading and navigating European Uni
 - **Smart Table of Contents**: Navigate through chapters, sections, and articles with an organized, collapsible structure.
 - **Recitals Viewer**: Quick access to all recitals with a grid-based navigation interface.
 - **Annexes Browser**: Easy browsing of supplementary materials and annexes.
-- **Responsive Design**: Optimized for reading on desktop, tablet, and mobile devices.
+
 
 ### 🔍 Powerful Search & Navigation
 - **Instant Search**: Full-text search across articles, recitals, and annexes.
@@ -27,7 +27,12 @@ A beautiful, interactive web application for reading and navigating European Uni
 ### 🤖 AI-Powered Context
 - **Related Recitals**: The tool automatically analyzes the text to find connections between articles and recitals.
 - **Inline Context**: View relevant recitals side-by-side with articles to better understand the legislative intent.
+- **Definitions Context**: Automatically highlights defined terms (e.g., "online platform") and shows their legal definition on hover.
 - **TF-IDF Analysis**: Uses transparent, client-side text analysis (TF-IDF & Cosine Similarity) to suggest relationships without external API calls.
+
+### 🎨 Design & Accessibility
+- **Dark Mode**: Fully supported dark theme that respects system settings.
+- **Responsive Design**: Optimized for reading on desktop, tablet, and mobile devices.
 
 ### 🖨️ Professional Export
 - **Customizable Printing**: Create clean, print-ready documents or PDFs.
