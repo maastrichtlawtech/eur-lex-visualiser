@@ -7,7 +7,7 @@ import { LAWS } from "../constants/laws.js";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
 import { getLawPathFromKey } from "../utils/url.js";
-import { mapRecitalsToArticles } from "../utils/nlp.js";
+import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -158,15 +158,32 @@ export function LawViewer() {
   useEffect(() => {
     if (data.articles?.length > 0 && data.recitals?.length > 0) {
 
+      // Clean up old NLP cache entries (old versions and legacy keys)
+      try {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && (k.startsWith('nlp_map_') || k.startsWith('nlp_v'))) {
+            // Remove legacy nlp_map_ keys and old versioned keys
+            if (k.startsWith('nlp_map_') || !k.startsWith(`nlp_v${NLP_VERSION}_`)) {
+              keysToRemove.push(k);
+            }
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+      } catch (e) {
+        console.warn('Error cleaning up old NLP cache', e);
+      }
+
       // Generate a cache key for NLP results
       let cacheKey = null;
       if (key && !isExtensionMode) {
-        cacheKey = `nlp_map_${key}`;
+        cacheKey = `nlp_v${NLP_VERSION}_${key}`;
       } else if (isExtensionMode && data.title) {
         // Fallback for extension mode if title exists
         // Simple hash of title + lengths to identify specific content
         const safeTitle = data.title.replace(/\s+/g, '_').substring(0, 50);
-        cacheKey = `nlp_map_ext_${safeTitle}_${data.articles.length}_${data.recitals.length}`;
+        cacheKey = `nlp_v${NLP_VERSION}_ext_${safeTitle}_${data.articles.length}_${data.recitals.length}`;
       }
 
       // 1. Try to load from cache

@@ -1,7 +1,20 @@
-// Basic stop words list for EU law context (English)
+// NLP Algorithm Version - bump this when algorithm changes to invalidate cache
+export const NLP_VERSION = 8;
+
+// Expanded stop words list for EU law context (English)
+// Includes common legal boilerplate terms that appear frequently but don't indicate relevance
 const STOP_WORDS = new Set([
+  // Basic English stop words
   "a", "an", "the", "and", "or", "but", "if", "then", "else", "when", "at", "by", "for", "with", "about", "against", "between", "into", "through", "during", "before", "after", "above", "below", "to", "from", "up", "down", "in", "out", "on", "off", "over", "under", "again", "further", "then", "once", "here", "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more", "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "can", "will", "just", "don", "should", "now",
-  "union", "member", "states", "commission", "regulation", "directive", "decision", "article", "paragraph", "eu", "european", "law", "act", "provisions", "measures", "shall", "may", "accordance", "order", "laying", "establishing", "regarding", "whereas"
+  // EU legal boilerplate terms
+  "union", "member", "states", "commission", "regulation", "directive", "decision", "article", "paragraph", "eu", "european", "law", "act", "provisions", "measures", "shall", "may", "accordance", "order", "laying", "establishing", "regarding", "whereas",
+  // Additional legal/procedural terms that are common but not semantically meaningful
+  "referred", "pursuant", "apply", "applicable", "applied", "competent", "provide", "provided", "provides", "providing",
+  "scope", "relevant", "appropriate", "ensure", "ensures", "ensuring", "without", "prejudice", "necessary",
+  "concerned", "respect", "taking", "account", "case", "cases", "particular", "given", "within", "meaning",
+  "set", "point", "points", "subject", "under", "upon", "therefore", "also", "including", "included",
+  "following", "follows", "accordance", "accordance", "need", "needs", "make", "made", "take", "taken",
+  "view", "purpose", "purposes", "context", "basis", "effect", "effects", "way", "ways", "manner", "involves", "typically", "always", "applies", "regardless", "ascertain", "lay"
 ]);
 
 /**
@@ -60,7 +73,7 @@ function computeIDF(documents) {
 function computeTFIDFVector(tokens, idf) {
   const tf = computeTF(tokens);
   const vec = new Map();
-  
+
   // Vector length (magnitude) for cosine normalization
   let magnitude = 0;
 
@@ -71,7 +84,7 @@ function computeTFIDFVector(tokens, idf) {
       magnitude += score * score;
     }
   }
-  
+
   return { vec, magnitude: Math.sqrt(magnitude) };
 }
 
@@ -82,10 +95,10 @@ function cosineSimilarity(vec1Obj, vec2Obj) {
   if (vec1Obj.magnitude === 0 || vec2Obj.magnitude === 0) return 0;
 
   let dotProduct = 0;
-  
+
   // Iterate over the smaller vector for efficiency
-  const [smaller, larger] = vec1Obj.vec.size < vec2Obj.vec.size 
-    ? [vec1Obj.vec, vec2Obj.vec] 
+  const [smaller, larger] = vec1Obj.vec.size < vec2Obj.vec.size
+    ? [vec1Obj.vec, vec2Obj.vec]
     : [vec2Obj.vec, vec1Obj.vec];
 
   for (const [term, score1] of smaller) {
@@ -119,12 +132,26 @@ const stripTags = (html) => {
  * @returns {Map} - Map where key is article_number, value is array of matching recitals
  */
 export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
+  // Configuration
+  const SIMILARITY_THRESHOLD = 0.1; // Minimum cosine similarity to consider a match
+  const TITLE_WEIGHT = 3; // How many times to repeat title tokens for weighting
+
   // 1. Prepare Article Documents (Corpus)
-  const articleDocs = articles.map(a => ({
-    id: a.article_number,
-    tokens: tokenize(a.article_title + " " + stripTags(a.article_html)),
-    original: a
-  }));
+  // Weight article titles more heavily by repeating their tokens
+  const articleDocs = articles.map(a => {
+    const titleTokens = tokenize(a.article_title || "");
+    const bodyTokens = tokenize(stripTags(a.article_html));
+    // Repeat title tokens for increased weight
+    const weightedTitleTokens = [];
+    for (let i = 0; i < TITLE_WEIGHT; i++) {
+      weightedTitleTokens.push(...titleTokens);
+    }
+    return {
+      id: a.article_number,
+      tokens: [...weightedTitleTokens, ...bodyTokens],
+      original: a
+    };
+  });
 
   // 2. Compute IDF on Articles
   const idf = computeIDF(articleDocs);
@@ -140,52 +167,68 @@ export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
 
   // 4. Process Recitals
   recitals.forEach(r => {
-    const tokens = tokenize(r.recital_text);
-    // Use the same IDF as derived from articles (treating articles as the reference corpus)
+    const recitalText = r.recital_text || stripTags(r.recital_html) || "";
+    const tokens = tokenize(recitalText);
     const recitalVec = computeTFIDFVector(tokens, idf);
+
+    // Extract top keywords based on TF-IDF scores
+    const keywordScores = new Map();
+    for (const token of tokens) {
+      if (idf.has(token)) {
+        const score = idf.get(token);
+        // Keep the highest score for each unique token
+        if (!keywordScores.has(token) || keywordScores.get(token) < score) {
+          keywordScores.set(token, score);
+        }
+      }
+    }
+    // Sort by IDF score (higher = more distinctive) and take top 3
+    const keywords = Array.from(keywordScores.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([term]) => term);
 
     let bestScore = 0;
     let bestArticleId = null;
 
     articleVectors.forEach(aVec => {
       const score = cosineSimilarity(recitalVec, aVec);
-      
-      if (exclusive) {
-        // Keep track of the absolute best match
-        if (score > bestScore) {
-          bestScore = score;
-          bestArticleId = aVec.id;
-        }
-      } else {
-        // Multi-assignment logic (existing)
-        if (score > bestScore) {
-           bestScore = score;
-           bestArticleId = aVec.id;
-        }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestArticleId = aVec.id;
       }
     });
 
-    // Similarity threshold (tunable)
-    if (exclusive) {
-       // For exclusive mode, assign only to the single best article if above threshold
-       if (bestScore > 0.1 && bestArticleId) {
-         const list = articleToRecitals.get(bestArticleId);
-         if (list) list.push(r);
-       }
-    } else {
-       // For existing non-exclusive mode (visualiser sidebar), we stick to the original "best match" logic
-       // Currently the logic above effectively finds ONE best match anyway for the sidebar too, 
-       // but we could expand this to top-N in future. 
-       // For now, let's keep it consistent: assigns to best match > threshold.
-       if (bestScore > 0.1 && bestArticleId) {
-          const list = articleToRecitals.get(bestArticleId);
-          if (list) list.push(r);
-       }
+    // Apply threshold and assign
+    if (bestScore > SIMILARITY_THRESHOLD && bestArticleId) {
+      const list = articleToRecitals.get(bestArticleId);
+      if (list) {
+        // Store with score and keywords for later processing
+        list.push({ ...r, _score: bestScore, _keywords: keywords });
+      }
     }
   });
 
+  // 5. Sort by score and expose relevance score + keywords
+  for (const [articleId, recitalList] of articleToRecitals) {
+    if (recitalList.length > 0) {
+      // Sort by score descending
+      recitalList.sort((a, b) => (b._score || 0) - (a._score || 0));
+
+      // Rename internal properties for cleaner API
+      const sortedList = recitalList.map(r => {
+        const { _score, _keywords, ...rest } = r;
+        return { ...rest, relevanceScore: _score, keywords: _keywords };
+      });
+
+      articleToRecitals.set(articleId, sortedList);
+    }
+  }
+
   return articleToRecitals;
 }
+
 
 /**
  * Pre-compute search index for a given law data.
@@ -194,7 +237,7 @@ export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
  */
 export function buildSearchIndex(data) {
   const docs = [];
-  
+
   if (data.articles) {
     data.articles.forEach(a => {
       const text = stripTags(a.article_html);
@@ -244,7 +287,7 @@ export function buildSearchIndex(data) {
   }
 
   const idf = computeIDF(docs);
-  
+
   // Pre-compute vectors for all docs
   const docVectors = docs.map(doc => ({
     ...doc,
@@ -278,10 +321,10 @@ export function searchIndex(query, index) {
 
     const titleLower = doc.title.toLowerCase();
     const idStr = String(doc.id).toLowerCase();
-    
+
     // Exact ID match
     if (q === idStr) score += 200;
-    
+
     // "Article X" type match
     if (doc.type === 'article' && q.replace(/\s/g, '') === `article${idStr}`) score += 200;
     if (doc.type === 'recital' && q.replace(/\s/g, '') === `recital${idStr}`) score += 200;
@@ -302,14 +345,14 @@ export function searchIndex(query, index) {
 }
 
 function simpleSearchDocs(query, docs) {
-   const q = query.toLowerCase();
-   return docs
-     .filter(doc => doc.text.toLowerCase().includes(q) || doc.title.toLowerCase().includes(q))
-     .map(doc => ({
-       ...doc,
-       score: 1,
-       vec: undefined
-     }));
+  const q = query.toLowerCase();
+  return docs
+    .filter(doc => doc.text.toLowerCase().includes(q) || doc.title.toLowerCase().includes(q))
+    .map(doc => ({
+      ...doc,
+      score: 1,
+      vec: undefined
+    }));
 }
 
 /**
