@@ -94,6 +94,27 @@
   margin-bottom: .5rem;
 }
 
+/* Definition tooltips */
+.defined-term {
+  border-bottom: 1px dotted #6b7280;
+  cursor: help;
+  position: relative;
+}
+
+.defined-term:hover {
+  border-bottom-color: #3b82f6;
+  color: #3b82f6;
+}
+
+:root.dark .defined-term {
+  border-bottom-color: #9ca3af;
+}
+
+:root.dark .defined-term:hover {
+  border-bottom-color: #60a5fa;
+  color: #60a5fa;
+}
+
 @media print {
 
   /* Hide everything by default */

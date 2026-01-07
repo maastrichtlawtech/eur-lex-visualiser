@@ -8,6 +8,7 @@ import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
 import { getLawPathFromKey } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
+import { injectDefinitionTooltips } from "../utils/definitions.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -24,7 +25,7 @@ export function LawViewer() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const lawPath = getLawPathFromKey(key);
-  const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [] });
+  const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [], definitions: [] });
   const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
@@ -629,6 +630,17 @@ export function LawViewer() {
     return law ? law.eurlex : null;
   }, [key, isExtensionMode, data.eurlex]);
 
+  // Process HTML to inject definition tooltips
+  const processedHtml = useMemo(() => {
+    if (!selected.html) return "";
+    // Skip injection for the definitions article itself
+    const skipDefinitions = selected.kind === "article" &&
+      data.articles.find(a => a.article_number === selected.id)?.article_title?.toLowerCase().includes('definition');
+    return injectDefinitionTooltips(selected.html, data.definitions, {
+      skipDefinitionsArticle: skipDefinitions
+    });
+  }, [selected.html, selected.kind, selected.id, data.definitions, data.articles]);
+
   // Handle printing
   useEffect(() => {
     if (printOptions) {
@@ -724,7 +736,7 @@ export function LawViewer() {
                 className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
                 dangerouslySetInnerHTML={{
                   __html:
-                    selected.html ||
+                    processedHtml ||
                     "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
                 }}
               />

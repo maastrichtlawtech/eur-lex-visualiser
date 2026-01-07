@@ -7,8 +7,8 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   const innerHTML = (el) =>
     el
       ? Array.from(el.childNodes)
-          .map((n) => (n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent))
-          .join("")
+        .map((n) => (n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent))
+        .join("")
       : "";
 
   const articles = [];
@@ -21,7 +21,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
     if (!t) return "";
     // Cut after " of " (case insensitive)
     let short = t.split(/\s+of\s+/i)[0];
-    
+
     // Convert to Title Case logic
     // 1. Lowercase everything
     // 2. Capitalize first letter of each word
@@ -56,7 +56,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
       ) {
         // Found a likely short title -> prioritize it
         shortTitle = candidate;
-        break; 
+        break;
       }
     }
   }
@@ -189,17 +189,17 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
         // Title
         let title = t;
         let titleP = el.parentElement?.querySelector("div.eli-title p, p.oj-ti-annex-2, p.stitle-annex-norm");
-        
+
         // Extended logic: check next sibling for subtitle (common in some layouts like oj-doc-ti)
         if (!titleP) {
           const next = el.nextElementSibling;
           if (next && next.tagName === "P" && (next.classList.contains("oj-doc-ti") || next.classList.contains("oj-normal"))) {
-             titleP = next;
+            titleP = next;
           }
         }
 
         if (titleP) title = `${t} — ${getText(titleP)}`;
-        
+
         // Container: nearest subdivision, else the parent block
         let container = el.parentElement;
         while (container && !(container.tagName === "DIV" && container.classList.contains("eli-subdivision"))) {
@@ -213,7 +213,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
         if (titleP) titleP.setAttribute("data-ax-sub", markId);
 
         const clone = root.cloneNode(true);
-        
+
         el.removeAttribute("data-ax-id");
         if (titleP) titleP.removeAttribute("data-ax-sub");
 
@@ -227,7 +227,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
         }
 
         const annex_html = innerHTML(clone);
-        
+
         // Id/number if present
         const m = t.match(/^ANNEX\s*([IVXLC]+|\d+)?/i);
         const annex_id = (m && (m[1] || "").trim()) || title;
@@ -236,21 +236,63 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
     }
   }
 
+  // Extract definitions from the "Definitions" article
+  const definitions = [];
+  const definitionsArticle = articles.find(a =>
+    a.article_title && a.article_title.toLowerCase().includes('definition')
+  );
+
+  console.log('[LegalViz] Found definitions article:', definitionsArticle ? `Article ${definitionsArticle.article_number}: ${definitionsArticle.article_title}` : 'NOT FOUND');
+  console.log('[LegalViz] All article titles:', articles.map(a => `${a.article_number}: ${a.article_title}`).slice(0, 10));
+
+  if (definitionsArticle) {
+    // Parse the definitions article HTML to extract terms
+    const defDoc = parser.parseFromString(definitionsArticle.article_html, "text/html");
+    const tables = defDoc.querySelectorAll("table");
+    console.log('[LegalViz] Tables in definitions article:', tables.length);
+
+    for (const table of tables) {
+      const cells = table.querySelectorAll("td");
+      if (cells.length >= 2) {
+        const textCell = cells[1];
+        const text = getText(textCell);
+
+        // Match pattern: 'term' means ...
+        // EUR-Lex uses Unicode curly quotes: ' (U+2018) and ' (U+2019)
+        const termMatch = text.match(/^[\u2018\u2019'"]([^''\u2018\u2019""]+)[\u2018\u2019'"]\s+means\s+/i);
+        if (termMatch) {
+          const term = termMatch[1].trim();
+          // Definition is everything after "means "
+          const definition = text.replace(termMatch[0], '').trim();
+          definitions.push({ term, definition });
+        } else if (text.length > 0) {
+          // Log failed matches for debugging
+          console.log('[LegalViz] No match for:', text.substring(0, 80));
+        }
+      }
+    }
+  }
+
   // Sorts
   const asNum = (s) => (s == null ? NaN : parseInt(String(s).replace(/\D+/g, ""), 10));
   recitals.sort((a, b) => (asNum(a.recital_number) || 0) - (asNum(b.recital_number) || 0));
-  return { title, articles, recitals, annexes };
+
+  // Debug: log extracted definitions
+  console.log('[LegalViz] Extracted definitions:', definitions.length, definitions.slice(0, 5));
+
+  return { title, articles, recitals, annexes, definitions };
 }
 
 export function parseAnyToCombined(text) {
   try {
     const obj = JSON.parse(text);
     if (obj && (Array.isArray(obj.articles) || Array.isArray(obj.recitals) || Array.isArray(obj.annexes))) {
-      return { 
-        title: obj.title || "", 
-        articles: obj.articles || [], 
-        recitals: obj.recitals || [], 
-        annexes: obj.annexes || [] 
+      return {
+        title: obj.title || "",
+        articles: obj.articles || [],
+        recitals: obj.recitals || [],
+        annexes: obj.annexes || [],
+        definitions: obj.definitions || []
       };
     }
   } catch {

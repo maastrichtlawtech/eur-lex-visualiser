@@ -1,0 +1,94 @@
+/**
+ * Inject definition tooltips into HTML content.
+ * Wraps occurrences of defined terms with span elements that show the definition on hover.
+ */
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Escape HTML special characters for safe attribute values
+ */
+function escapeHtml(str) {
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+/**
+ * Inject tooltips for defined terms into HTML content.
+ * 
+ * @param {string} html - The HTML content to process
+ * @param {Array<{term: string, definition: string}>} definitions - Array of definitions
+ * @param {Object} options - Options
+ * @param {boolean} options.skipDefinitionsArticle - If true, don't highlight terms in the definitions article itself
+ * @returns {string} - HTML with definition tooltips injected
+ */
+export function injectDefinitionTooltips(html, definitions, options = {}) {
+    if (!html || !definitions || definitions.length === 0) {
+        return html;
+    }
+
+    // Check if this is the definitions article (contains "Definitions" heading)
+    if (options.skipDefinitionsArticle) {
+        const isDefinitionsArticle = /<p[^>]*class="[^"]*oj-sti-art[^"]*"[^>]*>\s*Definitions?\s*<\/p>/i.test(html);
+        if (isDefinitionsArticle) {
+            return html;
+        }
+    }
+
+    let result = html;
+
+    // Sort definitions by term length (longest first) to avoid partial replacements
+    const sortedDefs = [...definitions].sort((a, b) => b.term.length - a.term.length);
+
+    for (const { term, definition } of sortedDefs) {
+        // Create a regex that matches the term as a whole word, case-insensitive
+        // But NOT inside HTML tags or already-wrapped spans
+        const termPattern = new RegExp(
+            `(?<![\\w-])${escapeRegex(term)}(?![\\w-])`,
+            'gi'
+        );
+
+        // We need to be careful not to replace inside HTML tags
+        // Split by tags, process text nodes only
+        const parts = result.split(/(<[^>]+>)/);
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+
+            // Skip HTML tags
+            if (part.startsWith('<')) continue;
+
+            // Skip if we're inside a defined-term span (check previous parts)
+            let insideDefinedTerm = false;
+            for (let j = i - 1; j >= 0; j--) {
+                if (parts[j].includes('class="defined-term"')) {
+                    insideDefinedTerm = true;
+                    break;
+                }
+                if (parts[j].includes('</span>')) {
+                    break;
+                }
+            }
+            if (insideDefinedTerm) continue;
+
+            // Replace occurrences in text nodes
+            parts[i] = part.replace(termPattern, (match) => {
+                const escapedDef = escapeHtml(definition);
+                return `<span class="defined-term" data-definition="${escapedDef}" title="${escapedDef}">${match}</span>`;
+            });
+        }
+
+        result = parts.join('');
+    }
+
+    return result;
+}
