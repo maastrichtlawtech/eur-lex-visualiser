@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar.jsx";
 import { SEO } from "./SEO.jsx";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
+import { fetchAllLaws } from "../utils/searchUtils.js";
 
 export function Landing() {
   const navigate = useNavigate();
@@ -52,116 +53,13 @@ export function Landing() {
   const [allLawsData, setAllLawsData] = useState({ articles: [], recitals: [], annexes: [] });
   const [isSearchLoading, setIsSearchLoading] = useState(false);
 
-  const fetchCustomLaw = (key) => {
-    return new Promise((resolve) => {
-      const handleMsg = (event) => {
-        if (event.source !== window) return;
-        if (event.data.type === 'EURLEX_LAW_DATA') {
-          // We blindly resolve the first LAW_DATA we get. 
-          // Since we request sequentially, this should be fine.
-          window.removeEventListener('message', handleMsg);
-          resolve(event.data.payload);
-        }
-      };
-      window.addEventListener('message', handleMsg);
-      window.postMessage({ type: 'EURLEX_GET_LAW', key }, '*');
-
-      // Timeout safety
-      setTimeout(() => {
-        window.removeEventListener('message', handleMsg);
-        resolve(null);
-      }, 2000);
-    });
-  };
-
   const handleSearchOpen = async () => {
     // Only load if not already loaded
     if (allLawsData.articles.length > 0) return;
 
     setIsSearchLoading(true);
     try {
-      const combined = { articles: [], recitals: [], annexes: [] };
-
-      // 1. Fetch Standard Laws
-      const standardPromises = LAWS.map(async (law) => {
-        try {
-          if (hiddenLaws.includes(law.key)) return null;
-
-          const text = await fetchText(law.value);
-          const parsed = parseAnyToCombined(text);
-
-          parsed.articles?.forEach(a => {
-            a.law_key = law.key;
-            a.law_label = law.label;
-          });
-          parsed.recitals?.forEach(r => {
-            r.law_key = law.key;
-            r.law_label = law.label;
-          });
-          parsed.annexes?.forEach(a => {
-            a.law_key = law.key;
-            a.law_label = law.label;
-          });
-
-          return parsed;
-        } catch (e) {
-          console.error(`Failed to load law ${law.key} for search index`, e);
-          return null;
-        }
-      });
-
-      // 2. Fetch Custom Laws (Sequentially to avoid bridge congestion/race conditions)
-      // We don't block standard laws loading, but we wait for everything at the end
-      const customLawResults = [];
-      if (customLaws.length > 0) {
-        for (const l of customLaws) {
-          try {
-            // Skip if hidden
-            if (hiddenLaws.includes(l.key)) continue;
-
-            const data = await fetchCustomLaw(l.key);
-            if (data && data.html) {
-              const parsed = parseAnyToCombined(data.html);
-
-              // Use metadata title if available
-              const title = data.metadata?.title || l.title || "Custom Law";
-
-              parsed.articles?.forEach(a => {
-                a.law_key = l.key;
-                a.law_label = title;
-              });
-              parsed.recitals?.forEach(r => {
-                r.law_key = l.key;
-                r.law_label = title;
-              });
-              parsed.annexes?.forEach(a => {
-                a.law_key = l.key;
-                a.law_label = title;
-              });
-              customLawResults.push(parsed);
-            }
-          } catch (e) {
-            console.error("Failed to load custom law for search", l.key, e);
-          }
-        }
-      }
-
-      const standardResults = await Promise.allSettled(standardPromises);
-
-      standardResults.forEach((res) => {
-        if (res.status === 'fulfilled' && res.value) {
-          combined.articles.push(...(res.value.articles || []));
-          combined.recitals.push(...(res.value.recitals || []));
-          combined.annexes.push(...(res.value.annexes || []));
-        }
-      });
-
-      customLawResults.forEach((res) => {
-        combined.articles.push(...(res.articles || []));
-        combined.recitals.push(...(res.recitals || []));
-        combined.annexes.push(...(res.annexes || []));
-      });
-
+      const combined = await fetchAllLaws(hiddenLaws, customLaws);
       setAllLawsData(combined);
     } catch (e) {
       console.error("Error loading search data", e);

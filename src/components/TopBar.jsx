@@ -5,8 +5,13 @@ import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose,
 import { Button } from "./Button.jsx";
 import { ThemeToggle } from "./ThemeToggle.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
+import { fetchAllLaws } from "../utils/searchUtils.js";
 
 function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
+  const [searchScope, setSearchScope] = useState("current"); // "current" | "all"
+  const [globalData, setGlobalData] = useState(null);
+  const [globalIndex, setGlobalIndex] = useState(null);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -25,30 +30,67 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
     }
   }, [isOpen, onSearchOpen]);
 
-  // Reset index when law changes
+  // Reset indices and scope when law changes
   useEffect(() => {
     setSearchIndex(null);
     setQuery("");
     setResults([]);
+    // Default to 'current' when inside a law (lists has content), 'all' if global (lists is empty/global)
+    // Actually lists is usually populated. If we want default behavior... let's stick to 'current' default.
+    setSearchScope("current");
   }, [lists]);
 
-  // Build index on open if needed
+  // Build index on open if needed (Current Scope)
   useEffect(() => {
-    if (isOpen && !searchIndex && !isBuilding) {
+    if (isOpen && searchScope === "current" && !searchIndex && !isBuilding && lists?.articles?.length > 0) {
       setIsBuilding(true);
-      // Timeout to allow UI to render loading state
       setTimeout(() => {
         try {
           const idx = buildSearchIndex(lists);
           setSearchIndex(idx);
         } catch (e) {
-          console.error("Failed to build search index", e);
+          console.error("Failed to build local search index", e);
         } finally {
           setIsBuilding(false);
         }
       }, 100);
     }
-  }, [isOpen, searchIndex, isBuilding, lists]);
+  }, [isOpen, searchIndex, isBuilding, lists, searchScope]);
+
+  // Handle Global Scope Loading
+  useEffect(() => {
+    if (isOpen && searchScope === "all") {
+      // If we don't have global data yet, fetch it
+      if (!globalData && !isBuilding) {
+        setIsBuilding(true);
+        fetchAllLaws([], []) // We need to check if we have access to hidden/custom laws here...
+          // Creating a simplified fetch for TopBar usage - assuming we might miss custom laws if context not provided, 
+          // but TopBar is usually used within LawViewer where we don't easily have the custom/hidden state without prop drilling.
+          // For now, let's just fetch standard laws or assume minimal context. 
+          // Ideally passing hiddenLaws/customLaws props is better, but let's start simple.
+          .then(data => {
+            setGlobalData(data);
+            // Indexing happens in next effect or chain
+            const idx = buildSearchIndex(data);
+            setGlobalIndex(idx);
+          })
+          .catch(e => console.error("Failed to load global data", e))
+          .finally(() => setIsBuilding(false));
+      }
+      // If we have data but no index (rare case if done above)
+      else if (globalData && !globalIndex && !isBuilding) {
+        setIsBuilding(true);
+        setTimeout(() => {
+          try {
+            const idx = buildSearchIndex(globalData);
+            setGlobalIndex(idx);
+          } finally {
+            setIsBuilding(false);
+          }
+        }, 100);
+      }
+    }
+  }, [isOpen, searchScope, globalData, globalIndex, isBuilding]);
 
   // Close when pressing Escape
   useEffect(() => {
@@ -110,13 +152,21 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
 
     if (q.length >= 2) {
       let res;
-      if (searchIndex) {
-        res = searchWithIndex(q, searchIndex);
+      if (searchScope === "all") {
+        if (globalIndex) {
+          res = searchWithIndex(q, globalIndex);
+        } else {
+          res = [];
+        }
       } else {
-        // Fallback if index missing for some reason
-        res = searchContent(q, lists);
+        if (searchIndex) {
+          res = searchWithIndex(q, searchIndex);
+        } else {
+          // Fallback if index missing for some reason
+          res = searchContent(q, lists);
+        }
       }
-      setResults(res);
+      setResults(res || []);
     } else {
       setResults([]);
     }
@@ -172,6 +222,25 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
               >
                 <ChevronLeft size={24} />
               </button>
+
+              {/* Scope Toggle (Only if current law exists) */}
+              {lists?.articles?.length > 0 && (
+                <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-lg dark:bg-gray-800 mr-2 flex-shrink-0">
+                  <button
+                    onClick={() => setSearchScope("current")}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${searchScope === "current" ? "bg-white shadow-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+                  >
+                    Current Law
+                  </button>
+                  <button
+                    onClick={() => setSearchScope("all")}
+                    className={`px-2 py-1 text-xs font-medium rounded-md transition-all ${searchScope === "all" ? "bg-white shadow-sm text-gray-900 dark:bg-gray-700 dark:text-gray-100" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+                  >
+                    All Laws
+                  </button>
+                </div>
+              )}
+
               <Search size={20} className="text-gray-400 hidden md:block" />
               <div className="flex-1 relative">
                 <input
@@ -179,7 +248,7 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                   type="text"
                   value={query}
                   onChange={handleSearch}
-                  placeholder={isBuilding || isSearchLoading ? "Initializing search..." : "Search..."}
+                  placeholder={isBuilding || isSearchLoading ? (searchScope === "all" ? "Indexing all laws..." : "Initializing search...") : "Search (Cmd+K)..."}
                   disabled={isBuilding || isSearchLoading}
                   className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50 dark:text-white dark:placeholder:text-gray-600"
                 />
