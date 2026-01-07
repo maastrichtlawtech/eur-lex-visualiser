@@ -242,14 +242,10 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
     a.article_title && a.article_title.toLowerCase().includes('definition')
   );
 
-  console.log('[LegalViz] Found definitions article:', definitionsArticle ? `Article ${definitionsArticle.article_number}: ${definitionsArticle.article_title}` : 'NOT FOUND');
-  console.log('[LegalViz] All article titles:', articles.map(a => `${a.article_number}: ${a.article_title}`).slice(0, 10));
-
   if (definitionsArticle) {
     // Parse the definitions article HTML to extract terms
     const defDoc = parser.parseFromString(definitionsArticle.article_html, "text/html");
     const tables = defDoc.querySelectorAll("table");
-    console.log('[LegalViz] Tables in definitions article:', tables.length);
 
     for (const table of tables) {
       const cells = table.querySelectorAll("td");
@@ -265,9 +261,6 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
           // Definition is everything after "means "
           const definition = text.replace(termMatch[0], '').trim();
           definitions.push({ term, definition });
-        } else if (text.length > 0) {
-          // Log failed matches for debugging
-          console.log('[LegalViz] No match for:', text.substring(0, 80));
         }
       }
     }
@@ -276,9 +269,6 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   // Sorts
   const asNum = (s) => (s == null ? NaN : parseInt(String(s).replace(/\D+/g, ""), 10));
   recitals.sort((a, b) => (asNum(a.recital_number) || 0) - (asNum(b.recital_number) || 0));
-
-  // Debug: log extracted definitions
-  console.log('[LegalViz] Extracted definitions:', definitions.length, definitions.slice(0, 5));
 
   return { title, articles, recitals, annexes, definitions };
 }
