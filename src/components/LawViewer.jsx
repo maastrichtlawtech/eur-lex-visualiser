@@ -733,6 +733,7 @@ export function LawViewer() {
             {selected.kind === "article" && (
               <RelatedRecitals
                 recitals={recitalMap.get(selected.id) || []}
+                allRecitals={data.recitals}
                 onSelectRecital={(r) => onClickRecital(r, selected.id)}
               />
             )}

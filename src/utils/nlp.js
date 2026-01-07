@@ -1,5 +1,5 @@
 // NLP Algorithm Version - bump this when algorithm changes to invalidate cache
-export const NLP_VERSION = 9;
+export const NLP_VERSION = 10;
 
 // Stop words for EU law TF-IDF analysis
 // Only truly generic terms that don't indicate semantic relevance
@@ -24,7 +24,9 @@ const STOP_WORDS = new Set([
   // Generic filler terms
   "relevant", "appropriate", "necessary", "competent", "concerned", "particular",
   "respect", "account", "case", "cases", "order", "view", "way", "ways", "manner",
-  "point", "points", "subject", "meaning", "need", "needs", "effect", "effects"
+  "point", "points", "subject", "meaning", "need", "needs", "effect", "effects",
+  // Additional boilerplate/transition words
+  "however", "furthermore", "especially", "certain", "inter", "alia"
 ]);
 
 /**
@@ -226,11 +228,13 @@ export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
       // Sort by score descending
       recitalList.sort((a, b) => (b._score || 0) - (a._score || 0));
 
-      // Rename internal properties for cleaner API
-      const sortedList = recitalList.map(r => {
-        const { _score, _keywords, ...rest } = r;
-        return { ...rest, relevanceScore: _score, keywords: _keywords };
-      });
+      // Return only recital_number + computed fields (not full recital object)
+      // This keeps cache small - HTML is looked up at render time from original data
+      const sortedList = recitalList.map(r => ({
+        recital_number: r.recital_number,
+        relevanceScore: r._score,
+        keywords: r._keywords
+      }));
 
       articleToRecitals.set(articleId, sortedList);
     }
