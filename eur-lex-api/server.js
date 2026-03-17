@@ -34,15 +34,8 @@ function rateLimitMiddleware(req, res, next) {
   
   record.count++;
   
-  res.setHeader('X-RateLimit-Limit', RATE_LIMIT_MAX);
-  res.setHeader('X-RateLimit-Remaining', Math.max(0, RATE_LIMIT_MAX - record.count));
-  res.setHeader('X-RateLimit-Reset', Math.ceil(record.resetAt / 1000));
-  
   if (record.count > RATE_LIMIT_MAX) {
-    return res.status(429).json({ 
-      error: 'Too many requests', 
-      retryAfter: Math.ceil((record.resetAt - now) / 1000) 
-    });
+    return res.status(429).json({ error: 'Too many requests' });
   }
   
   next();
@@ -267,18 +260,8 @@ app.get('/health', (req, res) => {
 app.get('/api/laws', rateLimitMiddleware, (req, res) => {
   try {
     const files = fs.readdirSync(FMX_DIR);
-    const laws = files
-      .filter(f => f.endsWith('.xml') || f.endsWith('.zip'))
-      .map(f => {
-        const stat = fs.statSync(path.join(FMX_DIR, f));
-        return {
-          filename: f,
-          size: stat.size,
-          modified: stat.mtime
-        };
-      });
-    
-    res.json({ count: laws.length, laws });
+    const laws = files.filter(f => f.endsWith('.xml') || f.endsWith('.zip'));
+    res.json({ laws });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -326,18 +309,13 @@ app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
     }
 
     const fmx4Uri = await findFmx4Uri(celex, lang);
-    const { type, urls } = await findDownloadUrls(fmx4Uri);
+    const { type } = await findDownloadUrls(fmx4Uri);
 
     res.json({
       celex,
       lang,
       name: CELEX_NAMES[celex] || null,
-      fmx4Uri,
-      type,
-      files: urls.map(u => ({
-        url: u,
-        filename: u.split('/').pop()
-      }))
+      type
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -353,36 +331,15 @@ app.get('/api/search', rateLimitMiddleware, (req, res) => {
     }
     
     const files = fs.readdirSync(FMX_DIR);
-    const matches = files
-      .filter(f => f.toLowerCase().includes(q.toLowerCase()))
-      .map(f => {
-        const stat = fs.statSync(path.join(FMX_DIR, f));
-        return { filename: f, size: stat.size, modified: stat.mtime };
-      });
+    const matches = files.filter(f => 
+      (f.endsWith('.xml') || f.endsWith('.zip')) && 
+      f.toLowerCase().includes(q.toLowerCase())
+    );
     
-    res.json({ query: q, count: matches.length, results: matches });
+    res.json({ matches });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
-// Cache status endpoint
-app.get('/api/cache', (req, res) => {
-  const files = getCacheFiles();
-  const totalMB = files.reduce((sum, f) => sum + f.size, 0) / (1024 * 1024);
-  
-  res.json({
-    storage: {
-      usedMB: totalMB.toFixed(2),
-      limitMB: STORAGE_LIMIT_MB,
-      percentUsed: ((totalMB / STORAGE_LIMIT_MB) * 100).toFixed(1)
-    },
-    files: files.map(f => ({
-      filename: f.filename,
-      sizeKB: (f.size / 1024).toFixed(0),
-      modified: f.mtime
-    }))
-  });
 });
 
 // Root endpoint with API docs
@@ -390,14 +347,9 @@ app.get('/', (req, res) => {
   res.json({
     name: 'EUR-Lex FMX API',
     version: '2.0.0',
-    limits: {
-      rateLimit: `${RATE_LIMIT_MAX} requests per 15 min per IP`,
-      storageLimit: `${STORAGE_LIMIT_MB} MB cache (LRU eviction)`
-    },
     endpoints: {
       'GET /': 'This documentation',
       'GET /health': 'Health check',
-      'GET /api/cache': 'Cache status and storage usage',
       'GET /api/laws': 'List cached FMX files',
       'GET /api/laws/:celex?lang=ENG': 'Get law by CELEX (fetches & caches)',
       'GET /api/laws/:celex/info': 'Get metadata only',
