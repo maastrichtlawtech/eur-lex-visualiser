@@ -4,11 +4,22 @@
  * Download FMX (Formex 4) files for any EUR-Lex regulation by CELEX ID.
  *
  * Usage:
- *   node scripts/download-fmx.mjs <CELEX> [output-dir]
+ *   node scripts/download-fmx.mjs <CELEX> [output-dir] [--lang <LANG>]
  *
  * Examples:
  *   node scripts/download-fmx.mjs 32016R0679
  *   node scripts/download-fmx.mjs 32024R1689 ./my-fmx
+ *   node scripts/download-fmx.mjs 32016R0679 ./gdpr-pol --lang POL
+ *
+ * Supported languages (24 EU official languages):
+ *   BUL  Bulgarian    CES  Czech        DAN  Danish
+ *   DEU  German       ELL  Greek        ENG  English  (default)
+ *   EST  Estonian     FIN  Finnish      FRA  French
+ *   GLE  Irish        HRV  Croatian     HUN  Hungarian
+ *   ITA  Italian      LAV  Latvian      LIT  Lithuanian
+ *   MLT  Maltese      NLD  Dutch        POL  Polish
+ *   POR  Portuguese   RON  Romanian     SLK  Slovak
+ *   SLV  Slovenian    SPA  Spanish      SWE  Swedish
  *
  * How it works:
  *   1. Fetch Cellar RDF for the CELEX ID → find OJ fmx4 expression URI
@@ -39,16 +50,26 @@ function extractUris(rdf) {
   return [...rdf.matchAll(/rdf:resource="([^"]+)"/g)].map(m => m[1]);
 }
 
-async function findFmx4Uri(celex) {
-  console.log(`[1] Fetching Cellar RDF for CELEX ${celex}…`);
+async function findFmx4Uri(celex, lang = 'ENG') {
+  console.log(`[1] Fetching Cellar RDF for CELEX ${celex} (lang: ${lang})…`);
   const rdf = await getRdf(`${CELLAR_BASE}/celex/${celex}`);
   const uris = extractUris(rdf);
 
-  // Match both old-style (JOL_) and new-style (L_YYYYNNNNN) fmx4 expression URIs
-  const fmx4 = uris.find(u =>
-    u.match(/\/oj\/(JOL_\d{4}_\d+_R_\d+|L_\d{9})\.ENG\.fmx4$/)
-  );
-  if (!fmx4) throw new Error('No fmx4 expression URI found. Law may not have FMX available.');
+  // Match both old-style (JOL_) and new-style (L_YYYYNNNNN) fmx4 expression URIs for requested language
+  const pattern = new RegExp(`\\/oj\\/(JOL_\\d{4}_\\d+_R_\\d+|L_\\d{9})\\.${lang}\\.fmx4$`);
+  let fmx4 = uris.find(u => pattern.test(u));
+
+  // If not found, try ENG as fallback and swap the language code
+  if (!fmx4) {
+    const engPattern = /\/oj\/(JOL_\d{4}_\d+_R_\d+|L_\d{9})\.ENG\.fmx4$/;
+    const engFmx4 = uris.find(u => engPattern.test(u));
+    if (engFmx4) {
+      fmx4 = engFmx4.replace('.ENG.fmx4', `.${lang}.fmx4`);
+      console.log(`[1] Derived ${lang} URI from ENG: ${fmx4}`);
+    }
+  }
+
+  if (!fmx4) throw new Error(`No fmx4 expression URI found for lang=${lang}. Law may not have FMX available.`);
   console.log(`[1] Found fmx4 expression: ${fmx4}`);
   return fmx4;
 }
@@ -101,18 +122,22 @@ async function download(url, destPath) {
 }
 
 async function main() {
-  const [,, celex, outDir = './fmx-downloads'] = process.argv;
+  const args = process.argv.slice(2);
+  const langIdx = args.indexOf('--lang');
+  const lang = langIdx !== -1 ? args.splice(langIdx, 2)[1].toUpperCase() : 'ENG';
+  const [celex, outDir = './fmx-downloads'] = args;
 
   if (!celex) {
-    console.error('Usage: node scripts/download-fmx.mjs <CELEX> [output-dir]');
-    console.error('Example: node scripts/download-fmx.mjs 32016R0679');
+    console.error('Usage: node scripts/download-fmx.mjs <CELEX> [output-dir] [--lang <LANG>]');
+    console.error('Example: node scripts/download-fmx.mjs 32016R0679 ./out --lang POL');
+    console.error('Languages: BUL CES DAN DEU ELL ENG EST FIN FRA GLE HRV HUN ITA LAV LIT MLT NLD POL POR RON SLK SLV SPA SWE');
     process.exit(1);
   }
 
   mkdirSync(outDir, { recursive: true });
 
   try {
-    const fmx4Uri = await findFmx4Uri(celex);
+    const fmx4Uri = await findFmx4Uri(celex, lang);
     const { type, urls } = await findDownloadUrls(fmx4Uri);
 
     console.log(`[3] Downloading ${urls.length} file(s) to ${outDir}…`);
