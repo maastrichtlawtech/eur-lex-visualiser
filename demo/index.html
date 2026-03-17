@@ -127,31 +127,7 @@
   <div id="sparqlStatus" class="status"></div>
   <pre id="sparqlOutput" style="display:none"></pre>
 
-  <div id="corsNote" class="cors-note">
-    <strong>CORS blocked.</strong> The SPARQL endpoint does not allow direct browser requests.
-    Options:
-    <ul style="margin-top:0.4rem;padding-left:1.2rem;line-height:1.8">
-      <li>Use the <a href="https://op.europa.eu/en/advanced-sparql-query-editor" target="_blank">Advanced Query Editor</a> in your browser</li>
-      <li>Add a Vite proxy to <code>vite.config.js</code> (see below)</li>
-      <li>Run queries from a backend / Node.js script</li>
-    </ul>
-    <details style="margin-top:0.6rem">
-      <summary>Vite proxy config to fix CORS during development</summary>
-      <pre>// vite.config.js — add inside defineConfig({})
-server: {
-  proxy: {
-    '/sparql': {
-      target: 'http://publications.europa.eu',
-      changeOrigin: true,
-      rewrite: (path) => path.replace(/^\/sparql/, '/webapi/rdf/sparql')
-    }
-  }
-}</pre>
-      <p style="font-size:0.78rem;margin-top:0.4rem;color:#555">
-        Then change the fetch URL in this demo to <code>/sparql?...</code> instead of the full URL.
-      </p>
-    </details>
-  </div>
+  <p style="font-size:0.78rem;color:#888;margin-top:0.5rem">Requests are proxied via <a href="https://corsproxy.io" target="_blank">corsproxy.io</a> to bypass browser CORS restrictions.</p>
 
   <details style="margin-top:0.75rem">
     <summary>View SPARQL query being sent</summary>
@@ -188,7 +164,8 @@ server: {
     output.style.display = 'none';
     setStatus(status, 'Fetching…');
 
-    const url = `https://publications.europa.eu/resource/celex/${encodeURIComponent(id)}`;
+    const targetUrl = `https://publications.europa.eu/resource/celex/${encodeURIComponent(id)}`;
+    const url = `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`;
 
     try {
       const res = await fetch(url, {
@@ -238,26 +215,25 @@ LIMIT ${limit}`;
     const btn     = document.getElementById('sparqlBtn');
     const status  = document.getElementById('sparqlStatus');
     const output  = document.getElementById('sparqlOutput');
-    const corsNote = document.getElementById('corsNote');
     const preview  = document.getElementById('sparqlQueryPreview');
 
     if (!keyword) { setStatus(status, 'Please enter a keyword.', 'err'); return; }
 
     const query = buildSparql(keyword, limit);
     preview.textContent = query;
-    corsNote.style.display = 'none';
     btn.disabled = true;
     output.style.display = 'none';
     setStatus(status, 'Querying SPARQL endpoint…');
 
-    const endpoint = 'http://publications.europa.eu/webapi/rdf/sparql';
+    const sparqlTarget = 'http://publications.europa.eu/webapi/rdf/sparql';
     const params = new URLSearchParams({
       query,
       format: 'application/sparql-results+json',
     });
+    const endpoint = `https://corsproxy.io/?url=${encodeURIComponent(`${sparqlTarget}?${params}`)}`;
 
     try {
-      const res = await fetch(`${endpoint}?${params}`, {
+      const res = await fetch(endpoint, {
         method: 'GET',
         headers: { 'Accept': 'application/sparql-results+json' },
       });
@@ -277,10 +253,8 @@ LIMIT ${limit}`;
         showPre(output, text.slice(0, 6000));
       }
     } catch (err) {
-      const isCors = err instanceof TypeError && err.message.includes('fetch');
       setStatus(status, `Error: ${err.message}`, 'err');
       showPre(output, String(err));
-      if (isCors) corsNote.style.display = 'block';
     }
 
     btn.disabled = false;
