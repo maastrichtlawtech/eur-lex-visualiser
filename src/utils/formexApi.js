@@ -12,6 +12,17 @@ const CACHE_VERSION = 1;
 const DB_NAME = "formex-cache";
 const STORE_NAME = "laws";
 
+export class FormexApiError extends Error {
+  constructor(message, { status = 500, code = null, details = null, fallback = null } = {}) {
+    super(message);
+    this.name = "FormexApiError";
+    this.status = status;
+    this.code = code;
+    this.details = details;
+    this.fallback = fallback;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // IndexedDB helpers
 // ---------------------------------------------------------------------------
@@ -89,6 +100,35 @@ export function toApiLang(twoLetter) {
   return LANG_MAP[twoLetter?.toUpperCase()] || "ENG";
 }
 
+async function readApiError(res, fallbackMessage) {
+  let body = null;
+  try {
+    body = await res.json();
+  } catch {
+    // ignore
+  }
+
+  throw new FormexApiError(body?.error || fallbackMessage || res.statusText, {
+    status: res.status,
+    code: body?.code || null,
+    details: body?.details || null,
+    fallback: body?.details?.fallback || body?.fallback || null,
+  });
+}
+
+function buildReferenceQuery(reference, lang = "EN") {
+  const apiLang = toApiLang(lang);
+  const params = new URLSearchParams({ lang: apiLang });
+
+  for (const [key, value] of Object.entries(reference || {})) {
+    if (value != null && value !== "") {
+      params.set(key, String(value));
+    }
+  }
+
+  return params.toString();
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -117,12 +157,7 @@ export async function fetchFormex(celex, lang = "EN") {
   const res = await fetch(url);
 
   if (!res.ok) {
-    let detail = "";
-    try {
-      const body = await res.json();
-      detail = body.error || "";
-    } catch { /* ignore */ }
-    throw new Error(`Formex API error ${res.status}: ${detail || res.statusText}`);
+    await readApiError(res, `Formex API error ${res.status}`);
   }
 
   const contentType = res.headers.get("content-type") || "";
@@ -140,6 +175,30 @@ export async function fetchFormex(celex, lang = "EN") {
   await cacheSet(cacheKey, xmlText);
 
   return xmlText;
+}
+
+export async function resolveOfficialReference(reference, lang = "EN") {
+  const query = buildReferenceQuery(reference, lang);
+  const url = `${API_BASE}/api/resolve-reference?${query}`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    await readApiError(res, `Reference resolution failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function fetchFormexByReference(reference, lang = "EN") {
+  const query = buildReferenceQuery(reference, lang);
+  const url = `${API_BASE}/api/laws/by-reference?${query}`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    await readApiError(res, `Formex reference fetch failed (${res.status})`);
+  }
+
+  return res.text();
 }
 
 /**

@@ -36,7 +36,7 @@ export function LanguageSelector({ currentLang, onChangeLang, useFormex, onToggl
         }`}
         title={useFormex ? `Formex API (${currentLang})` : "Use Formex API"}
       >
-        <Globe size={16} />
+        {!useFormex && <Globe size={16} />}
         {useFormex && <span>{getLanguageFlag(currentLang)}</span>}
         {useFormex && <span className="font-medium">{currentLang}</span>}
       </button>

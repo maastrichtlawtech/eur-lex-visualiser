@@ -6,10 +6,11 @@ import { Info, Menu } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
-import { buildEurlexOjUrl, buildEurlexSearchUrl, getLawPathFromKey } from "../utils/url.js";
+import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl, getLawPathFromKey } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
-import { fetchFormex, extractCelexFromUrl } from "../utils/formexApi.js";
+import { fetchFormex, extractCelexFromUrl, FormexApiError, resolveOfficialReference } from "../utils/formexApi.js";
+import { parseOfficialReference } from "../utils/officialReferences.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -26,6 +27,8 @@ export function LawViewer() {
   const { key, kind, id } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const importCelex = searchParams.get("celex");
+  const isImportedMode = !!importCelex;
   const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [], definitions: [] });
   const [recitalMap, setRecitalMap] = useState(new Map());
@@ -90,9 +93,29 @@ export function LawViewer() {
     localStorage.setItem("legalviz-formex-lang", formexLang);
   }, [formexLang]);
 
+  useEffect(() => {
+    const importLang = searchParams.get("lang");
+    if (isImportedMode && importLang && importLang !== formexLang) {
+      setFormexLang(importLang);
+    }
+  }, [isImportedMode, searchParams, formexLang]);
+
   const onIncreaseFont = () => setFontScale(s => Math.min(s + 1, 5));
   const onDecreaseFont = () => setFontScale(s => Math.max(s - 1, 1));
   const onToggleSidebar = () => setIsSidebarOpen(s => !s);
+  const currentContentLang = useMemo(() => (useFormex ? formexLang : data.langCode || "EN"), [useFormex, formexLang, data.langCode]);
+
+  const getImportParams = useCallback((overrides = {}) => {
+    if (!isImportedMode && !overrides.celex) return "";
+    const params = new URLSearchParams();
+    params.set("celex", overrides.celex || importCelex);
+    params.set("lang", overrides.lang || formexLang);
+
+    const raw = overrides.raw || searchParams.get("raw");
+    if (raw) params.set("raw", raw);
+
+    return `?${params.toString()}`;
+  }, [isImportedMode, importCelex, formexLang, searchParams]);
 
   // Map scale to prose class and percentage for display
   const getProseClass = (s) => {
@@ -352,7 +375,7 @@ export function LawViewer() {
 
   // Resolve CELEX for the current law key
   const currentLaw = LAWS.find(l => l.key === key);
-  const currentCelex = currentLaw?.celex || null;
+  const currentCelex = importCelex || currentLaw?.celex || null;
 
   // Load law when path/formex settings change
   useEffect(() => {
@@ -360,13 +383,15 @@ export function LawViewer() {
 
     if (useFormex && currentCelex) {
       loadLaw(null, currentCelex, formexLang);
+    } else if (isImportedMode && currentCelex) {
+      loadLaw(null, currentCelex, formexLang);
     } else if (lawPath) {
       loadLaw(lawPath);
     } else if (key) {
       // Only redirect if we have a key but no matching law path
       navigate("/", { replace: true });
     }
-  }, [lawPath, key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang]);
+  }, [lawPath, key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode]);
 
   // Update selection from URL params when data is loaded or URL params change
   useEffect(() => {
@@ -407,6 +432,7 @@ export function LawViewer() {
     if (!kind || !id) {
       const extensionKey = isExtensionMode ? searchParams.get('key') : null;
       const extensionParams = extensionKey ? `?extension=true&key=${extensionKey}` : '';
+      const importParams = getImportParams();
 
       if (data.articles?.[0]) {
         const a0 = data.articles[0];
@@ -414,6 +440,8 @@ export function LawViewer() {
         if (isExtensionMode) {
           // In extension mode, update URL without key
           navigate(`/extension/article/${a0.article_number}${extensionParams}`, { replace: true });
+        } else if (isImportedMode) {
+          navigate(`/import/article/${a0.article_number}${importParams}`, { replace: true });
         } else {
           navigate(`/law/${key}/article/${a0.article_number}`, { replace: true });
         }
@@ -422,6 +450,8 @@ export function LawViewer() {
         setSelected({ kind: "recital", id: r0.recital_number, html: r0.recital_html });
         if (isExtensionMode) {
           navigate(`/extension/recital/${r0.recital_number}${extensionParams}`, { replace: true });
+        } else if (isImportedMode) {
+          navigate(`/import/recital/${r0.recital_number}${importParams}`, { replace: true });
         } else {
           navigate(`/law/${key}/recital/${r0.recital_number}`, { replace: true });
         }
@@ -430,12 +460,14 @@ export function LawViewer() {
         setSelected({ kind: "annex", id: x0.annex_id, html: x0.annex_html });
         if (isExtensionMode) {
           navigate(`/extension/annex/${x0.annex_id}${extensionParams}`, { replace: true });
+        } else if (isImportedMode) {
+          navigate(`/import/annex/${x0.annex_id}${importParams}`, { replace: true });
         } else {
           navigate(`/law/${key}/annex/${x0.annex_id}`, { replace: true });
         }
       }
     }
-  }, [data, kind, id, key, navigate, isExtensionMode, searchParams]);
+  }, [data, kind, id, key, navigate, isExtensionMode, searchParams, isImportedMode, getImportParams]);
 
   // Group articles by chapter for TOC
   const toc = useMemo(() => {
@@ -501,6 +533,8 @@ export function LawViewer() {
     setSelected({ kind: "article", id: a.article_number, html: a.article_html });
     if (isExtensionMode) {
       navigate(`/extension/article/${a.article_number}${getExtensionParams}`);
+    } else if (isImportedMode) {
+      navigate(`/import/article/${a.article_number}${getImportParams()}`);
     } else {
       navigate(`/law/${key}/article/${a.article_number}`);
     }
@@ -511,6 +545,8 @@ export function LawViewer() {
     setSelected({ kind: "recital", id: r.recital_number, html: r.recital_html });
     if (isExtensionMode) {
       navigate(`/extension/recital/${r.recital_number}${getExtensionParams}`);
+    } else if (isImportedMode) {
+      navigate(`/import/recital/${r.recital_number}${getImportParams()}`);
     } else {
       navigate(`/law/${key}/recital/${r.recital_number}`);
     }
@@ -521,6 +557,8 @@ export function LawViewer() {
     setSelected({ kind: "annex", id: x.annex_id, html: x.annex_html });
     if (isExtensionMode) {
       navigate(`/extension/annex/${x.annex_id}${getExtensionParams}`);
+    } else if (isImportedMode) {
+      navigate(`/import/annex/${x.annex_id}${getImportParams()}`);
     } else {
       navigate(`/law/${key}/annex/${x.annex_id}`);
     }
@@ -689,15 +727,16 @@ export function LawViewer() {
 
   const eurlexUrl = useMemo(() => {
     if (isExtensionMode) return data.eurlex || null;
+    if (isImportedMode && currentCelex) return buildEurlexCelexUrl(currentCelex, formexLang);
     const law = LAWS.find(l => l.key === key);
     return law ? law.eurlex : null;
-  }, [key, isExtensionMode, data.eurlex]);
+  }, [key, isExtensionMode, isImportedMode, data.eurlex, currentCelex, formexLang]);
 
   const externalLawOverview = useMemo(() => {
     if (!data.crossReferences) return [];
 
     const items = new Map();
-    const currentLang = useFormex ? formexLang : data.langCode;
+    const currentLang = currentContentLang;
 
     const buildExternalHref = (ref) => {
       if (ref.type === "oj_ref" && ref.ojColl && ref.ojNo && ref.ojYear) {
@@ -735,6 +774,7 @@ export function LawViewer() {
             label,
             href: buildExternalHref(ref),
             count: 1,
+            ref,
           });
         }
       }
@@ -744,7 +784,7 @@ export function LawViewer() {
       if (b.count !== a.count) return b.count - a.count;
       return a.label.localeCompare(b.label);
     });
-  }, [data.crossReferences, data.langCode, useFormex, formexLang]);
+  }, [data.crossReferences, currentContentLang]);
 
   // Whether this law can be loaded via the Formex API
   const hasCelex = useMemo(() => {
@@ -755,6 +795,66 @@ export function LawViewer() {
     }
     return false;
   }, [currentCelex, isExtensionMode, data.eurlex]);
+
+  const openFallbackReference = useCallback((fallbackUrl) => {
+    if (fallbackUrl) {
+      window.open(fallbackUrl, "_blank", "noopener,noreferrer");
+    }
+  }, []);
+
+  const resolveReferenceInput = useCallback((refLike) => {
+    if (!refLike) return null;
+
+    const raw = refLike.raw || refLike.label || refLike.target || null;
+    const parsed = parseOfficialReference(raw || "");
+
+    return {
+      raw,
+      actType: refLike.actType || parsed?.actType || null,
+      year: refLike.year || parsed?.year || null,
+      number: refLike.number || parsed?.number || null,
+      suffix: refLike.suffix || parsed?.suffix || null,
+      ojColl: refLike.ojColl || null,
+      ojNo: refLike.ojNo || null,
+      ojYear: refLike.ojYear || null,
+    };
+  }, []);
+
+  const handleOpenExternalLaw = useCallback(async (refLike) => {
+    const reference = resolveReferenceInput(refLike);
+    const fallbackUrl = refLike?.type === "oj_ref"
+      ? buildEurlexOjUrl({
+        ojColl: refLike.ojColl,
+        ojYear: refLike.ojYear,
+        ojNo: refLike.ojNo,
+        langCode: currentContentLang,
+      })
+      : buildEurlexSearchUrl(refLike?.raw || refLike?.label || refLike?.target || "", currentContentLang);
+
+    if (!reference?.actType || !reference?.year || !reference?.number) {
+      openFallbackReference(fallbackUrl);
+      return;
+    }
+
+    try {
+      const result = await resolveOfficialReference(reference, currentContentLang);
+      if (result?.resolved?.celex) {
+        navigate(`/import${getImportParams({
+          celex: result.resolved.celex,
+          lang: currentContentLang,
+          raw: reference.raw,
+        })}`);
+        return;
+      }
+      openFallbackReference(result?.fallback?.url || fallbackUrl);
+    } catch (err) {
+      if (err instanceof FormexApiError) {
+        openFallbackReference(err.fallback?.url || err.details?.fallback?.url || fallbackUrl);
+        return;
+      }
+      openFallbackReference(fallbackUrl);
+    }
+  }, [resolveReferenceInput, currentContentLang, openFallbackReference, navigate, getImportParams]);
 
   // Process HTML to inject definition tooltips
   const processedHtml = useMemo(() => {
@@ -880,6 +980,19 @@ export function LawViewer() {
                     e.preventDefault();
                     const artNum = link.getAttribute("data-ref-article");
                     if (artNum) onCrossRefArticle(artNum);
+                    return;
+                  }
+
+                  const externalLink = e.target.closest("a.external-ref");
+                  if (externalLink) {
+                    e.preventDefault();
+                    handleOpenExternalLaw({
+                      raw: externalLink.getAttribute("data-ref-raw") || externalLink.textContent,
+                      actType: externalLink.getAttribute("data-ref-act-type") || null,
+                      year: externalLink.getAttribute("data-ref-year") || null,
+                      number: externalLink.getAttribute("data-ref-number") || null,
+                      suffix: externalLink.getAttribute("data-ref-suffix") || null,
+                    });
                   }
                 }}
               />
@@ -893,6 +1006,7 @@ export function LawViewer() {
                   articles={data.articles}
                   onSelectArticle={onCrossRefArticle}
                   currentLang={useFormex ? formexLang : data.langCode}
+                  onOpenExternalReference={handleOpenExternalLaw}
                 />
                 <RelatedRecitals
                   recitals={recitalMap.get(selected.id) || []}
@@ -1086,18 +1200,17 @@ export function LawViewer() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {externalLawOverview.map((item) => (
-                      <a
+                      <button
                         key={item.key}
-                        href={item.href || undefined}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        type="button"
+                        onClick={() => handleOpenExternalLaw(item.ref)}
                         className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-900 transition hover:border-blue-400 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100 dark:hover:border-blue-700 dark:hover:bg-blue-950/70"
                       >
                         <span className="max-w-[220px] truncate">{item.label}</span>
                         <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/70 dark:text-blue-200">
                           {item.count}
                         </span>
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>

@@ -38,6 +38,14 @@ const router = createBrowserRouter([
         path: "extension/:kind/:id",
         element: <LawViewer />,
       },
+      {
+        path: "import",
+        element: <LawViewer />,
+      },
+      {
+        path: "import/:kind/:id",
+        element: <LawViewer />,
+      },
     ],
   },
 ], {

@@ -43,3 +43,8 @@ export function buildEurlexOjUrl({ ojColl, ojYear, ojNo, langCode = "EN" }) {
   if (!ojColl || !ojYear || !ojNo) return null;
   return `https://eur-lex.europa.eu/legal-content/${toEurlexLang(langCode).toUpperCase()}/TXT/?uri=OJ:${ojColl}:${ojYear}:${ojNo}:TOC`;
 }
+
+export function buildEurlexCelexUrl(celex, langCode = "EN") {
+  if (!celex) return null;
+  return `https://eur-lex.europa.eu/legal-content/${toEurlexLang(langCode).toUpperCase()}/TXT/?uri=CELEX:${celex}`;
+}
