@@ -586,7 +586,9 @@ export function parseFmxToCombined(xmlText) {
 
   const enactingTerms = root.querySelector("ENACTING\\.TERMS");
   if (enactingTerms) {
-    walkDivisions(enactingTerms, { number: "", title: "" }, { number: "", title: "" });
+    // ENACTING.TERMS is the container above the first real DIVISION, so start
+    // one level higher to make the first nested DIVISION a chapter.
+    walkDivisions(enactingTerms, { number: "", title: "" }, { number: "", title: "" }, -1);
   }
 
   // --- Definitions ---
