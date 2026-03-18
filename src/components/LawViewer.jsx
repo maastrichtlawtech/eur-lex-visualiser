@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Info, Menu } from "lucide-react";
+import { Info, Loader2, Menu, RefreshCw } from "lucide-react";
 
 import { LAWS } from "../constants/laws.js";
 import { fetchText } from "../utils/fetch.js";
@@ -23,6 +23,24 @@ import { NumberSelector } from "./NumberSelector.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 
+const EMPTY_LAW_DATA = { title: "", articles: [], recitals: [], annexes: [], definitions: [] };
+
+function getLoadErrorDetails(error) {
+  if (error instanceof FormexApiError) {
+    return {
+      message: error.message || "The law could not be loaded from the Formex service.",
+      fallbackUrl: error.fallback?.url || error.details?.fallback?.url || null,
+      status: error.status || null,
+    };
+  }
+
+  return {
+    message: String(error?.message || error || "The law could not be loaded."),
+    fallbackUrl: null,
+    status: null,
+  };
+}
+
 export function LawViewer() {
   const { key, kind, id } = useParams();
   const navigate = useNavigate();
@@ -30,17 +48,18 @@ export function LawViewer() {
   const importCelex = searchParams.get("celex");
   const isImportedMode = !!importCelex;
   const lawPath = getLawPathFromKey(key);
-  const [data, setData] = useState({ title: "", articles: [], recitals: [], annexes: [], definitions: [] });
+  const [data, setData] = useState(EMPTY_LAW_DATA);
   const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
   const [openChapter, setOpenChapter] = useState(null);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isExtensionMode, setIsExtensionMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   // View Settings
   const [fontScale, setFontScale] = useState(() => {
@@ -146,8 +165,10 @@ export function LawViewer() {
   const loadLaw = React.useCallback(async (path, celex, lang) => {
     if (!path && !celex) return;
     setLoading(true);
-    setError("");
+    setLoadError(null);
+    setData(EMPTY_LAW_DATA);
     setSelected({ kind: "article", id: null, html: "" });
+    setReturnToArticle(null);
     try {
       let text;
       if (celex && lang) {
@@ -160,8 +181,8 @@ export function LawViewer() {
       const combined = parseAnyToCombined(text);
       setData(combined);
     } catch (e) {
-      setError(String(e.message || e));
-      setData({ title: "", articles: [], recitals: [], annexes: [] });
+      setLoadError(getLoadErrorDetails(e));
+      setData(EMPTY_LAW_DATA);
     } finally {
       setLoading(false);
     }
@@ -173,8 +194,10 @@ export function LawViewer() {
       return;
     }
     setLoading(true);
-    setError("");
+    setLoadError(null);
+    setData(EMPTY_LAW_DATA);
     setSelected({ kind: "article", id: null, html: "" });
+    setReturnToArticle(null);
     setIsExtensionMode(true);
     try {
       console.log('Parsing HTML from extension, length:', htmlString.length);
@@ -199,8 +222,8 @@ export function LawViewer() {
       setData(combined);
     } catch (e) {
       console.error('Error parsing HTML from extension:', e);
-      setError(String(e.message || e));
-      setData({ title: "", articles: [], recitals: [], annexes: [] });
+      setLoadError(getLoadErrorDetails(e));
+      setData(EMPTY_LAW_DATA);
     } finally {
       setLoading(false);
     }
@@ -306,7 +329,12 @@ export function LawViewer() {
           const payload = event.data.payload;
           if (payload.error) {
             console.error('Extension error:', payload.error);
-            setError(`Error loading law: ${payload.error}`);
+            setLoadError({
+              message: `Error loading law: ${payload.error}`,
+              fallbackUrl: null,
+              status: null,
+            });
+            setData(EMPTY_LAW_DATA);
             setLoading(false);
             isResponseReceived = true;
           } else if (payload.html) {
@@ -352,7 +380,12 @@ export function LawViewer() {
       const timeout = setTimeout(() => {
         clearInterval(pollInterval);
         if (!isResponseReceived && !data.title) {
-          setError("Timed out waiting for extension data. Please ensure the extension is installed and active.");
+          setLoadError({
+            message: "Timed out waiting for extension data. Please ensure the extension is installed and active.",
+            fallbackUrl: null,
+            status: null,
+          });
+          setData(EMPTY_LAW_DATA);
           setLoading(false);
         }
       }, 5000);
@@ -363,7 +396,7 @@ export function LawViewer() {
         clearTimeout(timeout);
       };
     }
-  }, [searchParams, loadFromExtension, loadLaw, data.title, useFormex, formexLang]);
+  }, [searchParams, loadFromExtension, loadLaw, data.title, useFormex, formexLang, loadAttempt]);
 
   // Resolve CELEX for the current law key
   const currentLaw = LAWS.find(l => l.key === key);
@@ -374,7 +407,7 @@ export function LawViewer() {
     if (isExtensionMode) return; // Don't load from file if we're in extension mode
 
     if (useFormex && currentCelex) {
-      loadLaw(null, currentCelex, formexLang);
+      loadLaw(lawPath, currentCelex, formexLang);
     } else if (isImportedMode && currentCelex) {
       loadLaw(null, currentCelex, formexLang);
     } else if (lawPath) {
@@ -383,7 +416,7 @@ export function LawViewer() {
       // Only redirect if we have a key but no matching law path
       navigate("/", { replace: true });
     }
-  }, [lawPath, key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode]);
+  }, [lawPath, key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode, loadAttempt]);
 
   // Update selection from URL params when data is loaded or URL params change
   useEffect(() => {
@@ -724,6 +757,34 @@ export function LawViewer() {
     return law ? law.eurlex : null;
   }, [key, isExtensionMode, isImportedMode, data.eurlex, currentCelex, formexLang]);
 
+  const hasLoadedContent = data.articles.length > 0 || data.recitals.length > 0 || data.annexes.length > 0;
+  const currentLawLabel = useMemo(() => {
+    if (data.title) return data.title;
+    if (searchParams.get("raw")) return searchParams.get("raw");
+    if (currentLaw?.label) return currentLaw.label;
+    if (currentCelex) return `CELEX ${currentCelex}`;
+    if (isExtensionMode) return "Imported law";
+    return "";
+  }, [data.title, searchParams, currentLaw, currentCelex, isExtensionMode]);
+
+  const retryLoad = useCallback(() => {
+    setLoadAttempt((attempt) => attempt + 1);
+  }, []);
+
+  const loadingMessage = useMemo(() => {
+    if (isExtensionMode) {
+      return useFormex && currentCelex
+        ? `Loading ${currentLawLabel || "law"} from Formex...`
+        : "Loading law from the browser extension...";
+    }
+
+    if (isImportedMode) {
+      return `Loading ${currentLawLabel || "law"}...`;
+    }
+
+    return `Loading ${currentLawLabel || "law"}...`;
+  }, [isExtensionMode, useFormex, currentCelex, currentLawLabel, isImportedMode]);
+
   const externalLawOverview = useMemo(() => {
     if (!data.crossReferences) return [];
 
@@ -922,7 +983,7 @@ export function LawViewer() {
       <div className="print:hidden">
         <TopBar
           lawKey={isExtensionMode ? "extension" : isImportedMode ? "import" : key}
-          title={data.title}
+          title={currentLawLabel}
           lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
           isExtensionMode={isExtensionMode}
           isImportedMode={isImportedMode}
@@ -949,45 +1010,93 @@ export function LawViewer() {
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
             >
-              <div className="flex items-center justify-between mb-4 gap-4">
-                <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0 dark:text-gray-100">
-                  {selected.kind === "article" && `Article ${selected.id || ""}`}
-                  {selected.kind === "recital" && `Recital ${selected.id || ""}`}
-                  {selected.kind === "annex" && `Annex ${selected.id || ""}`}
-                  {!selected.id && "No selection"}
-                </h2>
-              </div>
+              {loading ? (
+                <div className="flex min-h-[30vh] flex-col items-center justify-center text-center">
+                  <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300">
+                    <Loader2 size={28} className="animate-spin" />
+                  </div>
+                  <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight dark:text-gray-100">
+                    Loading law
+                  </h2>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-gray-600 dark:text-gray-400">
+                    {loadingMessage}
+                  </p>
+                  <div className="mt-8 w-full max-w-2xl space-y-3">
+                    <div className="h-4 w-2/5 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-full animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-11/12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-4 w-4/5 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
+                  </div>
+                </div>
+              ) : loadError && !hasLoadedContent ? (
+                <div className="flex min-h-[30vh] flex-col items-center justify-center text-center">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 dark:border-red-900 dark:bg-red-950/30">
+                    <h2 className="text-2xl font-bold font-serif text-red-900 dark:text-red-200">
+                      Law could not be loaded
+                    </h2>
+                    <p className="mt-3 max-w-xl text-sm leading-6 text-red-700 dark:text-red-300">
+                      {loadError.message}
+                    </p>
+                    <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                      <Button type="button" onClick={retryLoad}>
+                        <RefreshCw size={16} />
+                        Retry
+                      </Button>
+                      {eurlexUrl && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => window.open(loadError.fallbackUrl || eurlexUrl, "_blank", "noopener,noreferrer")}
+                        >
+                          Open on EUR-Lex
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-4 gap-4">
+                    <h2 className="text-2xl font-bold font-serif text-gray-900 tracking-tight truncate min-w-0 dark:text-gray-100">
+                      {selected.kind === "article" && `Article ${selected.id || ""}`}
+                      {selected.kind === "recital" && `Recital ${selected.id || ""}`}
+                      {selected.kind === "annex" && `Annex ${selected.id || ""}`}
+                      {!selected.id && "No selection"}
+                    </h2>
+                  </div>
 
-              <article
-                className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
-                dangerouslySetInnerHTML={{
-                  __html:
-                    processedHtml ||
-                    "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
-                }}
-                onClick={(e) => {
-                  // Handle clicks on inline cross-reference links
-                  const link = e.target.closest("a.cross-ref");
-                  if (link) {
-                    e.preventDefault();
-                    const artNum = link.getAttribute("data-ref-article");
-                    if (artNum) onCrossRefArticle(artNum);
-                    return;
-                  }
+                  <article
+                    className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
+                    dangerouslySetInnerHTML={{
+                      __html:
+                        processedHtml ||
+                        "<div class='text-center text-gray-400 py-10'>Select an article, recital, or annex from the menu to begin reading.</div>",
+                    }}
+                    onClick={(e) => {
+                      // Handle clicks on inline cross-reference links
+                      const link = e.target.closest("a.cross-ref");
+                      if (link) {
+                        e.preventDefault();
+                        const artNum = link.getAttribute("data-ref-article");
+                        if (artNum) onCrossRefArticle(artNum);
+                        return;
+                      }
 
-                  const externalLink = e.target.closest("a.external-ref");
-                  if (externalLink) {
-                    e.preventDefault();
-                    handleOpenExternalLaw({
-                      raw: externalLink.getAttribute("data-ref-raw") || externalLink.textContent,
-                      actType: externalLink.getAttribute("data-ref-act-type") || null,
-                      year: externalLink.getAttribute("data-ref-year") || null,
-                      number: externalLink.getAttribute("data-ref-number") || null,
-                      suffix: externalLink.getAttribute("data-ref-suffix") || null,
-                    });
-                  }
-                }}
-              />
+                      const externalLink = e.target.closest("a.external-ref");
+                      if (externalLink) {
+                        e.preventDefault();
+                        handleOpenExternalLaw({
+                          raw: externalLink.getAttribute("data-ref-raw") || externalLink.textContent,
+                          actType: externalLink.getAttribute("data-ref-act-type") || null,
+                          year: externalLink.getAttribute("data-ref-year") || null,
+                          number: externalLink.getAttribute("data-ref-number") || null,
+                          suffix: externalLink.getAttribute("data-ref-suffix") || null,
+                        });
+                      }
+                    }}
+                  />
+                </>
+              )}
             </section>
 
             {selected.kind === "article" && (
@@ -1008,9 +1117,15 @@ export function LawViewer() {
               </>
             )}
 
-            {error && (
+            {loadError && hasLoadedContent && (
               <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
-                {error}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>{loadError.message}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={retryLoad}>
+                    <RefreshCw size={14} />
+                    Retry
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -1103,7 +1218,15 @@ export function LawViewer() {
                 <div className="px-1 mb-2 text-sm font-semibold text-gray-900">
                   Table of Contents
                 </div>
-                {toc.length > 0 ? (
+                {loading ? (
+                  <div className="rounded-2xl border border-gray-200 bg-white p-4 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+                    Loading the table of contents...
+                  </div>
+                ) : loadError && !hasLoadedContent ? (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                    The law content is unavailable right now.
+                  </div>
+                ) : toc.length > 0 ? (
                   <div className="space-y-2">
                     {toc.map((ch) => {
                       const isOpen = openChapter === ch.label;
