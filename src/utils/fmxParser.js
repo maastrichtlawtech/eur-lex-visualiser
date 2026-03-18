@@ -506,7 +506,14 @@ export function injectCrossRefLinks(html, lang) {
         link.setAttribute("href", `#article-${ref.articleNumber}`);
         link.setAttribute("title", `Go to Article ${ref.articleNumber}`);
       } else {
-        link.setAttribute("href", `https://eur-lex.europa.eu/search.html?text=${encodeURIComponent(ref.target)}`);
+        const searchParams = new URLSearchParams({
+          scope: "EURLEX",
+          text: ref.label,
+          lang: "en",
+          type: "quick",
+          qid: String(Date.now()),
+        });
+        link.setAttribute("href", `https://eur-lex.europa.eu/search.html?${searchParams.toString()}`);
         link.setAttribute("target", "_blank");
         link.setAttribute("rel", "noopener noreferrer");
         link.setAttribute("title", `Open ${ref.target} on EUR-Lex`);
