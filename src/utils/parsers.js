@@ -17,11 +17,117 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   const fallbackDefRegex = buildFallbackDefRegex(lang);
 
   const getText = (el) => (el ? el.textContent.replace(/\s+/g, " ").trim() : "");
+  const normalizeLegacyListTables = (root) => {
+    if (!root || !(root instanceof Element)) return;
+
+    const isListMarker = (text = "") => {
+      const value = text.replace(/\u00a0/g, " ").trim();
+      if (!value || value.length > 12) return false;
+      return /^(\(?[a-z]\)|\(?[ivxlcdm]+\)|\d+(?:\.\d+)*\.?)$/i.test(value);
+    };
+
+    const getListMeta = (marker = "") => {
+      const value = marker.replace(/\u00a0/g, " ").trim();
+      if (/^\d+(?:\.\d+)*\.?$/i.test(value)) {
+        return { tag: "ol", className: "legacy-list legacy-list-decimal" };
+      }
+      if (/^\(?[a-z]\)$/i.test(value)) {
+        return { tag: "ol", className: "legacy-list legacy-list-lower-alpha" };
+      }
+      if (/^\(?[ivxlcdm]+\)$/i.test(value)) {
+        return { tag: "ol", className: "legacy-list legacy-list-lower-roman" };
+      }
+      return { tag: "div", className: "legacy-numbered-group" };
+    };
+
+    const extractTableItem = (table) => {
+      const rows = table.querySelectorAll(":scope > tbody > tr, :scope > tr");
+      if (rows.length !== 1) return null;
+      const cells = rows[0].querySelectorAll(":scope > td");
+      if (cells.length !== 2) return null;
+
+      const marker = getText(cells[0]);
+      if (!isListMarker(marker)) return null;
+
+      const body = cells[1].cloneNode(true);
+      normalizeLegacyListTables(body);
+      return { marker, body };
+    };
+
+    const childElements = Array.from(root.children);
+    for (const child of childElements) {
+      normalizeLegacyListTables(child);
+    }
+
+    let i = 0;
+    while (i < root.children.length) {
+      const current = root.children[i];
+      if (!(current instanceof HTMLTableElement)) {
+        i += 1;
+        continue;
+      }
+
+      const firstItem = extractTableItem(current);
+      if (!firstItem) {
+        i += 1;
+        continue;
+      }
+
+      const group = [{ table: current, ...firstItem }];
+      let j = i + 1;
+      while (j < root.children.length) {
+        const next = root.children[j];
+        if (!(next instanceof HTMLTableElement)) break;
+        const nextItem = extractTableItem(next);
+        if (!nextItem) break;
+        group.push({ table: next, ...nextItem });
+        j += 1;
+      }
+
+      const { tag, className } = getListMeta(group[0].marker);
+      const replacement = doc.createElement(tag);
+      replacement.className = className;
+
+      for (const item of group) {
+        if (tag === "div") {
+          const block = doc.createElement("div");
+          block.className = "legacy-numbered-block";
+
+          const num = doc.createElement("div");
+          num.className = "legacy-numbered-block-num";
+          num.textContent = item.marker;
+
+          const body = doc.createElement("div");
+          body.className = "legacy-numbered-block-body";
+          body.innerHTML = item.body.innerHTML;
+
+          block.append(num, body);
+          replacement.appendChild(block);
+        } else {
+          const li = doc.createElement("li");
+          li.className = "legacy-list-item";
+          li.setAttribute("data-marker", item.marker);
+          li.innerHTML = item.body.innerHTML;
+          replacement.appendChild(li);
+        }
+      }
+
+      root.replaceChild(replacement, group[0].table);
+      for (let k = 1; k < group.length; k += 1) {
+        group[k].table.remove();
+      }
+      i += 1;
+    }
+  };
   const innerHTML = (el) =>
     el
-      ? Array.from(el.childNodes)
-        .map((n) => (n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent))
-        .join("")
+      ? (() => {
+        const clone = el.cloneNode(true);
+        normalizeLegacyListTables(clone);
+        return Array.from(clone.childNodes)
+          .map((n) => (n.nodeType === Node.ELEMENT_NODE ? n.outerHTML : n.textContent))
+          .join("");
+      })()
       : "";
 
   const articles = [];
@@ -259,28 +365,29 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   if (definitionsArticle) {
     // Parse the definitions article HTML to extract terms
     const defDoc = parser.parseFromString(definitionsArticle.article_html, "text/html");
-    const tables = defDoc.querySelectorAll("table");
+    const candidates = [
+      ...defDoc.querySelectorAll("table td:last-child"),
+      ...defDoc.querySelectorAll(".legacy-list-item"),
+      ...defDoc.querySelectorAll(".legacy-numbered-block-body"),
+    ];
 
-    for (const table of tables) {
-      const cells = table.querySelectorAll("td");
-      if (cells.length >= 2) {
-        const textCell = cells[1];
-        const text = getText(textCell);
+    for (const candidate of candidates) {
+      const text = getText(candidate);
+      if (!text) continue;
 
-        // Try the configured meansVerb first; fall back to the quoted-term
-        // pattern for languages where the verb only appears in the article intro.
-        let termMatch = text.match(meansRegex);
-        if (termMatch) {
-          const term = termMatch[1].trim();
-          const definition = text.replace(termMatch[0], '').trim();
-          definitions.push({ term, definition });
-        } else {
-          const fbMatch = text.match(fallbackDefRegex);
-          if (fbMatch) {
-            const term = fbMatch[1].trim();
-            const definition = text.slice(fbMatch[0].length).trim();
-            if (term && definition) definitions.push({ term, definition });
-          }
+      // Try the configured meansVerb first; fall back to the quoted-term
+      // pattern for languages where the verb only appears in the article intro.
+      let termMatch = text.match(meansRegex);
+      if (termMatch) {
+        const term = termMatch[1].trim();
+        const definition = text.replace(termMatch[0], '').trim();
+        definitions.push({ term, definition });
+      } else {
+        const fbMatch = text.match(fallbackDefRegex);
+        if (fbMatch) {
+          const term = fbMatch[1].trim();
+          const definition = text.slice(fbMatch[0].length).trim();
+          if (term && definition) definitions.push({ term, definition });
         }
       }
     }

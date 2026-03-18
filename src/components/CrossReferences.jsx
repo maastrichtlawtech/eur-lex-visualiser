@@ -9,15 +9,19 @@ import { buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
  */
 export function CrossReferences({
   articleNumber,
+  entryKey,
   crossReferences,
   articles,
   onSelectArticle,
+  itemLabel = "article",
+  showBackReferences = true,
   currentLang = "EN",
   onOpenExternalReference,
 }) {
-  if (!crossReferences || !articleNumber) return null;
+  const referenceKey = entryKey || articleNumber;
+  if (!crossReferences || !referenceKey) return null;
 
-  const allRefsForArticle = crossReferences[articleNumber] || [];
+  const allRefsForArticle = crossReferences[referenceKey] || [];
 
   // Forward refs: articles referenced BY this article
   const forwardRefs = allRefsForArticle.filter(r => r.type === "article");
@@ -27,12 +31,14 @@ export function CrossReferences({
 
   // Back refs: articles that reference THIS article
   const backRefs = [];
-  for (const [sourceArt, refs] of Object.entries(crossReferences)) {
-    // Only article-level entries (not recital_*)
-    if (sourceArt.startsWith("recital_")) continue;
-    if (sourceArt === articleNumber) continue;
-    if (refs.some(r => r.type === "article" && r.target === articleNumber)) {
-      backRefs.push(sourceArt);
+  if (showBackReferences && articleNumber) {
+    for (const [sourceArt, refs] of Object.entries(crossReferences)) {
+      // Only article-level entries (not recital_*/annex_*)
+      if (sourceArt.startsWith("recital_") || sourceArt.startsWith("annex_")) continue;
+      if (sourceArt === articleNumber) continue;
+      if (refs.some(r => r.type === "article" && r.target === articleNumber)) {
+        backRefs.push(sourceArt);
+      }
     }
   }
 
@@ -59,7 +65,7 @@ export function CrossReferences({
         {forwardRefs.length > 0 && (
           <div>
             <p className="text-sm text-gray-500 mb-3 dark:text-gray-400">
-              This article references:
+              This {itemLabel} references:
             </p>
             <div className="flex flex-wrap gap-2">
               {forwardRefs.map((ref, i) => {

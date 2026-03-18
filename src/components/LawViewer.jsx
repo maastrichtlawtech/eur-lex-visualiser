@@ -1188,6 +1188,19 @@ export function LawViewer() {
               </>
             )}
 
+            {selected.kind === "annex" && (
+              <CrossReferences
+                entryKey={`annex_${selected.id}`}
+                crossReferences={data.crossReferences}
+                articles={data.articles}
+                onSelectArticle={onCrossRefArticle}
+                itemLabel="annex"
+                showBackReferences={false}
+                currentLang={useFormex ? formexLang : data.langCode}
+                onOpenExternalReference={handleOpenExternalLaw}
+              />
+            )}
+
             {loadError && hasLoadedContent && (
               <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1381,24 +1394,26 @@ export function LawViewer() {
 
               {externalLawOverview.length > 0 && (
                 <div className="pt-4">
-                  <div className="px-1 mb-2 text-sm font-semibold text-gray-900 dark:text-gray-200">
-                    Linked Legislation
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {externalLawOverview.map((item) => (
-                      <button
-                        key={item.key}
-                        type="button"
-                        onClick={() => handleOpenExternalLaw(item.ref)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-900 transition hover:border-blue-400 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100 dark:hover:border-blue-700 dark:hover:bg-blue-950/70"
-                      >
-                        <span className="max-w-[220px] truncate">{item.label}</span>
-                        <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/70 dark:text-blue-200">
-                          {item.count}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
+                  <Accordion
+                    title={`Linked Legislation (${externalLawOverview.length})`}
+                    defaultOpen={false}
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {externalLawOverview.map((item) => (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => handleOpenExternalLaw(item.ref)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-900 transition hover:border-blue-400 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100 dark:hover:border-blue-700 dark:hover:bg-blue-950/70"
+                        >
+                          <span className="max-w-[220px] truncate">{item.label}</span>
+                          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] text-blue-700 dark:bg-blue-900/70 dark:text-blue-200">
+                            {item.count}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </Accordion>
                 </div>
               )}
             </div>

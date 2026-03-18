@@ -46,6 +46,58 @@ function allText(el) {
     .trim();
 }
 
+function inferHtmlListTag(listType = "") {
+  const type = String(listType).toUpperCase();
+  if (type === "DASH") return "ul";
+  return "ol";
+}
+
+function inferListStyleClass(listType = "") {
+  const type = String(listType).toUpperCase();
+  if (type === "DASH") return "fmx-list-disc";
+  if (type === "ALPHA") return "fmx-list-lower-alpha";
+  if (type === "ARAB") return "fmx-list-decimal";
+  return "";
+}
+
+function inferMarkerListMeta(marker = "") {
+  const value = String(marker).trim();
+  if (/^\d+(?:\.\d+)*\.?$/i.test(value)) {
+    return { tag: "ol", className: "fmx-list fmx-list-decimal" };
+  }
+  if (/^\(?[a-z]\)$/i.test(value)) {
+    return { tag: "ol", className: "fmx-list fmx-list-lower-alpha" };
+  }
+  if (/^\(?[ivxlcdm]+\)$/i.test(value)) {
+    return { tag: "ol", className: "fmx-list fmx-list-lower-roman" };
+  }
+  return null;
+}
+
+function renderListItem(itemEl, ctx) {
+  const np = Array.from(itemEl.children).find((child) => child.tagName === "NP");
+  if (np) return fmxToHtml(np, ctx);
+
+  const bodyHtml = childrenHtml(itemEl, ctx);
+  return `<li class="fmx-list-item">${bodyHtml}</li>`;
+}
+
+function renderNpListItem(npEl, ctx) {
+  const numHtml = fmxToHtml(npEl.querySelector("NO\\.P"), ctx);
+  const bodyHtml = childrenHtmlExcept(npEl, "NO.P", ctx);
+  const marker = allText(npEl.querySelector("NO\\.P"));
+  return `<li class="fmx-list-item" data-marker="${escapeHtml(marker)}"><span class="fmx-list-item-num">${numHtml}</span><div class="fmx-list-item-body">${bodyHtml}</div></li>`;
+}
+
+function renderNumberedGroup(npElements, ctx) {
+  const firstMarker = allText(npElements[0]?.querySelector("NO\\.P"));
+  const meta = inferMarkerListMeta(firstMarker);
+  if (!meta) {
+    return `<div class="fmx-numbered-group">${npElements.map((npEl) => fmxToHtml(npEl, ctx)).join("")}</div>`;
+  }
+  return `<${meta.tag} class="${meta.className}">${npElements.map((npEl) => renderNpListItem(npEl, ctx)).join("")}</${meta.tag}>`;
+}
+
 /**
  * Convert an FMX XML element tree into displayable HTML.
  *
@@ -101,16 +153,19 @@ function fmxToHtml(el, ctx = null) {
   // NP children may appear without a LIST wrapper; group them into tables
   if (tag === "GR.SEQ") {
     let html = "";
-    let npBuffer = "";
+    let npBuffer = [];
     for (const c of el.childNodes) {
       if (c.nodeType === Node.ELEMENT_NODE && c.tagName === "NP") {
-        npBuffer += fmxToHtml(c, ctx);
+        npBuffer.push(c);
       } else {
-        if (npBuffer) { html += `<table class="fmx-list">${npBuffer}</table>`; npBuffer = ""; }
+        if (npBuffer.length > 0) {
+          html += renderNumberedGroup(npBuffer, ctx);
+          npBuffer = [];
+        }
         html += fmxToHtml(c, ctx);
       }
     }
-    if (npBuffer) html += `<table class="fmx-list">${npBuffer}</table>`;
+    if (npBuffer.length > 0) html += renderNumberedGroup(npBuffer, ctx);
     return `<div class="fmx-gr-seq">${html}</div>`;
   }
 
@@ -128,7 +183,23 @@ function fmxToHtml(el, ctx = null) {
   if (tag === "STI") return `<p class="oj-sti-art">${escapeHtml(allText(el))}</p>`;
 
   // CONTENTS — annex body content
-  if (tag === "CONTENTS") return childrenHtml(el, ctx);
+  if (tag === "CONTENTS") {
+    let html = "";
+    let npBuffer = [];
+    for (const child of el.childNodes) {
+      if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "NP") {
+        npBuffer.push(child);
+      } else {
+        if (npBuffer.length > 0) {
+          html += renderNumberedGroup(npBuffer, ctx);
+          npBuffer = [];
+        }
+        html += fmxToHtml(child, ctx);
+      }
+    }
+    if (npBuffer.length > 0) html += renderNumberedGroup(npBuffer, ctx);
+    return html;
+  }
 
   // Footnotes
   if (tag === "NOTE") {
@@ -156,12 +227,26 @@ function fmxToHtml(el, ctx = null) {
 
   // Numbered paragraph (e.g. NP = numbered point)
   if (tag === "NP") {
-    return `<tr class="fmx-np"><td class="fmx-np-num">${fmxToHtml(el.querySelector("NO\\.P"), ctx)}</td><td>${childrenHtmlExcept(el, "NO.P", ctx)}</td></tr>`;
+    const numHtml = fmxToHtml(el.querySelector("NO\\.P"), ctx);
+    const bodyHtml = childrenHtmlExcept(el, "NO.P", ctx);
+    const parentTag = el.parentElement?.tagName || "";
+    const marker = allText(el.querySelector("NO\\.P"));
+
+    if (parentTag === "ITEM" || parentTag === "LIST") {
+      return `<li class="fmx-list-item" data-marker="${escapeHtml(marker)}"><span class="fmx-list-item-num">${numHtml}</span><div class="fmx-list-item-body">${bodyHtml}</div></li>`;
+    }
+
+    return `<div class="fmx-numbered-block"><div class="fmx-numbered-block-num">${numHtml}</div><div class="fmx-numbered-block-body">${bodyHtml}</div></div>`;
   }
 
   // Lists
   if (tag === "LIST") {
-    return `<table class="fmx-list">${childrenHtml(el, ctx)}</table>`;
+    const listType = (el.getAttribute("TYPE") || "").toUpperCase();
+    const items = Array.from(el.children).filter((child) => child.tagName === "ITEM");
+    const tagName = inferHtmlListTag(listType);
+    const styleClass = inferListStyleClass(listType);
+    const inner = items.map((item) => renderListItem(item, ctx)).join("");
+    return `<${tagName} class="fmx-list ${styleClass}">${inner}</${tagName}>`;
   }
 
   // List item
@@ -896,6 +981,21 @@ export function parseFmxToCombined(xmlText) {
     }
 
     annexes.push({ annex_id, annex_title, annex_html });
+
+    const annexText = allText(annexEl);
+    const textRefs = extractCrossRefsFromText(annexText, lang);
+    const ojRefs = extractOjRefsFromElement(annexEl);
+    const seenKeys = new Set();
+    const uniqueRefs = [...textRefs, ...ojRefs].filter((ref) => {
+      const key = `${ref.type}:${ref.target}:${ref.paragraph || ""}:${ref.point || ""}:${ref.ojColl || ""}:${ref.ojYear || ""}:${ref.ojNo || ""}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
+    if (uniqueRefs.length > 0) {
+      crossReferences[`annex_${annex_id}`] = uniqueRefs;
+    }
   }
 
   return { title, articles, recitals, annexes, definitions, langCode, crossReferences };
