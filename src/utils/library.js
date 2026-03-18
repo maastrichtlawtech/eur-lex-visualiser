@@ -1,4 +1,5 @@
-import { LAWS } from "../constants/laws.js";
+import { parseOfficialReference } from "./officialReferences.js";
+import { buildImportedLawCandidate, findBundledLawByCelex, getBundledLaws, getCanonicalLawRoute } from "./lawRouting.js";
 
 const IMPORTED_LAWS_STORAGE_KEY = "eurlex_imported_laws";
 
@@ -22,12 +23,23 @@ function writeJson(key, value) {
 function normalizeImportedLaw(entry) {
   if (!entry?.celex) return null;
 
+  const parsedReference = entry.officialReference
+    || parseOfficialReference(entry.raw || "")
+    || parseOfficialReference(entry.label || "");
+  const bundledLaw = findBundledLawByCelex(entry.celex);
+  const routeCandidate = bundledLaw || buildImportedLawCandidate({
+    ...entry,
+    officialReference: parsedReference,
+  });
+
   return {
     id: entry.id || `import:${entry.celex}`,
     kind: "imported",
     celex: entry.celex,
     label: entry.label || entry.raw || `CELEX ${entry.celex}`,
     raw: entry.raw || null,
+    officialReference: routeCandidate?.officialReference || null,
+    slug: routeCandidate?.slug || null,
     eurlex: entry.eurlex || null,
     addedAt: entry.addedAt || Date.now(),
   };
@@ -57,11 +69,11 @@ export function upsertImportedLaw(entry) {
 
 export function getLibraryLaws({ hiddenLaws = [], lastOpened = {} } = {}) {
   const hidden = new Set(hiddenLaws);
-  const bundled = LAWS.map((law) => ({
+  const bundled = getBundledLaws().map((law) => ({
     ...law,
     id: law.key,
     kind: "bundled",
-    route: `/law/${law.key}`,
+    route: getCanonicalLawRoute(law),
     timestamp: lastOpened[law.key] || lastOpened[`law:${law.key}`] || null,
   }));
 
@@ -71,16 +83,18 @@ export function getLibraryLaws({ hiddenLaws = [], lastOpened = {} } = {}) {
     .filter((law) => !bundledCelexes.has(law.celex))
     .map((law) => ({
       ...law,
-      route: `/import?celex=${encodeURIComponent(law.celex)}${law.raw ? `&raw=${encodeURIComponent(law.raw)}` : ""}`,
+      route: getCanonicalLawRoute(law),
       timestamp: lastOpened[law.id] || lastOpened[law.celex] || null,
     }));
 
   return [...bundled, ...imported]
-    .filter((law) => !hidden.has(law.id) && !hidden.has(law.key) && !hidden.has(law.celex))
+    .filter((law) => {
+      if (law.kind === "bundled" && law.shownInUi === false && !law.timestamp) return false;
+      return !hidden.has(law.id) && !hidden.has(law.key) && !hidden.has(law.celex);
+    })
     .sort((a, b) => {
       const timeDiff = (b.timestamp || 0) - (a.timestamp || 0);
       if (timeDiff !== 0) return timeDiff;
       return (b.addedAt || 0) - (a.addedAt || 0);
     });
 }
-

@@ -44,7 +44,7 @@ The URL-based resolver is used by the browser extension import flow:
 - the extension opens LegalViz with a `sourceUrl` query parameter
 - the frontend calls `/api/resolve-url`
 - the API resolves the URL to a canonical CELEX
-- the frontend redirects to the canonical `/import?celex=...` route
+- the frontend keeps `/import?...` as a compatibility entrypoint, then redirects to the canonical public law route
 
 The reference-based endpoints are designed to consume the structured fields we extract from FMX cross-references, such as:
 - `actType=directive|regulation|decision`

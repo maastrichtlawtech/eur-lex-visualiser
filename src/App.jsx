@@ -23,14 +23,6 @@ const router = createBrowserRouter([
         element: <Landing />,
       },
       {
-        path: "law/:key",
-        element: <LawViewer />,
-      },
-      {
-        path: "law/:key/:kind/:id",
-        element: <LawViewer />,
-      },
-      {
         path: "extension",
         element: <LawViewer />,
       },
@@ -44,6 +36,22 @@ const router = createBrowserRouter([
       },
       {
         path: "import/:kind/:id",
+        element: <LawViewer />,
+      },
+      {
+        path: "law/:key",
+        element: <LawViewer />,
+      },
+      {
+        path: "law/:key/:kind/:id",
+        element: <LawViewer />,
+      },
+      {
+        path: ":slug",
+        element: <LawViewer />,
+      },
+      {
+        path: ":slug/:kind/:id",
         element: <LawViewer />,
       },
     ],

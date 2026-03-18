@@ -41,9 +41,9 @@ A beautiful, interactive web application for reading and navigating European Uni
 
 ### 🌐 Browser Extension
 - **Universal Support**: Open recent EU laws directly from EUR-Lex using the browser extension.
-- **Direct Import Flow**: The extension sends the current EUR-Lex URL to LegalViz, which resolves it to the canonical CELEX import.
+- **Direct Import Flow**: The extension sends the current EUR-Lex URL to LegalViz through the existing `/import?...` compatibility entrypoint.
 - **Lightweight Design**: The extension does not capture or store full HTML pages locally.
-- **Canonical Imports**: Imported laws are redirected to the canonical `?celex=...` LegalViz URL once resolved.
+- **Canonical Imports**: Once resolved, LegalViz redirects imported laws to clean canonical URLs like `/gdpr` or `/regulation-2018-1972`.
 
 ## How to Use
 
@@ -78,11 +78,11 @@ The visualiser can open **any EU law** (at least newer ones) directly from EUR-L
 2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu) — for example, the [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng).
 3. Use the EUR-Lex language selector to open the law in **English** (the parser currently requires the English version).
 4. On supported EUR-Lex text pages, the extension opens LegalViz and passes the current EUR-Lex URL for server-side resolution.
-5. LegalViz resolves that URL to the canonical CELEX identifier and redirects to the canonical import URL.
+5. LegalViz resolves that URL to the canonical law URL for the act, while keeping the extension’s import entry URL compatible.
 
 ![EUR-Lex language selector showing available languages](public/language-selector.png)
 
-> 💡 **Note:** the extension no longer stores a separate local library. It delegates resolution to the backend and opens the canonical LegalViz import URL.
+> 💡 **Note:** the extension no longer stores a separate local library. It delegates resolution to the backend via the compatible `/import?...` entrypoint, and LegalViz then redirects to the canonical clean law URL.
 
 ## Browser Support
 
@@ -184,7 +184,7 @@ legalviz.eu/
 3. **Analysis**: The `nlp.js` module computes TF-IDF vectors for all articles and recitals to find semantic similarities, linking recitals to relevant articles automatically.
 4. **State Management**: The selected law and current view are synchronized with the URL, allowing for bookmarkable links and browser back/forward navigation.
 5. **Extension Integration**: The browser extension detects supported EUR-Lex pages and opens LegalViz with the full EUR-Lex `sourceUrl`.
-6. **URL Resolution**: The backend resolves the EUR-Lex URL to a canonical CELEX identifier, and the app redirects to `/import?celex=...`.
+6. **URL Resolution**: The backend resolves the EUR-Lex URL to a canonical CELEX identifier, and the app redirects from the compatible `/import?...` entrypoint to the canonical public law URL.
 
 ## Contributing
 

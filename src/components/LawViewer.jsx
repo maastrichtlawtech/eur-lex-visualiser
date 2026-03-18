@@ -1,16 +1,16 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Info, Loader2, Menu, RefreshCw } from "lucide-react";
 
-import { LAWS } from "../constants/laws.js";
 import { parseAnyToCombined, parseFormexToCombined } from "../utils/parsers.js";
 import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { fetchFormex, extractCelexFromUrl, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
-import { upsertImportedLaw } from "../utils/library.js";
+import { getImportedLaws, upsertImportedLaw } from "../utils/library.js";
+import { buildImportedLawCandidate, findBundledLawByCelex, findBundledLawByKey, findBundledLawBySlug, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -42,12 +42,15 @@ function getLoadErrorDetails(error) {
 }
 
 export function LawViewer() {
-  const { key, kind, id } = useParams();
+  const { slug, key, kind, id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const importCelex = searchParams.get("celex");
   const sourceUrl = searchParams.get("sourceUrl");
-  const isImportedMode = !!(importCelex || sourceUrl);
+  const isImportRoute = location.pathname === "/import" || location.pathname.startsWith("/import/");
+  const isLegacyLawRoute = location.pathname.startsWith("/law/");
+  const isImportedMode = !!(importCelex || sourceUrl || isImportRoute);
   const [data, setData] = useState(EMPTY_LAW_DATA);
   const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
@@ -116,18 +119,40 @@ export function LawViewer() {
   const onDecreaseFont = () => setFontScale(s => Math.max(s - 1, 1));
   const onToggleSidebar = () => setIsSidebarOpen(s => !s);
   const currentContentLang = useMemo(() => (useFormex ? formexLang : data.langCode || "EN"), [useFormex, formexLang, data.langCode]);
+  const storedImportedLaws = useMemo(() => getImportedLaws(), [loadAttempt, slug, importCelex]);
+  const bundledLaw = useMemo(() => findBundledLawBySlug(slug) || findBundledLawByKey(key), [slug, key]);
+  const celexMatchedBundledLaw = useMemo(() => findBundledLawByCelex(importCelex), [importCelex]);
+  const celexMatchedImportedLaw = useMemo(() => {
+    if (!importCelex || celexMatchedBundledLaw) return null;
+    return storedImportedLaws.find((entry) => entry.celex === importCelex) || null;
+  }, [importCelex, celexMatchedBundledLaw, storedImportedLaws]);
+  const storedImportedLaw = useMemo(() => {
+    if (celexMatchedImportedLaw) return celexMatchedImportedLaw;
+    if (!slug || bundledLaw) return null;
+    return storedImportedLaws.find((entry) => entry.slug === slug) || null;
+  }, [slug, bundledLaw, storedImportedLaws, celexMatchedImportedLaw]);
+  const slugReference = useMemo(() => {
+    if (!slug || bundledLaw || storedImportedLaw || celexMatchedBundledLaw) return null;
+    return parseOfficialReferenceSlug(slug);
+  }, [slug, bundledLaw, storedImportedLaw, celexMatchedBundledLaw]);
+  const derivedSlugLaw = useMemo(() => {
+    if (!slugReference) return null;
+    return buildImportedLawCandidate({ officialReference: slugReference, slug });
+  }, [slugReference, slug]);
+  const currentLaw = useMemo(() => (
+    celexMatchedBundledLaw || bundledLaw || storedImportedLaw || derivedSlugLaw || null
+  ), [celexMatchedBundledLaw, bundledLaw, storedImportedLaw, derivedSlugLaw]);
+  const currentCelex = importCelex || currentLaw?.celex || null;
+  const currentLawSlug = currentLaw?.slug || null;
+  const canonicalRoute = useMemo(() => {
+    if (isExtensionMode || !currentLawSlug) return null;
+    return getCanonicalLawRoute(currentLaw, kind, id);
+  }, [currentLaw, currentLawSlug, kind, id, isExtensionMode]);
 
-  const getImportParams = useCallback((overrides = {}) => {
-    const nextCelex = overrides.celex || importCelex;
-    if (!nextCelex) return "";
-    const params = new URLSearchParams();
-    params.set("celex", nextCelex);
-
-    const raw = overrides.raw || searchParams.get("raw");
-    if (raw) params.set("raw", raw);
-
-    return `?${params.toString()}`;
-  }, [isImportedMode, importCelex, searchParams]);
+  const navigateToCanonical = useCallback((kindName, targetId, options = {}) => {
+    if (!currentLawSlug) return;
+    navigate(getCanonicalLawRoute(currentLaw, kindName, targetId), options);
+  }, [currentLaw, currentLawSlug, navigate]);
 
   // Map scale to prose class and percentage for display
   const getProseClass = (s) => {
@@ -246,8 +271,8 @@ export function LawViewer() {
       // Generate a cache key for NLP results
       let cacheKey = null;
       const formexSuffix = useFormex ? `_fmx_${formexLang}` : '';
-      if (key && !isExtensionMode) {
-        cacheKey = `nlp_v${NLP_VERSION}_${key}${formexSuffix}`;
+      if (currentLaw?.slug && !isExtensionMode) {
+        cacheKey = `nlp_v${NLP_VERSION}_${currentLaw.slug}${formexSuffix}`;
       } else if (isExtensionMode && data.title) {
         // Fallback for extension mode if title exists
         // Simple hash of title + lengths to identify specific content
@@ -291,7 +316,7 @@ export function LawViewer() {
     } else {
       setRecitalMap(new Map());
     }
-  }, [data.articles, data.recitals, key, isExtensionMode, data.title, useFormex, formexLang]);
+  }, [data.articles, data.recitals, currentLawSlug, isExtensionMode, data.title, useFormex, formexLang]);
 
   // Ref to track the currently loaded law key to prevent re-loading on navigation
   const loadedKeyRef = React.useRef(null);
@@ -392,10 +417,6 @@ export function LawViewer() {
     }
   }, [searchParams, loadFromExtension, loadLaw, data.title, useFormex, formexLang, loadAttempt]);
 
-  // Resolve CELEX for the current law key
-  const currentLaw = LAWS.find(l => l.key === key);
-  const currentCelex = importCelex || currentLaw?.celex || null;
-
   useEffect(() => {
     if (!sourceUrl || importCelex) return;
 
@@ -420,6 +441,15 @@ export function LawViewer() {
 
         const params = new URLSearchParams();
         params.set("celex", resolvedCelex);
+        const resolvedReference = result?.parsed?.reference || null;
+        if (resolvedReference?.actType && resolvedReference?.year && resolvedReference?.number) {
+          const target = buildImportedLawCandidate({
+            celex: resolvedCelex,
+            officialReference: resolvedReference,
+          });
+          navigate(getCanonicalLawRoute(target), { replace: true });
+          return;
+        }
         navigate(`/import?${params.toString()}`, { replace: true });
       })
       .catch((error) => {
@@ -437,20 +467,60 @@ export function LawViewer() {
     };
   }, [sourceUrl, importCelex, formexLang, navigate, loadAttempt]);
 
+  useEffect(() => {
+    if (isExtensionMode || !canonicalRoute) return;
+    if (isLegacyLawRoute || (isImportRoute && currentCelex && currentLawSlug)) {
+      navigate(canonicalRoute, { replace: true });
+    }
+  }, [canonicalRoute, currentCelex, currentLawSlug, isExtensionMode, isImportRoute, isLegacyLawRoute, navigate]);
+
+  useEffect(() => {
+    if (isExtensionMode || currentCelex || !slugReference) return;
+
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+
+    resolveOfficialReference(slugReference, formexLang)
+      .then((result) => {
+        if (cancelled) return;
+        const resolvedCelex = result?.resolved?.celex;
+        if (!resolvedCelex) {
+          setLoadError({
+            message: "This law reference could not be resolved automatically.",
+            fallbackUrl: result?.fallback?.url || buildEurlexSearchUrl(`${slugReference.actType} ${slugReference.year}/${slugReference.number}`, formexLang),
+            status: result?.status || null,
+          });
+          setLoading(false);
+          return;
+        }
+        loadLaw(resolvedCelex, formexLang);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadError(getLoadErrorDetails(error));
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slugReference, currentCelex, formexLang, loadLaw, isExtensionMode]);
+
   // Load law when path/formex settings change
   useEffect(() => {
     if (isExtensionMode) return; // Don't load from file if we're in extension mode
     if (sourceUrl && !currentCelex) return;
+    if (!currentCelex && slugReference) return;
 
     if (useFormex && currentCelex) {
       loadLaw(currentCelex, formexLang);
     } else if (currentCelex) {
       loadLaw(currentCelex, formexLang);
-    } else if (key) {
-      // Only redirect if we have a key but no matching law path
+    } else if (key || slug) {
       navigate("/", { replace: true });
     }
-  }, [key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode, loadAttempt, sourceUrl]);
+  }, [key, slug, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode, loadAttempt, sourceUrl, slugReference]);
 
   // Update selection from URL params when data is loaded or URL params change
   useEffect(() => {
@@ -491,42 +561,34 @@ export function LawViewer() {
     if (!kind || !id) {
       const extensionKey = isExtensionMode ? searchParams.get('key') : null;
       const extensionParams = extensionKey ? `?extension=true&key=${extensionKey}` : '';
-      const importParams = getImportParams();
-
       if (data.articles?.[0]) {
         const a0 = data.articles[0];
         setSelected({ kind: "article", id: a0.article_number, html: a0.article_html });
         if (isExtensionMode) {
           // In extension mode, update URL without key
           navigate(`/extension/article/${a0.article_number}${extensionParams}`, { replace: true });
-        } else if (isImportedMode) {
-          navigate(`/import/article/${a0.article_number}${importParams}`, { replace: true });
         } else {
-          navigate(`/law/${key}/article/${a0.article_number}`, { replace: true });
+          navigateToCanonical("article", a0.article_number, { replace: true });
         }
       } else if (data.recitals?.[0]) {
         const r0 = data.recitals[0];
         setSelected({ kind: "recital", id: r0.recital_number, html: r0.recital_html });
         if (isExtensionMode) {
           navigate(`/extension/recital/${r0.recital_number}${extensionParams}`, { replace: true });
-        } else if (isImportedMode) {
-          navigate(`/import/recital/${r0.recital_number}${importParams}`, { replace: true });
         } else {
-          navigate(`/law/${key}/recital/${r0.recital_number}`, { replace: true });
+          navigateToCanonical("recital", r0.recital_number, { replace: true });
         }
       } else if (data.annexes?.[0]) {
         const x0 = data.annexes[0];
         setSelected({ kind: "annex", id: x0.annex_id, html: x0.annex_html });
         if (isExtensionMode) {
           navigate(`/extension/annex/${x0.annex_id}${extensionParams}`, { replace: true });
-        } else if (isImportedMode) {
-          navigate(`/import/annex/${x0.annex_id}${importParams}`, { replace: true });
         } else {
-          navigate(`/law/${key}/annex/${x0.annex_id}`, { replace: true });
+          navigateToCanonical("annex", x0.annex_id, { replace: true });
         }
       }
     }
-  }, [data, kind, id, key, navigate, isExtensionMode, searchParams, isImportedMode, getImportParams]);
+  }, [data, kind, id, navigate, isExtensionMode, searchParams, navigateToCanonical]);
 
   // Group articles by chapter for TOC
   const toc = useMemo(() => {
@@ -592,10 +654,8 @@ export function LawViewer() {
     setSelected({ kind: "article", id: a.article_number, html: a.article_html });
     if (isExtensionMode) {
       navigate(`/extension/article/${a.article_number}${getExtensionParams}`);
-    } else if (isImportedMode) {
-      navigate(`/import/article/${a.article_number}${getImportParams()}`);
     } else {
-      navigate(`/law/${key}/article/${a.article_number}`);
+      navigateToCanonical("article", a.article_number);
     }
   };
   const selectRecitalIdx = (idx) => {
@@ -604,10 +664,8 @@ export function LawViewer() {
     setSelected({ kind: "recital", id: r.recital_number, html: r.recital_html });
     if (isExtensionMode) {
       navigate(`/extension/recital/${r.recital_number}${getExtensionParams}`);
-    } else if (isImportedMode) {
-      navigate(`/import/recital/${r.recital_number}${getImportParams()}`);
     } else {
-      navigate(`/law/${key}/recital/${r.recital_number}`);
+      navigateToCanonical("recital", r.recital_number);
     }
   };
   const selectAnnexIdx = (idx) => {
@@ -616,10 +674,8 @@ export function LawViewer() {
     setSelected({ kind: "annex", id: x.annex_id, html: x.annex_html });
     if (isExtensionMode) {
       navigate(`/extension/annex/${x.annex_id}${getExtensionParams}`);
-    } else if (isImportedMode) {
-      navigate(`/import/annex/${x.annex_id}${getImportParams()}`);
     } else {
-      navigate(`/law/${key}/annex/${x.annex_id}`);
+      navigateToCanonical("annex", x.annex_id);
     }
   };
 
@@ -751,9 +807,8 @@ export function LawViewer() {
     if (!lawName) {
       if (isExtensionMode) {
         lawName = "Custom Law";
-      } else if (key) {
-        const law = LAWS.find((l) => l.key === key);
-        lawName = law ? law.label : key;
+      } else if (currentLaw?.label) {
+        lawName = currentLaw.label;
       } else {
         lawName = "LegalViz.EU";
       }
@@ -777,34 +832,35 @@ export function LawViewer() {
     }
 
     return { title, description };
-  }, [key, selected.kind, selected.id, isExtensionMode, data.title]);
+  }, [currentLaw, selected.kind, selected.id, isExtensionMode, data.title]);
 
   const eurlexUrl = useMemo(() => {
     if (isExtensionMode) return data.eurlex || null;
     if (sourceUrl) return sourceUrl;
-    if (isImportedMode && currentCelex) return buildEurlexCelexUrl(currentCelex, formexLang);
-    const law = LAWS.find(l => l.key === key);
-    return law ? law.eurlex : null;
-  }, [key, isExtensionMode, isImportedMode, data.eurlex, currentCelex, formexLang, sourceUrl]);
+    if (currentCelex) return buildEurlexCelexUrl(currentCelex, formexLang);
+    return currentLaw?.eurlex || null;
+  }, [currentLaw, isExtensionMode, data.eurlex, currentCelex, formexLang, sourceUrl]);
 
   const hasLoadedContent = data.articles.length > 0 || data.recitals.length > 0 || data.annexes.length > 0;
   const currentLawLabel = useMemo(() => {
     if (data.title) return data.title;
     if (searchParams.get("raw")) return searchParams.get("raw");
     if (currentLaw?.label) return currentLaw.label;
-    if (currentCelex) return `CELEX ${currentCelex}`;
     if (isExtensionMode) return "Imported law";
+    if (slugReference) return `${slugReference.actType} ${slugReference.year}/${slugReference.number}`;
     return "";
-  }, [data.title, searchParams, currentLaw, currentCelex, isExtensionMode]);
+  }, [data.title, searchParams, currentLaw, isExtensionMode, slugReference]);
 
   useEffect(() => {
-    if (!isImportedMode || !currentCelex || !hasLoadedContent) return;
+    if (isExtensionMode || !currentCelex || !hasLoadedContent) return;
 
     const rawReference = searchParams.get("raw");
+    const officialReference = currentLaw?.officialReference || parseOfficialReference(rawReference || "");
     const importedLaw = upsertImportedLaw({
       celex: currentCelex,
       raw: rawReference,
-      label: rawReference || data.title || `CELEX ${currentCelex}`,
+      officialReference,
+      label: rawReference || data.title || currentLaw?.label || "Imported law",
       eurlex: buildEurlexCelexUrl(currentCelex, formexLang),
     });
 
@@ -820,7 +876,7 @@ export function LawViewer() {
     } catch {
       // ignore localStorage failures
     }
-  }, [isImportedMode, currentCelex, hasLoadedContent, searchParams, data.title, formexLang]);
+  }, [isExtensionMode, currentCelex, currentLaw, hasLoadedContent, searchParams, data.title, formexLang]);
 
   const retryLoad = useCallback(() => {
     setLoadAttempt((attempt) => attempt + 1);
@@ -833,12 +889,8 @@ export function LawViewer() {
         : "Loading law from the browser extension...";
     }
 
-    if (isImportedMode) {
-      return `Loading ${currentLawLabel || "law"}...`;
-    }
-
     return `Loading ${currentLawLabel || "law"}...`;
-  }, [isExtensionMode, useFormex, currentCelex, currentLawLabel, isImportedMode]);
+  }, [isExtensionMode, useFormex, currentCelex, currentLawLabel]);
 
   const externalLawOverview = useMemo(() => {
     if (!data.crossReferences) return [];
@@ -947,10 +999,11 @@ export function LawViewer() {
     try {
       const result = await resolveOfficialReference(reference, currentContentLang);
       if (result?.resolved?.celex) {
-        navigate(`/import${getImportParams({
+        const targetLaw = buildImportedLawCandidate({
           celex: result.resolved.celex,
-          raw: reference.raw,
-        })}`);
+          officialReference: reference,
+        });
+        navigate(getCanonicalLawRoute(targetLaw));
         return;
       }
       openFallbackReference(result?.fallback?.url || fallbackUrl);
@@ -961,7 +1014,7 @@ export function LawViewer() {
       }
       openFallbackReference(fallbackUrl);
     }
-  }, [resolveReferenceInput, currentContentLang, openFallbackReference, navigate, getImportParams]);
+  }, [resolveReferenceInput, currentContentLang, openFallbackReference, navigate]);
 
   // Process HTML to inject definition tooltips
   const processedHtml = useMemo(() => {
@@ -1037,11 +1090,10 @@ export function LawViewer() {
       />
       <div className="print:hidden">
         <TopBar
-          lawKey={isExtensionMode ? "extension" : isImportedMode ? "import" : key}
+          lawKey={isExtensionMode ? "extension" : currentLaw?.slug || slug || key || "import"}
           title={currentLawLabel}
           lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
           isExtensionMode={isExtensionMode}
-          isImportedMode={isImportedMode}
           eurlexUrl={eurlexUrl}
           onPrint={() => setPrintModalOpen(true)}
           onToggleSidebar={onToggleSidebar}

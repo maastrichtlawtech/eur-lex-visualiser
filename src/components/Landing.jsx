@@ -8,6 +8,7 @@ import { AppResetFooter } from "./AppResetFooter.jsx";
 import { parseFormexToCombined } from "../utils/parsers.js";
 import { FormexApiError, getCachedFormex, resolveOfficialReference } from "../utils/formexApi.js";
 import { getImportedLaws, getLibraryLaws } from "../utils/library.js";
+import { buildImportedLawCandidate, getCanonicalLawRoute } from "../utils/lawRouting.js";
 
 export function Landing() {
   const navigate = useNavigate();
@@ -93,6 +94,7 @@ export function Landing() {
           const metadata = {
             routeKind: law.kind === "imported" ? "imported" : "bundled",
             law_key: law.key || null,
+            law_slug: law.slug || null,
             celex: law.celex,
             raw: law.raw || null,
             langCode: parsed.langCode || formexLang,
@@ -236,11 +238,11 @@ export function Landing() {
     try {
       const result = await resolveOfficialReference(parsed, "EN");
       if (result?.resolved?.celex) {
-        const params = new URLSearchParams({
+        const importedLaw = buildImportedLawCandidate({
           celex: result.resolved.celex,
-          raw: parsed.raw,
+          officialReference: parsed,
         });
-        navigate(`/import?${params.toString()}`);
+        navigate(getCanonicalLawRoute(importedLaw));
         return;
       }
 

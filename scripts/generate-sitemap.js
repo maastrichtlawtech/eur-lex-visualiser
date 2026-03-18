@@ -6,9 +6,11 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-import { LAWS } from '../src/constants/laws.js';
+import { getBundledLaws } from '../src/utils/lawRouting.js';
 
 const DOMAIN = 'https://legalviz.eu';
+
+const LAWS = getBundledLaws().filter((law) => law.shownInUi !== false);
 
 function generateSitemap() {
   let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
@@ -20,19 +22,19 @@ function generateSitemap() {
   // Laws
   for (const law of LAWS) {
     // Law main page
-    sitemap += `  <url><loc>${DOMAIN}/law/${law.key}</loc></url>\n`;
+    sitemap += `  <url><loc>${DOMAIN}/${law.slug}</loc></url>\n`;
 
     // Articles
     if (law.articles) {
       for (let i = 1; i <= law.articles; i++) {
-        sitemap += `  <url><loc>${DOMAIN}/law/${law.key}/article/${i}</loc></url>\n`;
+        sitemap += `  <url><loc>${DOMAIN}/${law.slug}/article/${i}</loc></url>\n`;
       }
     }
 
     // Recitals
     if (law.recitals) {
       for (let i = 1; i <= law.recitals; i++) {
-        sitemap += `  <url><loc>${DOMAIN}/law/${law.key}/recital/${i}</loc></url>\n`;
+        sitemap += `  <url><loc>${DOMAIN}/${law.slug}/recital/${i}</loc></url>\n`;
       }
     }
   }
@@ -45,4 +47,3 @@ function generateSitemap() {
 }
 
 generateSitemap();
-

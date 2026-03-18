@@ -243,6 +243,7 @@ export function buildSearchIndex(data) {
         preview: text.substring(0, 150) + "...",
         law_label: a.law_label, // Add law context
         law_key: a.law_key,
+        law_slug: a.law_slug,
         routeKind: a.routeKind,
         celex: a.celex,
         raw: a.raw,
@@ -264,6 +265,7 @@ export function buildSearchIndex(data) {
         preview: text.substring(0, 150) + "...",
         law_label: r.law_label,
         law_key: r.law_key,
+        law_slug: r.law_slug,
         routeKind: r.routeKind,
         celex: r.celex,
         raw: r.raw,
@@ -285,6 +287,7 @@ export function buildSearchIndex(data) {
         preview: text.substring(0, 150) + "...",
         law_label: a.law_label,
         law_key: a.law_key,
+        law_slug: a.law_slug,
         routeKind: a.routeKind,
         celex: a.celex,
         raw: a.raw,

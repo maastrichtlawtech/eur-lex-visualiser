@@ -1,12 +1,11 @@
 /**
- * Get the law key from the current URL path
- * Expects format: /law/:key
+ * Get the canonical law slug from the current URL path.
+ * Expects format: /:slug
  */
-export const getLawKeyFromPath = (pathname) => {
-  // Remove base path and extract law key
+export const getLawSlugFromPath = (pathname) => {
   const basePath = "";
   const pathWithoutBase = pathname.replace(basePath, "");
-  const match = pathWithoutBase.match(/^\/law\/([^/]+)/);
+  const match = pathWithoutBase.match(/^\/(?!law\/|import(?:\/|$)|extension(?:\/|$))([^/]+)/);
   return match ? match[1] : null;
 };
 

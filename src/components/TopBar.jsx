@@ -312,7 +312,6 @@ export function TopBar({
   title,
   lists,
   isExtensionMode,
-  isImportedMode = false,
   eurlexUrl,
   onPrint,
   showPrint = true,
@@ -336,25 +335,15 @@ export function TopBar({
     const extensionParams = isExtensionMode && lawKey === 'extension'
       ? window.location.search
       : '';
-    const importParams = isImportedMode ? window.location.search : '';
 
     // Ensure ID is a string before encoding
     const safeId = encodeURIComponent(String(item.id));
-    const targetLawKey = item.law_key || lawKey;
-    const targetImportParams = new URLSearchParams();
-    if (item.celex) targetImportParams.set("celex", item.celex);
-    if (item.raw) targetImportParams.set("raw", item.raw);
-    const importQuery = targetImportParams.toString();
+    const targetLawSlug = item.law_slug || item.law_key || lawKey;
 
     if (isExtensionMode) {
       navigate(`/extension/${item.type}/${safeId}${extensionParams}`);
-    } else if (item.routeKind === "imported" || (isImportedMode && !item.law_key)) {
-      const nextQuery = importQuery ? `?${importQuery}` : importParams;
-      navigate(`/import/${item.type}/${safeId}${nextQuery}`);
-    } else if (item.routeKind === "bundled") {
-      navigate(`/law/${targetLawKey}/${item.type}/${safeId}`);
-    } else {
-      navigate(`/law/${targetLawKey}/${item.type}/${safeId}`);
+    } else if (targetLawSlug) {
+      navigate(`/${targetLawSlug}/${item.type}/${safeId}`);
     }
   };
 
