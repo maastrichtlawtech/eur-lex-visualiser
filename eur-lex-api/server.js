@@ -7,7 +7,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // FMX files directory - adjust if needed
-const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, '..', 'eur-lex-visualiser', 'fmx-downloads');
+const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, 'fmx-downloads');
 const CELLAR_BASE = 'https://publications.europa.eu/resource';
 const TIMEOUT_MS = 30_000;
 
@@ -110,6 +110,18 @@ if (!fs.existsSync(FMX_DIR)) {
   fs.mkdirSync(FMX_DIR, { recursive: true });
 }
 
+// === Language Validation ===
+const VALID_LANGS = new Set([
+  'BUL', 'CES', 'DAN', 'DEU', 'ELL', 'ENG', 'EST', 'FIN', 'FRA', 'GLE',
+  'HRV', 'HUN', 'ITA', 'LAV', 'LIT', 'MLT', 'NLD', 'POL', 'POR', 'RON',
+  'SLK', 'SLV', 'SPA', 'SWE'
+]);
+
+function validateLang(lang) {
+  const upper = (lang || 'ENG').toUpperCase();
+  return VALID_LANGS.has(upper) ? upper : null;
+}
+
 // === EUR-Lex Cellar Fetching Logic ===
 
 async function fetchWithTimeout(url, options = {}) {
@@ -191,13 +203,32 @@ async function findDownloadUrls(fmx4Uri) {
   throw new Error('No downloadable FMX files found');
 }
 
+// Prevent concurrent duplicate downloads for the same celex+lang
+const inFlightDownloads = new Map(); // "celex_lang" -> Promise
+
 async function downloadFmx(celex, lang = 'ENG') {
+  const lockKey = `${celex}_${lang}`;
+
+  // If a download for this exact celex+lang is already in progress, wait for it
+  if (inFlightDownloads.has(lockKey)) {
+    return inFlightDownloads.get(lockKey);
+  }
+
+  const promise = _downloadFmxImpl(celex, lang).finally(() => {
+    inFlightDownloads.delete(lockKey);
+  });
+
+  inFlightDownloads.set(lockKey, promise);
+  return promise;
+}
+
+async function _downloadFmxImpl(celex, lang) {
   const fmx4Uri = await findFmx4Uri(celex, lang);
   const { type, urls } = await findDownloadUrls(fmx4Uri);
 
   const downloaded = [];
   let totalSize = 0;
-  
+
   // First pass: check cache and calculate sizes
   for (const url of urls) {
     const filename = url.split('/').pop();
@@ -227,10 +258,10 @@ async function downloadFmx(celex, lang = 'ENG') {
   // Second pass: download missing files
   for (const file of downloaded) {
     if (file.cached) continue;
-    
+
     const r = await fetchWithTimeout(file.url);
     if (!r.ok) throw new Error(`HTTP ${r.status} downloading ${file.url}`);
-    
+
     const buffer = Buffer.from(await r.arrayBuffer());
     fs.writeFileSync(file.path, buffer);
     file.size = buffer.length;
@@ -271,10 +302,15 @@ app.get('/api/laws', rateLimitMiddleware, (req, res) => {
 app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
   try {
     const { celex } = req.params;
-    const { lang = 'ENG' } = req.query;
+    const rawLang = req.query.lang || 'ENG';
 
     if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
+    }
+
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
     }
 
     console.log(`[API] Fetching ${celex} (lang: ${lang})…`);
@@ -285,16 +321,32 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
     }
 
     const file = files[0];
+
+    if (!fs.existsSync(file.path)) {
+      return res.status(404).json({ error: 'Cached file missing' });
+    }
+
     const stat = fs.statSync(file.path);
-    
+
     res.setHeader('Content-Type', type === 'zip' ? 'application/zip' : 'application/xml');
     res.setHeader('Content-Length', stat.size);
     res.setHeader('X-Filename', file.filename);
-    
-    fs.createReadStream(file.path).pipe(res);
+
+    const stream = fs.createReadStream(file.path);
+    stream.on('error', (err) => {
+      console.error(`[API] Stream error: ${err.message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error reading cached file' });
+      } else {
+        res.destroy();
+      }
+    });
+    stream.pipe(res);
   } catch (err) {
     console.error(`[API] Error: ${err.message}`);
-    res.status(500).json({ error: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -302,10 +354,15 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
 app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
   try {
     const { celex } = req.params;
-    const { lang = 'ENG' } = req.query;
+    const rawLang = req.query.lang || 'ENG';
 
     if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format' });
+    }
+
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
     }
 
     const fmx4Uri = await findFmx4Uri(celex, lang);
