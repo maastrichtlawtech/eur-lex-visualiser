@@ -54,6 +54,10 @@ function openDb() {
   });
 }
 
+function makeCacheKey(celex, lang = "EN") {
+  return `${celex}_${toApiLang(lang)}`;
+}
+
 async function cacheGet(key) {
   try {
     const db = await openDb();
@@ -155,7 +159,7 @@ function buildReferenceQuery(reference, lang = "EN") {
  */
 export async function fetchFormex(celex, lang = "EN") {
   const apiLang = toApiLang(lang);
-  const cacheKey = `${celex}_${apiLang}`;
+  const cacheKey = makeCacheKey(celex, lang);
 
   // 1. Try cache first
   const cached = await cacheGet(cacheKey);
@@ -186,8 +190,22 @@ export async function fetchFormex(celex, lang = "EN") {
 
   // 3. Cache it
   await cacheSet(cacheKey, xmlText);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("legalviz-formex-cache-updated", {
+      detail: { celex, lang: lang.toUpperCase() },
+    }));
+  }
 
   return xmlText;
+}
+
+export async function getCachedFormex(celex, lang = "EN") {
+  if (!celex) return null;
+  return cacheGet(makeCacheKey(celex, lang));
+}
+
+export async function hasCachedFormex(celex, lang = "EN") {
+  return (await getCachedFormex(celex, lang)) != null;
 }
 
 export async function resolveOfficialReference(reference, lang = "EN") {

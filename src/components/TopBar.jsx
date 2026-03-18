@@ -7,7 +7,7 @@ import { ThemeToggle } from "./ThemeToggle.jsx";
 import { LanguageSelector } from "./LanguageSelector.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 
-function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
+function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading, activeLanguage = "EN", searchableLawCount = 0 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -18,6 +18,7 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const resultsRef = useRef(null);
+  const isGlobalLibrarySearch = typeof onSearchOpen === "function";
 
   // Trigger search data loading on open
   useEffect(() => {
@@ -207,6 +208,12 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
               </button>
             </div>
 
+            {isGlobalLibrarySearch && (
+              <div className="flex-none border-b border-gray-100 px-4 py-2.5 text-xs text-gray-500 bg-gray-50/80 dark:bg-gray-950/60 dark:border-gray-800 dark:text-gray-400">
+                Searching {searchableLawCount} cached {searchableLawCount === 1 ? "law" : "laws"} in {activeLanguage}. Open a law in this language to make it searchable.
+              </div>
+            )}
+
             <div className="flex-1 overflow-y-auto p-2 scroll-smooth bg-gray-50/30 dark:bg-gray-950/50">
               {results.length > 0 ? (
                 <div className="flex flex-col gap-2 p-2 w-full" ref={resultsRef}>
@@ -249,10 +256,31 @@ function SearchBox({ lists, onNavigate, onSearchOpen, isSearchLoading }) {
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-                  {query.length < 2 ? (
+                  {isGlobalLibrarySearch && searchableLawCount === 0 ? (
+                    <>
+                      <Search size={48} className="opacity-10 mb-4" />
+                      <p className="text-sm text-center max-w-sm">
+                        No cached laws are searchable in {activeLanguage} yet. Open a law in this language to add it to search.
+                      </p>
+                    </>
+                  ) : isGlobalLibrarySearch && query.length < 2 ? (
+                    <>
+                      <Search size={48} className="opacity-10 mb-4" />
+                      <p className="text-sm text-center max-w-sm">
+                        Type to search across {searchableLawCount} cached {searchableLawCount === 1 ? "law" : "laws"} in {activeLanguage}.
+                      </p>
+                    </>
+                  ) : query.length < 2 ? (
                     <>
                       <Search size={48} className="opacity-10 mb-4" />
                       <p className="text-sm">Type to start searching...</p>
+                    </>
+                  ) : isGlobalLibrarySearch ? (
+                    <>
+                      <Search size={48} className="opacity-20 mb-4" />
+                      <p className="text-sm text-center max-w-sm">
+                        No results found for "{query}" in {searchableLawCount} cached {searchableLawCount === 1 ? "law" : "laws"} in {activeLanguage}.
+                      </p>
                     </>
                   ) : (
                     <>
@@ -296,13 +324,13 @@ export function TopBar({
   onDecreaseFont,
   fontSize,
   formexLang,
+  searchableLawCount = 0,
   onFormexLangChange,
   useFormex,
   onToggleFormex,
   hasCelex,
 }) {
   const navigate = useNavigate();
-  const { articles, recitals, annexes } = lists;
 
   const onNavigate = (item) => {
     const extensionParams = isExtensionMode && lawKey === 'extension'
@@ -313,11 +341,18 @@ export function TopBar({
     // Ensure ID is a string before encoding
     const safeId = encodeURIComponent(String(item.id));
     const targetLawKey = item.law_key || lawKey;
+    const targetImportParams = new URLSearchParams();
+    if (item.celex) targetImportParams.set("celex", item.celex);
+    if (item.raw) targetImportParams.set("raw", item.raw);
+    const importQuery = targetImportParams.toString();
 
     if (isExtensionMode) {
       navigate(`/extension/${item.type}/${safeId}${extensionParams}`);
-    } else if (isImportedMode && !item.law_key) {
-      navigate(`/import/${item.type}/${safeId}${importParams}`);
+    } else if (item.routeKind === "imported" || (isImportedMode && !item.law_key)) {
+      const nextQuery = importQuery ? `?${importQuery}` : importParams;
+      navigate(`/import/${item.type}/${safeId}${nextQuery}`);
+    } else if (item.routeKind === "bundled") {
+      navigate(`/law/${targetLawKey}/${item.type}/${safeId}`);
     } else {
       navigate(`/law/${targetLawKey}/${item.type}/${safeId}`);
     }
@@ -409,7 +444,14 @@ export function TopBar({
             />
           </div>
 
-          <SearchBox lists={lists} onNavigate={onNavigate} onSearchOpen={onSearchOpen} isSearchLoading={isSearchLoading} />
+          <SearchBox
+            lists={lists}
+            onNavigate={onNavigate}
+            onSearchOpen={onSearchOpen}
+            isSearchLoading={isSearchLoading}
+            activeLanguage={formexLang}
+            searchableLawCount={searchableLawCount}
+          />
 
         </div>
       </div>
@@ -432,12 +474,6 @@ function ToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, fontSiz
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
-
-  // Close menu when actions are clicked
-  const handleAction = (action) => {
-    action();
-    // setIsOpen(false); // Optional: close on action? Maybe not for zoom controls.
-  };
 
   return (
     <div className="relative" ref={menuRef}>

@@ -1,12 +1,11 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Info, Loader2, Menu, RefreshCw } from "lucide-react";
 
 import { LAWS } from "../constants/laws.js";
-import { fetchText } from "../utils/fetch.js";
-import { parseAnyToCombined } from "../utils/parsers.js";
-import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl, getLawPathFromKey } from "../utils/url.js";
+import { parseAnyToCombined, parseFormexToCombined } from "../utils/parsers.js";
+import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { fetchFormex, extractCelexFromUrl, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
@@ -49,11 +48,10 @@ export function LawViewer() {
   const importCelex = searchParams.get("celex");
   const sourceUrl = searchParams.get("sourceUrl");
   const isImportedMode = !!(importCelex || sourceUrl);
-  const lawPath = getLawPathFromKey(key);
   const [data, setData] = useState(EMPTY_LAW_DATA);
   const [recitalMap, setRecitalMap] = useState(new Map());
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
-  const [returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
+  const [_returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
   const [openChapter, setOpenChapter] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -165,23 +163,16 @@ export function LawViewer() {
     }
   };
 
-  const loadLaw = React.useCallback(async (path, celex, lang) => {
-    if (!path && !celex) return;
+  const loadLaw = React.useCallback(async (celex, lang) => {
+    if (!celex) return;
     setLoading(true);
     setLoadError(null);
     setData(EMPTY_LAW_DATA);
     setSelected({ kind: "article", id: null, html: "" });
     setReturnToArticle(null);
     try {
-      let text;
-      if (celex && lang) {
-        // Load from Formex API
-        text = await fetchFormex(celex, lang);
-      } else {
-        // Load from local file
-        text = await fetchText(path);
-      }
-      const combined = parseAnyToCombined(text);
+      const text = await fetchFormex(celex, lang);
+      const combined = parseFormexToCombined(text);
       setData(combined);
     } catch (e) {
       setLoadError(getLoadErrorDetails(e));
@@ -350,7 +341,7 @@ export function LawViewer() {
               const celex = extractCelexFromUrl(payload.metadata.url);
               if (celex) {
                 console.log(`Extension: using Formex API for CELEX ${celex} (${formexLang})`);
-                loadLaw(null, celex, formexLang).then(() => {
+                loadLaw(celex, formexLang).then(() => {
                   setIsExtensionMode(true); // re-set since loadLaw doesn't set it
                 });
                 return;
@@ -452,16 +443,14 @@ export function LawViewer() {
     if (sourceUrl && !currentCelex) return;
 
     if (useFormex && currentCelex) {
-      loadLaw(lawPath, currentCelex, formexLang);
-    } else if (isImportedMode && currentCelex) {
-      loadLaw(null, currentCelex, formexLang);
-    } else if (lawPath) {
-      loadLaw(lawPath);
+      loadLaw(currentCelex, formexLang);
+    } else if (currentCelex) {
+      loadLaw(currentCelex, formexLang);
     } else if (key) {
       // Only redirect if we have a key but no matching law path
       navigate("/", { replace: true });
     }
-  }, [lawPath, key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode, loadAttempt, sourceUrl]);
+  }, [key, loadLaw, navigate, isExtensionMode, useFormex, currentCelex, formexLang, isImportedMode, loadAttempt, sourceUrl]);
 
   // Update selection from URL params when data is loaded or URL params change
   useEffect(() => {
@@ -749,11 +738,6 @@ export function LawViewer() {
 
     selectRecitalIdx(data.recitals.findIndex((x) => x.recital_number === r.recital_number));
   };
-  const onClickAnnex = (ax) => {
-    setReturnToArticle(null);
-    selectAnnexIdx(data.annexes.findIndex((x) => x.annex_id === ax.annex_id));
-  };
-
   // Navigate to article by number (for cross-reference clicks)
   const onCrossRefArticle = useCallback((articleNumber) => {
     const idx = data.articles.findIndex(a => a.article_number === articleNumber);

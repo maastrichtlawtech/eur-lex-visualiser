@@ -1,13 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { motion as Motion, AnimatePresence } from "framer-motion";
 import { Github, Trash, Clock } from "lucide-react";
 import { TopBar } from "./TopBar.jsx";
 import { SEO } from "./SEO.jsx";
 import { AppResetFooter } from "./AppResetFooter.jsx";
-import { fetchText } from "../utils/fetch.js";
-import { parseAnyToCombined } from "../utils/parsers.js";
-import { fetchFormex, FormexApiError, resolveOfficialReference } from "../utils/formexApi.js";
+import { parseFormexToCombined } from "../utils/parsers.js";
+import { FormexApiError, getCachedFormex, resolveOfficialReference } from "../utils/formexApi.js";
 import { getImportedLaws, getLibraryLaws } from "../utils/library.js";
 
 export function Landing() {
@@ -47,43 +46,72 @@ export function Landing() {
     }
   });
   const [importedLawsVersion, setImportedLawsVersion] = useState(() => getImportedLaws().length);
+  const [formexLang, setFormexLang] = useState(() => {
+    try {
+      return localStorage.getItem("legalviz-formex-lang") || "EN";
+    } catch {
+      return "EN";
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("legalviz-formex-lang", formexLang);
+    } catch {
+      // ignore localStorage failures
+    }
+  }, [formexLang]);
 
   // State for global search
   const [allLawsData, setAllLawsData] = useState({ articles: [], recitals: [], annexes: [] });
   const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [searchableLawCount, setSearchableLawCount] = useState(0);
+  const searchLoadInFlightRef = useRef(false);
   const [referenceType, setReferenceType] = useState("directive");
   const [referenceYear, setReferenceYear] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [importError, setImportError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  const handleSearchOpen = async () => {
-    // Only load if not already loaded
-    if (allLawsData.articles.length > 0) return;
+  const handleSearchOpen = useCallback(async () => {
+    if (searchLoadInFlightRef.current) return;
 
+    searchLoadInFlightRef.current = true;
     setIsSearchLoading(true);
     try {
       const combined = { articles: [], recitals: [], annexes: [] };
-      const libraryLaws = getLibraryLaws({ hiddenLaws, lastOpened });
+      const libraryLaws = getLibraryLaws({ hiddenLaws, lastOpened, importedLawsVersion });
 
       const standardPromises = libraryLaws.map(async (law) => {
         try {
-          const text = law.kind === "imported"
-            ? await fetchFormex(law.celex, "EN")
-            : await fetchText(law.value);
-          const parsed = parseAnyToCombined(text);
+          if (!law.celex) return null;
+
+          const text = await getCachedFormex(law.celex, formexLang);
+          if (!text) return null;
+
+          const parsed = parseFormexToCombined(text);
+          const metadata = {
+            routeKind: law.kind === "imported" ? "imported" : "bundled",
+            law_key: law.key || null,
+            celex: law.celex,
+            raw: law.raw || null,
+            langCode: parsed.langCode || formexLang,
+          };
 
           parsed.articles?.forEach(a => {
             a.law_key = law.id;
             a.law_label = law.label;
+            Object.assign(a, metadata);
           });
           parsed.recitals?.forEach(r => {
             r.law_key = law.id;
             r.law_label = law.label;
+            Object.assign(r, metadata);
           });
           parsed.annexes?.forEach(a => {
             a.law_key = law.id;
             a.law_label = law.label;
+            Object.assign(a, metadata);
           });
 
           return parsed;
@@ -104,12 +132,21 @@ export function Landing() {
       });
 
       setAllLawsData(combined);
+      const searchableIds = new Set(combined.articles.map((entry) => entry.celex).filter(Boolean));
+      combined.recitals.forEach((entry) => {
+        if (entry.celex) searchableIds.add(entry.celex);
+      });
+      combined.annexes.forEach((entry) => {
+        if (entry.celex) searchableIds.add(entry.celex);
+      });
+      setSearchableLawCount(searchableIds.size);
     } catch (e) {
       console.error("Error loading search data", e);
     } finally {
+      searchLoadInFlightRef.current = false;
       setIsSearchLoading(false);
     }
-  };
+  }, [formexLang, hiddenLaws, importedLawsVersion, lastOpened]);
 
   // Update document title
   // Handled by SEO component
@@ -128,14 +165,19 @@ export function Landing() {
       const newHidden = [...hiddenLaws, key];
       setHiddenLaws(newHidden);
       localStorage.setItem('eurlex_hidden_laws', JSON.stringify(newHidden));
-      // Clear search cache
       setAllLawsData({ articles: [], recitals: [], annexes: [] });
+      setSearchableLawCount(0);
     }
   };
 
   useEffect(() => {
     const syncLibrary = () => {
       setImportedLawsVersion(getImportedLaws().length);
+      try {
+        setFormexLang(localStorage.getItem("legalviz-formex-lang") || "EN");
+      } catch {
+        setFormexLang("EN");
+      }
       try {
         const storedHidden = localStorage.getItem('eurlex_hidden_laws');
         setHiddenLaws(storedHidden ? JSON.parse(storedHidden) : []);
@@ -152,11 +194,18 @@ export function Landing() {
 
     window.addEventListener("focus", syncLibrary);
     window.addEventListener("storage", syncLibrary);
+    window.addEventListener("legalviz-formex-cache-updated", syncLibrary);
     return () => {
       window.removeEventListener("focus", syncLibrary);
       window.removeEventListener("storage", syncLibrary);
+      window.removeEventListener("legalviz-formex-cache-updated", syncLibrary);
     };
   }, []);
+
+  useEffect(() => {
+    setAllLawsData({ articles: [], recitals: [], annexes: [] });
+    setSearchableLawCount(0);
+  }, [hiddenLaws, importedLawsVersion, formexLang]);
 
   const formatDate = (ts) => {
     if (!ts) return "Never";
@@ -235,10 +284,16 @@ export function Landing() {
         showPrint={false}
         onSearchOpen={handleSearchOpen}
         isSearchLoading={isSearchLoading}
+        formexLang={formexLang}
+        searchableLawCount={searchableLawCount}
+        onFormexLangChange={setFormexLang}
+        useFormex={true}
+        onToggleFormex={() => {}}
+        hasCelex={true}
       />
 
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col items-center justify-center px-6 py-10">
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
@@ -256,9 +311,9 @@ export function Landing() {
             Choose the instrument you are working with. You will then see an interactive view with
             chapters, articles, recitals, and annexes side by side.
           </p>
-        </motion.div>
+        </Motion.div>
 
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -314,9 +369,9 @@ export function Landing() {
               </p>
             )}
           </div>
-        </motion.div>
+        </Motion.div>
 
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
@@ -328,7 +383,7 @@ export function Landing() {
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {allLaws.map((law) => (
-              <motion.div
+              <Motion.div
                 key={law.id}
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
@@ -369,14 +424,14 @@ export function Landing() {
                     <Trash className="h-4 w-4" />
                   </button>
                 </div>
-              </motion.div>
+              </Motion.div>
             ))}
           </div>
-        </motion.div>
+        </Motion.div>
 
         {
           !instructionsDismissed && (
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.15 }}
@@ -395,13 +450,13 @@ export function Landing() {
                     <p className="text-sm font-semibold text-gray-900 dark:text-white">
                       Visualise other EU laws in 4 simple steps
                     </p>
-                    <motion.span
+                    <Motion.span
                       animate={{ rotate: showExtensionInfo ? 90 : 0 }}
                       transition={{ duration: 0.2 }}
                       className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-gray-50 text-xl text-gray-600 shadow-sm dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400"
                     >
                       ❯
-                    </motion.span>
+                    </Motion.span>
                   </button>
 
                   <button
@@ -414,7 +469,7 @@ export function Landing() {
                 </div>
                 <AnimatePresence initial={false}>
                   {showExtensionInfo && (
-                    <motion.div
+                    <Motion.div
                       initial="collapsed"
                       animate="open"
                       exit="collapsed"
@@ -514,15 +569,15 @@ export function Landing() {
                         </div>
 
                       </div>
-                    </motion.div>
+                    </Motion.div>
                   )}
                 </AnimatePresence>
               </div>
-            </motion.div>
+            </Motion.div>
           )
         }
 
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -558,16 +613,16 @@ export function Landing() {
             <Github className="h-4 w-4" />
             <span>Source code and support on GitHub</span>
           </a>
-        </motion.div>
+        </Motion.div>
 
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.25 }}
           className="mt-8"
         >
           <AppResetFooter />
-        </motion.div>
+        </Motion.div>
       </div >
     </div >
   );

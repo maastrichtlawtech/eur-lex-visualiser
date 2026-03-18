@@ -472,3 +472,11 @@ export function parseAnyToCombined(text) {
   // Deprecated fallback for legacy XHTML / standalone HTML inputs.
   return parseSingleXHTMLToCombined(text);
 }
+
+export function parseFormexToCombined(text) {
+  if (!isFmxDocument(text)) {
+    throw new Error("Expected cached Formex XML content.");
+  }
+
+  return parseFmxToCombined(text);
+}

@@ -119,10 +119,9 @@ const stripTags = (html) => {
  * 
  * @param {Array} recitals - Array of { recital_number, recital_text, ... }
  * @param {Array} articles - Array of { article_number, article_title, article_html, ... }
- * @param {boolean} exclusive - If true, assigns each recital ONLY to the best matching article
  * @returns {Map} - Map where key is article_number, value is array of matching recitals
  */
-export function mapRecitalsToArticles(recitals, articles, exclusive = false) {
+export function mapRecitalsToArticles(recitals, articles) {
   // Configuration
   const SIMILARITY_THRESHOLD = 0.1; // Minimum cosine similarity to consider a match
   const TITLE_WEIGHT = 3; // How many times to repeat title tokens for weighting
@@ -234,15 +233,20 @@ export function buildSearchIndex(data) {
   if (data.articles) {
     data.articles.forEach(a => {
       const text = stripTags(a.article_html);
+      const langCode = a.langCode;
       docs.push({
         type: 'article',
         id: a.article_number,
         title: a.article_title ? `Art. ${a.article_number} - ${a.article_title}` : `Article ${a.article_number}`,
         text: text,
-        tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number),
+        tokens: tokenize(text + " " + (a.article_title || "") + " Article " + a.article_number, langCode),
         preview: text.substring(0, 150) + "...",
         law_label: a.law_label, // Add law context
-        law_key: a.law_key     // Add law context
+        law_key: a.law_key,
+        routeKind: a.routeKind,
+        celex: a.celex,
+        raw: a.raw,
+        langCode,
       });
     });
   }
@@ -250,15 +254,20 @@ export function buildSearchIndex(data) {
   if (data.recitals) {
     data.recitals.forEach(r => {
       const text = stripTags(r.recital_html);
+      const langCode = r.langCode;
       docs.push({
         type: 'recital',
         id: r.recital_number,
         title: `Recital ${r.recital_number}`,
         text: text,
-        tokens: tokenize(text + " Recital " + r.recital_number),
+        tokens: tokenize(text + " Recital " + r.recital_number, langCode),
         preview: text.substring(0, 150) + "...",
         law_label: r.law_label,
-        law_key: r.law_key
+        law_key: r.law_key,
+        routeKind: r.routeKind,
+        celex: r.celex,
+        raw: r.raw,
+        langCode,
       });
     });
   }
@@ -266,15 +275,20 @@ export function buildSearchIndex(data) {
   if (data.annexes) {
     data.annexes.forEach(a => {
       const text = stripTags(a.annex_html);
+      const langCode = a.langCode;
       docs.push({
         type: 'annex',
         id: a.annex_id,
         title: `Annex ${a.annex_id} - ${a.annex_title}`,
         text: text,
-        tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id),
+        tokens: tokenize(text + " " + (a.annex_title || "") + " Annex " + a.annex_id, langCode),
         preview: text.substring(0, 150) + "...",
         law_label: a.law_label,
-        law_key: a.law_key
+        law_key: a.law_key,
+        routeKind: a.routeKind,
+        celex: a.celex,
+        raw: a.raw,
+        langCode,
       });
     });
   }
