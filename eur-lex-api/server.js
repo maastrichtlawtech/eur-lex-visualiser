@@ -2,12 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
+const { execSync } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // FMX files directory - adjust if needed
-const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, '..', 'eur-lex-visualiser', 'fmx-downloads');
+const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, 'fmx-downloads');
 const CELLAR_BASE = 'https://publications.europa.eu/resource';
 const TIMEOUT_MS = 30_000;
 
@@ -110,6 +112,18 @@ if (!fs.existsSync(FMX_DIR)) {
   fs.mkdirSync(FMX_DIR, { recursive: true });
 }
 
+// === Language Validation ===
+const VALID_LANGS = new Set([
+  'BUL', 'CES', 'DAN', 'DEU', 'ELL', 'ENG', 'EST', 'FIN', 'FRA', 'GLE',
+  'HRV', 'HUN', 'ITA', 'LAV', 'LIT', 'MLT', 'NLD', 'POL', 'POR', 'RON',
+  'SLK', 'SLV', 'SPA', 'SWE'
+]);
+
+function validateLang(lang) {
+  const upper = (lang || 'ENG').toUpperCase();
+  return VALID_LANGS.has(upper) ? upper : null;
+}
+
 // === EUR-Lex Cellar Fetching Logic ===
 
 async function fetchWithTimeout(url, options = {}) {
@@ -191,13 +205,102 @@ async function findDownloadUrls(fmx4Uri) {
   throw new Error('No downloadable FMX files found');
 }
 
+// === ZIP → Combined XML ===
+
+/**
+ * Extract a Formex ZIP and combine its FMX files into a single
+ * <COMBINED.FMX> XML document, matching the logic in
+ * scripts/combine-fmx-zip.mjs.
+ *
+ * Returns the path to the combined XML file (cached alongside the ZIP).
+ */
+function combineZipToXml(zipPath) {
+  const combinedPath = zipPath.replace(/\.zip$/, '.combined.xml');
+
+  // Return cached combined file if it already exists
+  if (fs.existsSync(combinedPath)) return combinedPath;
+
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'fmx-'));
+  try {
+    execSync(`unzip -o "${zipPath}" -d "${tmp}"`, { stdio: 'pipe' });
+
+    const files = fs.readdirSync(tmp);
+
+    // Find the manifest (*.doc.fmx.xml)
+    const docFile = files.find(f => f.endsWith('.doc.fmx.xml'));
+    if (!docFile) {
+      throw new Error('No *.doc.fmx.xml manifest found in ZIP');
+    }
+    const manifest = fs.readFileSync(path.join(tmp, docFile), 'utf8');
+
+    // Extract file references from manifest
+    const refPattern = /FILE="([^"]+)"/g;
+    const physRefs = [];
+    let m;
+    while ((m = refPattern.exec(manifest)) !== null) {
+      const ref = m[1];
+      if (ref.endsWith('.fmx.xml') && ref !== docFile && files.includes(ref)) {
+        physRefs.push(ref);
+      }
+    }
+
+    if (physRefs.length === 0) {
+      // Fallback: include all .fmx.xml files except the manifest
+      for (const f of files) {
+        if (f.endsWith('.fmx.xml') && f !== docFile) {
+          physRefs.push(f);
+        }
+      }
+    }
+
+    // Build combined XML
+    const parts = ['<?xml version="1.0" encoding="UTF-8"?>'];
+    parts.push('<COMBINED.FMX>');
+
+    for (const ref of physRefs) {
+      let xml = fs.readFileSync(path.join(tmp, ref), 'utf8');
+      // Remove XML declaration from individual files
+      xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
+      parts.push(xml);
+    }
+
+    parts.push('</COMBINED.FMX>');
+
+    fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
+    console.log(`[ZIP] Combined ${physRefs.length} files from ${path.basename(zipPath)} → ${path.basename(combinedPath)}`);
+
+    return combinedPath;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
+// Prevent concurrent duplicate downloads for the same celex+lang
+const inFlightDownloads = new Map(); // "celex_lang" -> Promise
+
 async function downloadFmx(celex, lang = 'ENG') {
+  const lockKey = `${celex}_${lang}`;
+
+  // If a download for this exact celex+lang is already in progress, wait for it
+  if (inFlightDownloads.has(lockKey)) {
+    return inFlightDownloads.get(lockKey);
+  }
+
+  const promise = _downloadFmxImpl(celex, lang).finally(() => {
+    inFlightDownloads.delete(lockKey);
+  });
+
+  inFlightDownloads.set(lockKey, promise);
+  return promise;
+}
+
+async function _downloadFmxImpl(celex, lang) {
   const fmx4Uri = await findFmx4Uri(celex, lang);
   const { type, urls } = await findDownloadUrls(fmx4Uri);
 
   const downloaded = [];
   let totalSize = 0;
-  
+
   // First pass: check cache and calculate sizes
   for (const url of urls) {
     const filename = url.split('/').pop();
@@ -227,10 +330,10 @@ async function downloadFmx(celex, lang = 'ENG') {
   // Second pass: download missing files
   for (const file of downloaded) {
     if (file.cached) continue;
-    
+
     const r = await fetchWithTimeout(file.url);
     if (!r.ok) throw new Error(`HTTP ${r.status} downloading ${file.url}`);
-    
+
     const buffer = Buffer.from(await r.arrayBuffer());
     fs.writeFileSync(file.path, buffer);
     file.size = buffer.length;
@@ -271,10 +374,15 @@ app.get('/api/laws', rateLimitMiddleware, (req, res) => {
 app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
   try {
     const { celex } = req.params;
-    const { lang = 'ENG' } = req.query;
+    const rawLang = req.query.lang || 'ENG';
 
-    if (!/^\d{4}[A-Z]\d{4}$/.test(celex)) {
+    if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
+    }
+
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
     }
 
     console.log(`[API] Fetching ${celex} (lang: ${lang})…`);
@@ -284,17 +392,56 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
       return res.status(404).json({ error: `No FMX files found for ${celex}` });
     }
 
-    const file = files[0];
-    const stat = fs.statSync(file.path);
-    
-    res.setHeader('Content-Type', type === 'zip' ? 'application/zip' : 'application/xml');
+    // If the Cellar returned a ZIP, extract and combine into a single XML
+    let servePath;
+    if (type === 'zip') {
+      servePath = combineZipToXml(files[0].path);
+    } else if (files.length > 1) {
+      // Multiple XML files: combine them under <COMBINED.FMX>
+      const combinedPath = files[0].path.replace(/\.xml$/, '.combined.xml');
+      if (!fs.existsSync(combinedPath)) {
+        const parts = ['<?xml version="1.0" encoding="UTF-8"?>'];
+        parts.push('<COMBINED.FMX>');
+        for (const f of files) {
+          let xml = fs.readFileSync(f.path, 'utf8');
+          xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
+          parts.push(xml);
+        }
+        parts.push('</COMBINED.FMX>');
+        fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
+        console.log(`[API] Combined ${files.length} XML files → ${path.basename(combinedPath)}`);
+      }
+      servePath = combinedPath;
+    } else {
+      servePath = files[0].path;
+    }
+
+    if (!fs.existsSync(servePath)) {
+      return res.status(404).json({ error: 'Cached file missing' });
+    }
+
+    const stat = fs.statSync(servePath);
+
+    // Always serve XML to the client
+    res.setHeader('Content-Type', 'application/xml');
     res.setHeader('Content-Length', stat.size);
-    res.setHeader('X-Filename', file.filename);
-    
-    fs.createReadStream(file.path).pipe(res);
+    res.setHeader('X-Filename', path.basename(servePath));
+
+    const stream = fs.createReadStream(servePath);
+    stream.on('error', (err) => {
+      console.error(`[API] Stream error: ${err.message}`);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Error reading cached file' });
+      } else {
+        res.destroy();
+      }
+    });
+    stream.pipe(res);
   } catch (err) {
     console.error(`[API] Error: ${err.message}`);
-    res.status(500).json({ error: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -302,10 +449,15 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
 app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
   try {
     const { celex } = req.params;
-    const { lang = 'ENG' } = req.query;
+    const rawLang = req.query.lang || 'ENG';
 
-    if (!/^\d{4}[A-Z]\d{4}$/.test(celex)) {
+    if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format' });
+    }
+
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
     }
 
     const fmx4Uri = await findFmx4Uri(celex, lang);
