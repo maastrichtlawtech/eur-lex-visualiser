@@ -56,12 +56,14 @@ export function LawViewer() {
     }
   });
 
-  // Formex API settings (opt-in)
+  // Formex API settings (default). Legacy XHTML parsing remains only as a
+  // deprecated fallback for sources that do not have Formex available.
   const [useFormex, setUseFormex] = useState(() => {
     try {
-      return localStorage.getItem("legalviz-use-formex") === "true";
+      const stored = localStorage.getItem("legalviz-use-formex");
+      return stored == null ? true : stored === "true";
     } catch {
-      return false;
+      return true;
     }
   });
   const [formexLang, setFormexLang] = useState(() => {

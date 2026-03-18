@@ -496,21 +496,37 @@ export function parseFmxToCombined(xmlText) {
   const articles = [];
   const crossReferences = {};  // articleNumber → [refs]
 
-  function walkDivisions(divisionEl, chapter, section) {
-    for (const child of divisionEl.children) {
-      if (child.tagName === "TITLE") {
-        const ti = child.querySelector("TI");
-        const sti = child.querySelector("STI");
-        const tiText = ti ? allText(ti) : "";
-        const stiText = sti ? allText(sti) : "";
+  function classifyDivisionRole(tiText, depth) {
+    if (lang.chapter.test(tiText)) return "chapter";
+    if (lang.section.test(tiText)) return depth === 0 ? "chapter" : "section";
 
-        if (lang.chapter.test(tiText)) {
-          chapter = { number: tiText, title: stiText };
-          section = { number: "", title: "" };
-        } else if (lang.section.test(tiText)) {
-          section = { number: tiText, title: stiText };
-        }
+    // Prefer the structural FMX hierarchy over translated heading text so TOC
+    // extraction keeps working across languages and heading variants.
+    return depth === 0 ? "chapter" : "section";
+  }
+
+  function walkDivisions(divisionEl, chapter, section, depth = 0) {
+    const titleEl = Array.from(divisionEl.children).find((child) => child.tagName === "TITLE");
+    let currentChapter = { ...chapter };
+    let currentSection = { ...section };
+
+    if (titleEl) {
+      const ti = titleEl.querySelector("TI");
+      const sti = titleEl.querySelector("STI");
+      const tiText = ti ? allText(ti) : "";
+      const stiText = sti ? allText(sti) : "";
+      const role = classifyDivisionRole(tiText, depth);
+
+      if (role === "chapter") {
+        currentChapter = { number: tiText, title: stiText };
+        currentSection = { number: "", title: "" };
+      } else {
+        currentSection = { number: tiText, title: stiText };
       }
+    }
+
+    for (const child of divisionEl.children) {
+      if (child.tagName === "TITLE") continue;
 
       if (child.tagName === "ARTICLE") {
         const idAttr = child.getAttribute("IDENTIFIER") || "";
@@ -534,8 +550,8 @@ export function parseFmxToCombined(xmlText) {
           article_number,
           article_title,
           division: {
-            chapter: { number: chapter.number, title: chapter.title },
-            section: section.number ? { number: section.number, title: section.title } : null,
+            chapter: { number: currentChapter.number, title: currentChapter.title },
+            section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
           },
           article_html: bodyHtml,
         });
@@ -563,7 +579,7 @@ export function parseFmxToCombined(xmlText) {
 
       // Nested divisions (sections within chapters)
       if (child.tagName === "DIVISION") {
-        walkDivisions(child, { ...chapter }, { ...section });
+        walkDivisions(child, currentChapter, currentSection, depth + 1);
       }
     }
   }

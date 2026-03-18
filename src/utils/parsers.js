@@ -1,7 +1,11 @@
-// ---------------- Parser (best-effort for OJ & consolidated) ----------------
+// ---------------- Parser (legacy XHTML fallback) ----------------
 import { detectLanguage, getLangConfig, buildMeansRegex, buildFallbackDefRegex } from "./languages.js";
 import { isFmxDocument, parseFmxToCombined } from "./fmxParser.js";
 
+/**
+ * @deprecated Legacy XHTML parser kept only as a fallback while the app moves
+ * to Formex-first loading. Prefer Formex XML from `api.legalviz.eu`.
+ */
 export function parseSingleXHTMLToCombined(xhtmlText) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(xhtmlText, "text/html");
@@ -76,8 +80,6 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
   } else {
     title = shortTitle || mainTitle;
   }
-
-  let currentDivNum, currentDivTitle;
 
   const norm = (s = "") => s.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
 
@@ -356,6 +358,6 @@ export function parseAnyToCombined(text) {
     return parseFmxToCombined(text);
   }
 
+  // Deprecated fallback for legacy XHTML / standalone HTML inputs.
   return parseSingleXHTMLToCombined(text);
 }
-
