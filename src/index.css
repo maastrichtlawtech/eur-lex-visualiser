@@ -129,6 +129,18 @@
   border-bottom-style: solid;
 }
 
+.prose a.external-ref {
+  color: #2563eb; /* blue-600 */
+  text-decoration: none;
+  border-bottom: 1px dotted #2563eb;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.prose a.external-ref:hover {
+  color: #1d4ed8; /* blue-700 */
+  border-bottom-style: solid;
+}
+
 :root.dark .prose a.cross-ref {
   color: #fbbf24; /* amber-400 */
   border-bottom-color: #fbbf24;
@@ -137,6 +149,16 @@
 :root.dark .prose a.cross-ref:hover {
   color: #f59e0b; /* amber-500 */
   border-bottom-color: #f59e0b;
+}
+
+:root.dark .prose a.external-ref {
+  color: #60a5fa; /* blue-400 */
+  border-bottom-color: #60a5fa;
+}
+
+:root.dark .prose a.external-ref:hover {
+  color: #93c5fd; /* blue-300 */
+  border-bottom-color: #93c5fd;
 }
 
 /* FMX list formatting */

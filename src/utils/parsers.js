@@ -1,6 +1,6 @@
 // ---------------- Parser (legacy XHTML fallback) ----------------
 import { detectLanguage, getLangConfig, buildMeansRegex, buildFallbackDefRegex } from "./languages.js";
-import { isFmxDocument, parseFmxToCombined } from "./fmxParser.js";
+import { injectCrossRefLinks, isFmxDocument, parseFmxToCombined } from "./fmxParser.js";
 
 /**
  * @deprecated Legacy XHTML parser kept only as a fallback while the app moves
@@ -134,13 +134,17 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
         recitals.push({
           recital_number,
           recital_text: getText(textCell),
-          recital_html: innerHTML(textCell),
+          recital_html: injectCrossRefLinks(innerHTML(textCell), lang),
         });
       } else {
         // Fallback: take the whole block
         const num = el.querySelector(".recital-number, .oj-recital-num, strong");
         const recital_number = (num && getText(num).replace(/\D+/g, "")) || `${recitals.length + 1}`;
-        recitals.push({ recital_number, recital_text: getText(el), recital_html: innerHTML(el) });
+        recitals.push({
+          recital_number,
+          recital_text: getText(el),
+          recital_html: injectCrossRefLinks(innerHTML(el), lang)
+        });
       }
       continue;
     }
@@ -162,7 +166,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
           chapter: { number: currentChapter.number, title: currentChapter.title },
           section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
         },
-        article_html: innerHTML(container || el.parentElement),
+        article_html: injectCrossRefLinks(innerHTML(container || el.parentElement), lang),
       });
       continue;
     }
@@ -182,7 +186,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
             chapter: { number: currentChapter.number, title: currentChapter.title },
             section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
           },
-          article_html: innerHTML(el),
+          article_html: injectCrossRefLinks(innerHTML(el), lang),
         });
       }
     }
@@ -236,7 +240,7 @@ export function parseSingleXHTMLToCombined(xhtmlText) {
           subNode.removeAttribute("data-ax-sub");
         }
 
-        const annex_html = innerHTML(clone);
+        const annex_html = injectCrossRefLinks(innerHTML(clone), lang);
 
         // Id/number if present
         const m = t.match(lang.annexCapture);

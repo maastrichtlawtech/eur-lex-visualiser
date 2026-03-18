@@ -22,17 +22,27 @@ import { getLangConfig, buildMeansRegex, buildFallbackDefRegex } from "./languag
 /** Recursively collect all text from an Element (ignoring tags). */
 function allText(el) {
   if (!el) return "";
-  let out = "";
+  const parts = [];
   for (const n of el.childNodes) {
-    if (n.nodeType === Node.TEXT_NODE) out += n.textContent;
+    if (n.nodeType === Node.TEXT_NODE) {
+      const text = n.textContent?.trim();
+      if (text) parts.push(text);
+    }
     else if (n.nodeType === Node.ELEMENT_NODE) {
       // Preserve FMX quote marks as actual characters
-      if (n.tagName === "QUOT.START") { out += "\u2018"; continue; }
-      if (n.tagName === "QUOT.END") { out += "\u2019"; continue; }
-      out += allText(n);
+      if (n.tagName === "QUOT.START") { parts.push("\u2018"); continue; }
+      if (n.tagName === "QUOT.END") { parts.push("\u2019"); continue; }
+      const text = allText(n);
+      if (text) parts.push(text);
     }
   }
-  return out.replace(/\s+/g, " ").trim();
+  return parts
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([(\[])\s+/g, "$1")
+    .replace(/\s+([)\]])/g, "$1")
+    .trim();
 }
 
 /**
@@ -402,35 +412,118 @@ function extractOjRefsFromElement(el) {
  * @param {string} html  HTML string to process
  * @param {object} lang  Language config from getLangConfig()
  */
-function injectCrossRefLinks(html, lang) {
+export function injectCrossRefLinks(html, lang) {
+  if (!html) return html;
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(`<div>${html}</div>`, "text/html");
+  const root = doc.body.firstElementChild;
+  if (!root) return html;
+
   const src = lang.article.source;
-  // Detect num-first languages like Hungarian: "(\d+...)\.?\s+cikk"
   const isNumFirst = src.startsWith("(\\d");
 
-  let injectRe;
+  let articleInjectRe;
   if (isNumFirst) {
-    // For num-first languages, use the article pattern directly
-    injectRe = new RegExp(`(${src})`, "gi");
+    articleInjectRe = new RegExp(`(${src})`, "gi");
   } else {
-    // Extract the article word (everything before \s+(\d in the regex source)
     const wordPart = src.split(/\\s\+\(\\d/)[0];
-    // Build injection regex: ArticleWord[s?] NUM (optional para)(optional point)
-    injectRe = new RegExp(
+    articleInjectRe = new RegExp(
       `\\b(${wordPart}s?\\s+\\d+[a-z]?\\b(?:\\(\\d+\\))?(?:\\([a-z]\\))?)`,
       "gi"
     );
   }
 
-  // Use lang.article to extract the number from whatever was matched
-  const articleRe = lang.article;
-  return html.replace(injectRe, (match) => {
-    const m = articleRe.exec(match);
-    // Reset lastIndex in case the regex is stateful (it shouldn't be, but just in case)
-    articleRe.lastIndex = 0;
-    if (!m) return match;
-    const artNum = m[1];
-    return `<a class="cross-ref" data-ref-article="${artNum}" href="#article-${artNum}" title="Go to Article ${artNum}">${match}</a>`;
-  });
+  const textWalker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes = [];
+  while (textWalker.nextNode()) {
+    const node = textWalker.currentNode;
+    const parent = node.parentElement;
+    if (!parent) continue;
+    if (parent.closest("a, .defined-term, .oj-ref")) continue;
+    if (!node.textContent?.trim()) continue;
+    textNodes.push(node);
+  }
+
+  for (const node of textNodes) {
+    const text = node.textContent;
+    if (!text) continue;
+
+    const refs = [];
+
+    articleInjectRe.lastIndex = 0;
+    let match;
+    while ((match = articleInjectRe.exec(text)) !== null) {
+      const articleMatch = lang.article.exec(match[0]);
+      lang.article.lastIndex = 0;
+      if (!articleMatch) continue;
+      refs.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        kind: "article",
+        articleNumber: articleMatch[1],
+        label: match[0],
+      });
+    }
+
+    EXTERNAL_LAW_RE.lastIndex = 0;
+    while ((match = EXTERNAL_LAW_RE.exec(text)) !== null) {
+      refs.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        kind: "external",
+        target: match[1],
+        label: match[0],
+      });
+    }
+
+    refs.sort((a, b) => a.start - b.start || b.end - a.end);
+
+    const filtered = [];
+    let cursor = -1;
+    for (const ref of refs) {
+      if (ref.start < cursor) continue;
+      filtered.push(ref);
+      cursor = ref.end;
+    }
+
+    if (filtered.length === 0) continue;
+
+    const frag = doc.createDocumentFragment();
+    let lastIndex = 0;
+
+    for (const ref of filtered) {
+      if (ref.start > lastIndex) {
+        frag.appendChild(doc.createTextNode(text.slice(lastIndex, ref.start)));
+      }
+
+      const link = doc.createElement("a");
+      link.className = ref.kind === "article" ? "cross-ref" : "external-ref";
+      link.textContent = ref.label;
+
+      if (ref.kind === "article") {
+        link.setAttribute("data-ref-article", ref.articleNumber);
+        link.setAttribute("href", `#article-${ref.articleNumber}`);
+        link.setAttribute("title", `Go to Article ${ref.articleNumber}`);
+      } else {
+        link.setAttribute("href", `https://eur-lex.europa.eu/search.html?text=${encodeURIComponent(ref.target)}`);
+        link.setAttribute("target", "_blank");
+        link.setAttribute("rel", "noopener noreferrer");
+        link.setAttribute("title", `Open ${ref.target} on EUR-Lex`);
+      }
+
+      frag.appendChild(link);
+      lastIndex = ref.end;
+    }
+
+    if (lastIndex < text.length) {
+      frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
+    }
+
+    node.parentNode.replaceChild(frag, node);
+  }
+
+  return root.innerHTML;
 }
 
 // ---------------------------------------------------------------------------
