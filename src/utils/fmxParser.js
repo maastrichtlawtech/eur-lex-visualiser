@@ -304,6 +304,64 @@ function buildRecitalRefRe(lang) {
 const EXTERNAL_LAW_RE =
   /(?:Regulation|Directive|Decision|Verordnung|Verordnung|Richtlinie|Beschluss|R\u00e8glement|Directive|D\u00e9cision|Reglamento|Directiva|Decisi\u00f3n|Regolamento|Direttiva|Decisione|Regulamento|Diretiva|Decis\u00e3o|Verordening|Richtlijn|Besluit|F\u00f6rordning|Direktiv|Beslut|Forordning|Direktiv|Asetus|Direktiivi|P\u00e4\u00e4t\u00f6s|Na\u0159\u00edzen\u00ed|Sm\u011brnice|Rozhodnut\u00ed|Nariadenie|Smernica|Rozhodnutie|Rendelet|Irányelv|Hat\u00e1rozat|Regulamentul|Directiva|Decizia|Regolamento|Naredba|Odluka|Uredba|Direktiva|Regula|Direktīva|Lēmums|Reglamentas|Direktyva|Sprendimas|Regul\u0101ci\u0101|Direktīva|Rendelet|\u039a\u03b1\u03bd\u03bf\u03bd\u03b9\u03c3\u03bc\u03cc\u03c2|\u039f\u03b4\u03b7\u03b3\u03af\u03b1|\u0391\u03c0\u03cc\u03c6\u03b1\u03c3\u03b7|Regolament|Direttiva|De\u010bizjoni|\u0420\u0435\u0433\u043b\u0430\u043c\u0435\u043d\u0442|\u0414\u0438\u0440\u0435\u043a\u0442\u0438\u0432\u0430|\u0420\u0435\u0448\u0435\u043d\u0438\u0435|Uredba|Direktiva|Odluka|Rialachán|Treoir|Cinneadh)\s+(?:\([A-Z]+\)\s+)?(?:No\.?\s+)?(\d{2,4}\/\d+(?:\/[A-Z]+)?)/gi;
 
+function inferExternalActType(raw = "") {
+  if (!raw) return null;
+  const value = raw.toLowerCase();
+  if (/\b(directive|directiva|direttiva|diretiva|richtlijn|direktiv|smernica|směrnice|treoir|οδηγία|директива|direktyva|direktīva|direktiva|irányelv)\b/i.test(value)) {
+    return "directive";
+  }
+  if (/\b(regulation|reglamento|regolamento|regulamento|verordnung|verordening|förordning|forordning|nariadenie|nařízení|rialachán|κανονισμός|регламент|reglamentas|regulamentul|uredba|asetus|rendelet)\b/i.test(value)) {
+    return "regulation";
+  }
+  if (/\b(decision|decisión|decisione|decisão|beschluss|besluit|beslut|rozhodnutie|rozhodnutí|cinneadh|απόφαση|решение|sprendimas|lēmums|odluka|határozat)\b/i.test(value)) {
+    return "decision";
+  }
+  return null;
+}
+
+function normalizeExternalYear(yearPart) {
+  if (!yearPart) return null;
+  if (yearPart.length === 4) return yearPart;
+  if (yearPart.length !== 2) return null;
+  const year = parseInt(yearPart, 10);
+  if (Number.isNaN(year)) return null;
+  return String(year >= 50 ? 1900 + year : 2000 + year);
+}
+
+function parseExternalLawMeta(raw, target) {
+  const actType = inferExternalActType(raw);
+  const match = (target || "").match(/^(\d{2,4})\/(\d+)(?:\/([A-Z]+))?$/i);
+  if (!match) {
+    return { actType, identifier: target || null, year: null, number: null, suffix: null };
+  }
+
+  const first = match[1];
+  const second = match[2];
+  const suffix = match[3] || null;
+
+  let year = null;
+  let number = null;
+
+  if (first.length === 4) {
+    year = first;
+    number = second;
+  } else if (second.length === 4) {
+    year = second;
+    number = first;
+  } else if (first.length === 2) {
+    year = normalizeExternalYear(first);
+    number = second;
+  }
+
+  return {
+    actType,
+    identifier: target || null,
+    year,
+    number,
+    suffix,
+  };
+}
+
 /**
  * Extract cross-references from a text string, using language-specific patterns.
  * Returns an array of { type, target, paragraph, point, raw } objects.
@@ -373,7 +431,12 @@ function extractCrossRefsFromText(text, lang) {
   // External law references (mostly language-independent abbreviations)
   EXTERNAL_LAW_RE.lastIndex = 0;
   while ((m = EXTERNAL_LAW_RE.exec(text)) !== null) {
-    addRef({ type: "external", target: m[1], raw: m[0] });
+    addRef({
+      type: "external",
+      target: m[1],
+      raw: m[0],
+      ...parseExternalLawMeta(m[0], m[1]),
+    });
   }
 
   return refs;

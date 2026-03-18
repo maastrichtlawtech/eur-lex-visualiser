@@ -6,6 +6,8 @@ A minimal **Node.js** REST API that serves the FMX (Formex 4) files you downlo
 - **Health check**: `GET /health`
 - **List all available FMX files**: `GET /api/laws`
 - **Fetch a specific law by CELEX ID** (e.g. `32016R0679` for GDPR): `GET /api/laws/:celex`
+- **Fetch FMX by official reference**: `GET /api/laws/by-reference?actType=directive&year=2018&number=1972`
+- **Resolve an FMX-derived law reference to CELEX via Cellar SPARQL**: `GET /api/resolve-reference?actType=directive&year=2018&number=1972`
 - **Search by keyword**: `GET /api/search?q=keyword`
 - CORS enabled for easy client‑side consumption.
 
@@ -31,8 +33,27 @@ Open a browser or use `curl`:
 curl http://localhost:3000/health
 curl http://localhost:3000/api/laws
 curl http://localhost:3000/api/laws/32016R0679   # GDPR (English)
+curl "http://localhost:3000/api/resolve-reference?actType=directive&year=2018&number=1972&raw=Directive%20(EU)%202018/1972&lang=ENG"
+curl "http://localhost:3000/api/laws/by-reference?actType=directive&year=2018&number=1972&raw=Directive%20(EU)%202018/1972&lang=ENG"
 ```
 You should receive JSON listings or the raw FMX file (XML or ZIP) with proper `Content‑Type`.
+
+The reference-based endpoints are designed to consume the structured fields we extract from FMX cross-references, such as:
+- `actType=directive|regulation|decision`
+- `year=2018`
+- `number=1972`
+- optional `raw=Directive%20(EU)%202018/1972`
+- optional `suffix=JHA`
+- optional `ojColl=L&ojNo=321&ojYear=2018`
+
+They then use the official Cellar SPARQL endpoint to resolve the corresponding CELEX identifier. The resolver responds with:
+- `resolved`: the best CELEX when confidence is high
+- `tried`: the ELI candidates that were attempted
+- `fallback.url`: a EUR-Lex search URL to open in a separate tab if resolution fails
+
+`/api/laws/by-reference` will then fetch FMX using the resolved CELEX and returns structured errors where relevant:
+- `code=resolution_failed` when the official reference could not be resolved
+- `code=fmx_not_found` when CELEX resolves but no Formex data is available
 
 ## Deploying to Railway
 1. **Create a Railway project** and link it to this repository (or push the repo to GitHub and connect it).

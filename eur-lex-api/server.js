@@ -10,6 +10,7 @@ const PORT = process.env.PORT || 3000;
 // FMX files directory - adjust if needed
 const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, 'fmx-downloads');
 const CELLAR_BASE = 'https://publications.europa.eu/resource';
+const EURLEX_BASE = 'https://eur-lex.europa.eu';
 const TIMEOUT_MS = 30_000;
 
 // === Rate Limiting ===
@@ -18,6 +19,8 @@ const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100; // requests 
 const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500; // max cache size
 
 const ipRequests = new Map(); // ip -> { count, resetAt }
+const resolutionCache = new Map(); // key -> { expiresAt, value }
+const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
 
 function getIp(req) {
   return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || 'unknown';
@@ -123,23 +126,308 @@ function validateLang(lang) {
   return VALID_LANGS.has(upper) ? upper : null;
 }
 
+function toSearchLang(lang) {
+  return (lang || 'ENG').slice(0, 2).toLowerCase();
+}
+
+function cacheGet(cache, key) {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.value;
+}
+
+function cacheSet(cache, key, value, ttlMs) {
+  cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+}
+
 // === Safe Error Handling ===
 
 /** Error subclass for messages that are safe to show to API clients. */
 class ClientError extends Error {
-  constructor(message, statusCode = 500) {
+  constructor(message, statusCode = 500, code = null, details = null) {
     super(message);
     this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
   }
 }
 
 /** Return a safe error message for the client; log the real one server-side. */
 function safeErrorResponse(res, err, fallbackMessage = 'Internal server error') {
   if (err instanceof ClientError) {
-    return res.status(err.statusCode).json({ error: err.message });
+    return res.status(err.statusCode).json({
+      error: err.message,
+      ...(err.code ? { code: err.code } : {}),
+      ...(err.details ? { details: err.details } : {}),
+    });
   }
   console.error(`[API] ${fallbackMessage}:`, err.message);
   return res.status(500).json({ error: fallbackMessage });
+}
+
+function parseReferenceText(text = '') {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const lower = normalized.toLowerCase();
+  const typeMatch = lower.match(/\b(regulation|directive|decision)\b/);
+  const actType = typeMatch ? typeMatch[1] : null;
+
+  const numberPatterns = [
+    /\b(?:\((?:eu|ec|eec|euratom)\)\s*)?(\d{4})\/(\d{1,4})\b/i,
+    /\bno\s+(\d{1,4})\/(\d{4})\b/i,
+  ];
+
+  let year = null;
+  let number = null;
+
+  for (const pattern of numberPatterns) {
+    const match = normalized.match(pattern);
+    if (!match) continue;
+
+    if (pattern === numberPatterns[0]) {
+      year = match[1];
+      number = match[2];
+    } else {
+      year = match[2];
+      number = match[1];
+    }
+    break;
+  }
+
+  const types = actType ? [actType] : ['regulation', 'directive', 'decision'];
+
+  return {
+    raw: text,
+    normalized,
+    actType,
+    types,
+    year,
+    number,
+  };
+}
+
+function parseStructuredReference(input = {}) {
+  const raw = String(input.raw || input.text || '').trim();
+  const actType = input.actType ? String(input.actType).trim().toLowerCase() : null;
+  const year = input.year ? String(input.year).trim() : null;
+  const number = input.number ? String(input.number).trim() : null;
+  const identifier = input.identifier ? String(input.identifier).trim() : null;
+  const suffix = input.suffix ? String(input.suffix).trim().toUpperCase() : null;
+  const ojColl = input.ojColl ? String(input.ojColl).trim().toUpperCase() : null;
+  const ojNo = input.ojNo ? String(input.ojNo).trim() : null;
+  const ojYear = input.ojYear ? String(input.ojYear).trim() : null;
+
+  return {
+    raw,
+    normalized: raw || [actType, year, number].filter(Boolean).join(' '),
+    actType,
+    types: actType ? [actType] : ['regulation', 'directive', 'decision'],
+    year,
+    number,
+    identifier,
+    suffix,
+    ojColl,
+    ojNo,
+    ojYear,
+  };
+}
+
+function buildEurlexSearchFallbackUrl(reference, lang = 'ENG') {
+  const searchLang = toSearchLang(lang);
+  const searchText = reference.raw || [reference.actType, reference.year && `${reference.year}/${reference.number}`].filter(Boolean).join(' ');
+  if (!searchText) return null;
+  const params = new URLSearchParams({
+    scope: 'EURLEX',
+    text: searchText,
+    lang: searchLang,
+    type: 'quick',
+    qid: String(Date.now()),
+  });
+  return `${EURLEX_BASE}/search.html?${params.toString()}`;
+}
+
+function buildEliCandidates(reference) {
+  if (!reference.actType || !reference.year || !reference.number) {
+    throw new ClientError(
+      'Reference must include actType, year, and number',
+      400,
+      'invalid_reference',
+      { parsed: reference }
+    );
+  }
+
+  const number = String(parseInt(reference.number, 10));
+  if (!/^\d+$/.test(number)) {
+    throw new ClientError(
+      'Reference number must be numeric',
+      400,
+      'invalid_reference',
+      { parsed: reference }
+    );
+  }
+
+  if (reference.actType === 'directive') {
+    return [`http://publications.europa.eu/resource/eli/dir/${reference.year}/${number}/oj`];
+  }
+
+  if (reference.actType === 'regulation') {
+    return [`http://publications.europa.eu/resource/eli/reg/${reference.year}/${number}/oj`];
+  }
+
+  if (reference.actType === 'decision') {
+    const candidates = [];
+    if (reference.suffix === 'JHA') {
+      candidates.push(`http://publications.europa.eu/resource/eli/dec_framw/${reference.year}/${number}/oj`);
+    }
+    candidates.push(`http://publications.europa.eu/resource/eli/dec/${reference.year}/${number}/oj`);
+    candidates.push(`http://publications.europa.eu/resource/eli/dec/${reference.year}/${number}(1)/oj`);
+    return [...new Set(candidates)];
+  }
+
+  throw new ClientError(
+    `Unsupported act type: ${reference.actType}`,
+    400,
+    'unsupported_reference_type',
+    { parsed: reference }
+  );
+}
+
+async function runSparqlQuery(query) {
+  const url = new URL('https://publications.europa.eu/webapi/rdf/sparql');
+  url.searchParams.set('query', query);
+  url.searchParams.set('format', 'application/sparql-results+json');
+
+  const response = await fetchWithTimeout(url.toString(), {
+    headers: {
+      Accept: 'application/sparql-results+json',
+      'User-Agent': 'LegalViz Resolver/1.0 (+https://legalviz.eu)',
+    },
+  });
+
+  if (!response.ok) {
+    throw new ClientError(
+      `Cellar SPARQL endpoint returned HTTP ${response.status}`,
+      503,
+      'cellar_unavailable'
+    );
+  }
+
+  return response.json();
+}
+
+async function resolveReferenceViaCellar(reference, lang = 'ENG') {
+  const eliCandidates = buildEliCandidates(reference);
+  const cacheKey = JSON.stringify({ type: 'cellar-resolve', reference, lang, eliCandidates });
+  const cached = cacheGet(resolutionCache, cacheKey);
+  if (cached) return cached;
+
+  const results = [];
+  for (const eli of eliCandidates) {
+    const query = `
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+SELECT ?celex WHERE {
+  ?cellar ?p <${eli}> .
+  ?cellar owl:sameAs ?celex .
+  FILTER(STRSTARTS(STR(?celex), "http://publications.europa.eu/resource/celex/"))
+}
+LIMIT 5`;
+    const data = await runSparqlQuery(query);
+    const celexValues = (data.results?.bindings || []).map((binding) =>
+      binding.celex?.value?.split('/').pop()
+    ).filter(Boolean);
+
+    results.push({ eli, celex: celexValues });
+    if (celexValues.length > 0) {
+      const payload = {
+        resolved: {
+          celex: celexValues[0],
+          eli,
+          source: 'cellar-sparql',
+        },
+        tried: results,
+        fallback: {
+          type: 'eurlex-search',
+          url: buildEurlexSearchFallbackUrl(reference, lang),
+        },
+      };
+      cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+      return payload;
+    }
+  }
+
+  const payload = {
+    resolved: null,
+    tried: results,
+    fallback: {
+      type: 'eurlex-search',
+      url: buildEurlexSearchFallbackUrl(reference, lang),
+    },
+  };
+  cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+  return payload;
+}
+
+function validateCelex(celex) {
+  return /^\d{5}[A-Z]\d{4}(?:\([0-9]+\))?$/.test(celex);
+}
+
+async function prepareLawPayload(celex, lang) {
+  console.log(`[API] Fetching ${celex} (lang: ${lang})…`);
+  const { type, files } = await downloadFmx(celex, lang);
+
+  if (files.length === 0) {
+    throw new ClientError(`No FMX files found for ${celex}`, 404, 'fmx_not_found', { celex, lang });
+  }
+
+  let servePath;
+  if (type === 'zip') {
+    servePath = combineZipToXml(files[0].path);
+  } else if (files.length > 1) {
+    const combinedPath = files[0].path.replace(/\.xml$/, '.combined.xml');
+    if (!fs.existsSync(combinedPath)) {
+      const parts = ['<?xml version="1.0" encoding="UTF-8"?>'];
+      parts.push('<COMBINED.FMX>');
+      for (const f of files) {
+        let xml = fs.readFileSync(f.path, 'utf8');
+        xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
+        parts.push(xml);
+      }
+      parts.push('</COMBINED.FMX>');
+      fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
+      console.log(`[API] Combined ${files.length} XML files → ${path.basename(combinedPath)}`);
+    }
+    servePath = combinedPath;
+  } else {
+    servePath = files[0].path;
+  }
+
+  if (!fs.existsSync(servePath)) {
+    throw new ClientError('Cached file missing', 404, 'cached_file_missing', { celex, lang });
+  }
+
+  return { type, files, servePath };
+}
+
+function sendLawResponse(res, servePath) {
+  const stat = fs.statSync(servePath);
+
+  res.setHeader('Content-Type', 'application/xml');
+  res.setHeader('Content-Length', stat.size);
+  res.setHeader('X-Filename', path.basename(servePath));
+
+  const stream = fs.createReadStream(servePath);
+  stream.on('error', (err) => {
+    console.error(`[API] Stream error: ${err.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Error reading cached file' });
+    } else {
+      res.destroy();
+    }
+  });
+  stream.pipe(res);
 }
 
 // === EUR-Lex Cellar Fetching Logic ===
@@ -394,13 +682,70 @@ app.get('/api/laws', rateLimitMiddleware, (req, res) => {
   }
 });
 
+// Resolve an official legal reference to CELEX and fetch the matching FMX
+app.get('/api/laws/by-reference', rateLimitMiddleware, async (req, res) => {
+  try {
+    const rawLang = req.query.lang || 'ENG';
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+    }
+
+    const reference = parseStructuredReference(req.query);
+    if (!reference.actType || !reference.year || !reference.number) {
+      return res.status(400).json({
+        error: 'Provide official reference parameters: actType, year, number',
+        code: 'invalid_reference',
+      });
+    }
+
+    const resolution = await resolveReferenceViaCellar(reference, lang);
+    if (!resolution.resolved?.celex) {
+      return res.status(404).json({
+        error: 'Could not resolve the official reference to a CELEX identifier',
+        code: 'resolution_failed',
+        details: {
+          parsed: reference,
+          tried: resolution.tried,
+          fallback: resolution.fallback,
+        },
+      });
+    }
+
+    try {
+      const { servePath } = await prepareLawPayload(resolution.resolved.celex, lang);
+      res.setHeader('X-Resolved-CELEX', resolution.resolved.celex);
+      res.setHeader('X-Resolved-ELI', resolution.resolved.eli);
+      sendLawResponse(res, servePath);
+    } catch (err) {
+      if (err instanceof ClientError && err.statusCode === 404) {
+        throw new ClientError(
+          `Resolved CELEX ${resolution.resolved.celex}, but no FMX files are available`,
+          404,
+          'fmx_not_found',
+          {
+            resolved: resolution.resolved,
+            parsed: reference,
+            fallback: resolution.fallback,
+          }
+        );
+      }
+      throw err;
+    }
+  } catch (err) {
+    if (!res.headersSent) {
+      safeErrorResponse(res, err, 'Failed to fetch law by reference');
+    }
+  }
+});
+
 // Get law by CELEX (fetches on demand, caches transparently)
 app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
   try {
     const { celex } = req.params;
     const rawLang = req.query.lang || 'ENG';
 
-    if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
+    if (!validateCelex(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
     }
 
@@ -409,58 +754,8 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
       return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
     }
 
-    console.log(`[API] Fetching ${celex} (lang: ${lang})…`);
-    const { type, files } = await downloadFmx(celex, lang);
-
-    if (files.length === 0) {
-      return res.status(404).json({ error: `No FMX files found for ${celex}` });
-    }
-
-    // If the Cellar returned a ZIP, extract and combine into a single XML
-    let servePath;
-    if (type === 'zip') {
-      servePath = combineZipToXml(files[0].path);
-    } else if (files.length > 1) {
-      // Multiple XML files: combine them under <COMBINED.FMX>
-      const combinedPath = files[0].path.replace(/\.xml$/, '.combined.xml');
-      if (!fs.existsSync(combinedPath)) {
-        const parts = ['<?xml version="1.0" encoding="UTF-8"?>'];
-        parts.push('<COMBINED.FMX>');
-        for (const f of files) {
-          let xml = fs.readFileSync(f.path, 'utf8');
-          xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
-          parts.push(xml);
-        }
-        parts.push('</COMBINED.FMX>');
-        fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
-        console.log(`[API] Combined ${files.length} XML files → ${path.basename(combinedPath)}`);
-      }
-      servePath = combinedPath;
-    } else {
-      servePath = files[0].path;
-    }
-
-    if (!fs.existsSync(servePath)) {
-      return res.status(404).json({ error: 'Cached file missing' });
-    }
-
-    const stat = fs.statSync(servePath);
-
-    // Always serve XML to the client
-    res.setHeader('Content-Type', 'application/xml');
-    res.setHeader('Content-Length', stat.size);
-    res.setHeader('X-Filename', path.basename(servePath));
-
-    const stream = fs.createReadStream(servePath);
-    stream.on('error', (err) => {
-      console.error(`[API] Stream error: ${err.message}`);
-      if (!res.headersSent) {
-        res.status(500).json({ error: 'Error reading cached file' });
-      } else {
-        res.destroy();
-      }
-    });
-    stream.pipe(res);
+    const { servePath } = await prepareLawPayload(celex, lang);
+    sendLawResponse(res, servePath);
   } catch (err) {
     if (!res.headersSent) {
       safeErrorResponse(res, err, 'Failed to fetch law');
@@ -474,7 +769,7 @@ app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
     const { celex } = req.params;
     const rawLang = req.query.lang || 'ENG';
 
-    if (!/^\d{5}[A-Z]\d{4}$/.test(celex)) {
+    if (!validateCelex(celex)) {
       return res.status(400).json({ error: 'Invalid CELEX format' });
     }
 
@@ -517,6 +812,49 @@ app.get('/api/search', rateLimitMiddleware, (req, res) => {
   }
 });
 
+// Resolve an official legal reference to CELEX using Cellar SPARQL
+app.get('/api/resolve-reference', rateLimitMiddleware, async (req, res) => {
+  try {
+    const rawLang = req.query.lang || 'ENG';
+
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+    }
+
+    let reference = null;
+    if (req.query.actType || req.query.year || req.query.number || req.query.ojColl || req.query.ojNo || req.query.ojYear || req.query.raw) {
+      reference = parseStructuredReference(req.query);
+    } else if (req.query.text) {
+      reference = parseReferenceText(String(req.query.text).trim());
+    } else {
+      return res.status(400).json({
+        error: 'Provide FMX-style structured parameters like actType/year/number, optionally with ojColl/ojNo/ojYear',
+      });
+    }
+
+    if (!reference.year || !reference.number) {
+      return res.status(400).json({
+        error: 'Could not parse a structured FMX legal reference',
+        code: 'invalid_reference',
+        parsed: reference,
+      });
+    }
+
+    const resolution = await resolveReferenceViaCellar(reference, lang);
+    const payload = {
+      query: reference.raw || null,
+      parsed: reference,
+      resolved: resolution.resolved,
+      tried: resolution.tried,
+      fallback: resolution.fallback,
+    };
+    res.status(resolution.resolved ? 200 : 404).json(payload);
+  } catch (err) {
+    safeErrorResponse(res, err, 'Failed to resolve legal reference');
+  }
+});
+
 // Root endpoint with API docs
 app.get('/', (req, res) => {
   res.json({
@@ -528,7 +866,9 @@ app.get('/', (req, res) => {
       'GET /api/laws': 'List cached FMX files',
       'GET /api/laws/:celex?lang=ENG': 'Get law by CELEX (fetches & caches)',
       'GET /api/laws/:celex/info': 'Get metadata only',
-      'GET /api/search?q=keyword': 'Search cached files'
+      'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
+      'GET /api/search?q=keyword': 'Search cached files',
+      'GET /api/resolve-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an FMX-derived legal reference to CELEX via Cellar SPARQL'
     },
     celexExamples: {
       '32016R0679': 'GDPR',
