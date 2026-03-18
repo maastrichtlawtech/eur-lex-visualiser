@@ -123,6 +123,25 @@ function validateLang(lang) {
   return VALID_LANGS.has(upper) ? upper : null;
 }
 
+// === Safe Error Handling ===
+
+/** Error subclass for messages that are safe to show to API clients. */
+class ClientError extends Error {
+  constructor(message, statusCode = 500) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+/** Return a safe error message for the client; log the real one server-side. */
+function safeErrorResponse(res, err, fallbackMessage = 'Internal server error') {
+  if (err instanceof ClientError) {
+    return res.status(err.statusCode).json({ error: err.message });
+  }
+  console.error(`[API] ${fallbackMessage}:`, err.message);
+  return res.status(500).json({ error: fallbackMessage });
+}
+
 // === EUR-Lex Cellar Fetching Logic ===
 
 async function fetchWithTimeout(url, options = {}) {
@@ -147,6 +166,7 @@ async function getRdf(url) {
   const r = await fetchWithTimeout(url, {
     headers: { Accept: '*/*', 'Accept-Language': 'eng' }
   });
+  if (r.status === 404) throw new ClientError('Law not found in EUR-Lex Cellar', 404);
   if (!r.ok) throw new Error(`HTTP ${r.status} for ${url}`);
   return r.text();
 }
@@ -172,7 +192,7 @@ async function findFmx4Uri(celex, lang = 'ENG') {
     }
   }
 
-  if (!fmx4) throw new Error(`No fmx4 expression URI found for lang=${lang}`);
+  if (!fmx4) throw new ClientError(`No Formex data available for this law in language ${lang}`, 404);
   return fmx4;
 }
 
@@ -201,7 +221,7 @@ async function findDownloadUrls(fmx4Uri) {
   const docXmls = uris.filter(u => u.endsWith('.doc.xml'));
   if (docXmls.length) return { type: 'xml', urls: docXmls };
 
-  throw new Error('No downloadable FMX files found');
+  throw new ClientError('No downloadable Formex files found for this law', 404);
 }
 
 // === ZIP → Combined XML ===
@@ -361,7 +381,7 @@ app.get('/api/laws', rateLimitMiddleware, (req, res) => {
     const laws = files.filter(f => f.endsWith('.xml') || f.endsWith('.zip'));
     res.json({ laws });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    safeErrorResponse(res, err, 'Failed to list cached laws');
   }
 });
 
@@ -433,9 +453,8 @@ app.get('/api/laws/:celex', rateLimitMiddleware, async (req, res) => {
     });
     stream.pipe(res);
   } catch (err) {
-    console.error(`[API] Error: ${err.message}`);
     if (!res.headersSent) {
-      res.status(500).json({ error: err.message });
+      safeErrorResponse(res, err, 'Failed to fetch law');
     }
   }
 });
@@ -465,7 +484,7 @@ app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
       type
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    safeErrorResponse(res, err, 'Failed to fetch law metadata');
   }
 });
 
@@ -485,7 +504,7 @@ app.get('/api/search', rateLimitMiddleware, (req, res) => {
     
     res.json({ matches });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    safeErrorResponse(res, err, 'Search failed');
   }
 });
 
