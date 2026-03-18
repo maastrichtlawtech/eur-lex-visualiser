@@ -9,9 +9,13 @@ import React from "react";
 export function CrossReferences({ articleNumber, crossReferences, articles, onSelectArticle }) {
   if (!crossReferences || !articleNumber) return null;
 
+  const allRefsForArticle = crossReferences[articleNumber] || [];
+
   // Forward refs: articles referenced BY this article
-  const forwardRefs = (crossReferences[articleNumber] || [])
-    .filter(r => r.type === "article");
+  const forwardRefs = allRefsForArticle.filter(r => r.type === "article");
+
+  // External refs: other laws referenced by this article (OJ structural refs + text-pattern refs)
+  const externalRefs = allRefsForArticle.filter(r => r.type === "external" || r.type === "oj_ref");
 
   // Back refs: articles that reference THIS article
   const backRefs = [];
@@ -24,7 +28,7 @@ export function CrossReferences({ articleNumber, crossReferences, articles, onSe
     }
   }
 
-  if (forwardRefs.length === 0 && backRefs.length === 0) return null;
+  if (forwardRefs.length === 0 && backRefs.length === 0 && externalRefs.length === 0) return null;
 
   // Build a lookup for article titles
   const titleMap = new Map();
@@ -39,7 +43,7 @@ export function CrossReferences({ articleNumber, crossReferences, articles, onSe
       <div className="flex items-center gap-2 text-amber-900 mb-4 px-6 md:px-12 dark:text-amber-300">
         <span className="font-semibold text-xl">Cross-References</span>
         <span className="bg-amber-100 text-amber-800 text-sm px-2.5 py-0.5 rounded-full font-medium dark:bg-amber-900/40 dark:text-amber-200">
-          {forwardRefs.length + backRefs.length}
+          {forwardRefs.length + backRefs.length + externalRefs.length}
         </span>
       </div>
 
@@ -103,6 +107,48 @@ export function CrossReferences({ articleNumber, crossReferences, articles, onSe
                       </span>
                     )}
                   </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {externalRefs.length > 0 && (
+          <div>
+            <p className="text-sm text-gray-500 mb-3 dark:text-gray-400">
+              References to other legislation:
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {externalRefs.map((ref, i) => {
+                // Build EUR-Lex search URL for OJ references
+                let href = null;
+                if (ref.type === "oj_ref" && ref.ojColl && ref.ojNo && ref.ojYear) {
+                  href = `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:${ref.ojColl}:${ref.ojYear}:${ref.ojNo}:TOC`;
+                }
+                const label = ref.type === "oj_ref"
+                  ? ref.raw
+                  : ref.raw.length > 60 ? ref.raw.slice(0, 57) + "…" : ref.raw;
+                const inner = (
+                  <span className="font-medium text-gray-900 dark:text-gray-100 text-xs">
+                    {label}
+                  </span>
+                );
+                const cls = "group inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm transition hover:border-blue-400 hover:shadow-sm dark:bg-blue-900/20 dark:border-blue-800 dark:hover:border-blue-500";
+                return href ? (
+                  <a
+                    key={`ext-${i}`}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cls}
+                    title={ref.raw}
+                  >
+                    {inner}
+                  </a>
+                ) : (
+                  <span key={`ext-${i}`} className={cls} title={ref.raw}>
+                    {inner}
+                  </span>
                 );
               })}
             </div>
