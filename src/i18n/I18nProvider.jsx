@@ -110,14 +110,19 @@ export function I18nProvider({ children }) {
     }
   }, [location.hash, location.pathname, location.search, navigate]);
 
+  const localizePathFn = useCallback(
+    (pathname, nextLocale = locale) => localizePath(pathname, nextLocale),
+    [locale]
+  );
+
   const value = useMemo(() => ({
     locale,
     localeMeta: UI_LOCALES[locale],
     locales: UI_LOCALES,
     t,
     setLocale,
-    localizePath: (pathname, nextLocale = locale) => localizePath(pathname, nextLocale),
-  }), [locale, setLocale, t]);
+    localizePath: localizePathFn,
+  }), [locale, setLocale, t, localizePathFn]);
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
