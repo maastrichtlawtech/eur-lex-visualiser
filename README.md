@@ -39,11 +39,11 @@ A beautiful, interactive web application for reading and navigating European Uni
 - **Selective Export**: Choose exactly what to include—Articles, Recitals, Annexes, or specific combinations.
 - **Inline Context in PDF**: Option to include "Related Recitals" directly next to articles in the printed output.
 
-### 📚 Personal Library (Extension)
-- **Universal Support**: Open **any** recent EU law directly from EUR-Lex using the browser extension.
-- **Auto-Save**: Laws opened via the extension are automatically saved to your local library.
-- **Offline Access**: Once loaded, documents are stored locally in your browser for instant access.
-- **Privacy First**: All processing happens in your browser. No legal text is sent to our servers.
+### 🌐 Browser Extension
+- **Universal Support**: Open recent EU laws directly from EUR-Lex using the browser extension.
+- **Direct Import Flow**: The extension sends the current EUR-Lex URL to LegalViz, which resolves it to the canonical CELEX import.
+- **Lightweight Design**: The extension does not capture or store full HTML pages locally.
+- **Canonical Imports**: Imported laws are redirected to the canonical `?celex=...` LegalViz URL once resolved.
 
 ## How to Use
 
@@ -77,11 +77,12 @@ The visualiser can open **any EU law** (at least newer ones) directly from EUR-L
 1. Install the extension for your browser (see links above).
 2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu) — for example, the [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng).
 3. Use the EUR-Lex language selector to open the law in **English** (the parser currently requires the English version).
-4. The extension automatically captures the page and opens it in the visualiser with the same interactive table of contents, recitals, and annexes.
+4. On supported EUR-Lex text pages, the extension opens LegalViz and passes the current EUR-Lex URL for server-side resolution.
+5. LegalViz resolves that URL to the canonical CELEX identifier and redirects to the canonical import URL.
 
 ![EUR-Lex language selector showing available languages](public/language-selector.png)
 
-> 💡 **Pro tip:** laws opened via the extension are saved to your "Library" on the LegalViz homepage.
+> 💡 **Note:** the extension no longer stores a separate local library. It delegates resolution to the backend and opens the canonical LegalViz import URL.
 
 ## Browser Support
 
@@ -150,7 +151,7 @@ legalviz.eu/
 ├── src/
 │   ├── components/        # React components
 │   │   ├── Accordion.jsx   # Collapsible accordion component
-│   │   ├── Landing.jsx     # Landing page & Library
+│   │   ├── Landing.jsx     # Landing page
 │   │   ├── LawViewer.jsx   # Main document viewer
 │   │   ├── PrintModal.jsx  # Printing configuration
 │   │   ├── RelatedRecitals.jsx # AI context viewer
@@ -182,7 +183,8 @@ legalviz.eu/
 2. **Indexing**: A client-side inverted index is built on the fly to enable instant full-text search.
 3. **Analysis**: The `nlp.js` module computes TF-IDF vectors for all articles and recitals to find semantic similarities, linking recitals to relevant articles automatically.
 4. **State Management**: The selected law and current view are synchronized with the URL, allowing for bookmarkable links and browser back/forward navigation.
-5. **Extension Integration**: The browser extension captures HTML from EUR-Lex pages and passes it to the visualiser via window messaging and local storage, bypassing CORS restrictions and enabling the "Save to Library" feature.
+5. **Extension Integration**: The browser extension detects supported EUR-Lex pages and opens LegalViz with the full EUR-Lex `sourceUrl`.
+6. **URL Resolution**: The backend resolves the EUR-Lex URL to a canonical CELEX identifier, and the app redirects to `/import?celex=...`.
 
 ## Contributing
 

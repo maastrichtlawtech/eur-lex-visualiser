@@ -11,6 +11,7 @@ import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { fetchFormex, extractCelexFromUrl, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
+import { upsertImportedLaw } from "../utils/library.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -811,6 +812,31 @@ export function LawViewer() {
     if (isExtensionMode) return "Imported law";
     return "";
   }, [data.title, searchParams, currentLaw, currentCelex, isExtensionMode]);
+
+  useEffect(() => {
+    if (!isImportedMode || !currentCelex || !hasLoadedContent) return;
+
+    const rawReference = searchParams.get("raw");
+    const importedLaw = upsertImportedLaw({
+      celex: currentCelex,
+      raw: rawReference,
+      label: rawReference || data.title || `CELEX ${currentCelex}`,
+      eurlex: buildEurlexCelexUrl(currentCelex, formexLang),
+    });
+
+    if (!importedLaw?.id) return;
+
+    try {
+      const stored = localStorage.getItem("eurlex_last_opened");
+      const existing = stored ? JSON.parse(stored) : {};
+      const now = Date.now();
+      existing[importedLaw.id] = now;
+      existing[currentCelex] = now;
+      localStorage.setItem("eurlex_last_opened", JSON.stringify(existing));
+    } catch {
+      // ignore localStorage failures
+    }
+  }, [isImportedMode, currentCelex, hasLoadedContent, searchParams, data.title, formexLang]);
 
   const retryLoad = useCallback(() => {
     setLoadAttempt((attempt) => attempt + 1);

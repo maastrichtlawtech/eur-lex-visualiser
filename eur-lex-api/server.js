@@ -342,36 +342,32 @@ async function resolveEurlexUrl(inputUrl, lang = 'ENG') {
     return payload;
   }
 
-  const response = await fetchWithTimeout(parsed.url.toString(), {
-    headers: {
-      Accept: 'text/html,application/xhtml+xml',
-      'Accept-Language': toSearchLang(lang),
-      'User-Agent': 'LegalViz Resolver/1.0 (+https://legalviz.eu)',
-    },
-  });
-
-  if (!response.ok) {
-    throw new ClientError(
-      `EUR-Lex page returned HTTP ${response.status}`,
-      response.status,
-      'eurlex_fetch_failed'
-    );
+  if (parsed.type === 'oj') {
+    const resolution = await resolveOfficialJournalViaCellar(parsed.oj, lang);
+    const payload = {
+      sourceUrl: parsed.url.toString(),
+      parsed: {
+        type: parsed.type,
+        oj: parsed.oj,
+      },
+      resolved: resolution.resolved,
+      tried: resolution.tried,
+      fallback: resolution.fallback || {
+        type: 'open-source-url',
+        url: parsed.url.toString(),
+      },
+      ...(resolution.error ? { error: resolution.error } : {}),
+    };
+    cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+    return payload;
   }
 
-  const html = await response.text();
-  const candidates = extractCelexCandidatesFromHtml(html);
-  const resolvedCelex = candidates[0] || null;
   const payload = {
     sourceUrl: parsed.url.toString(),
     parsed: {
       type: parsed.type,
-      ...(parsed.oj ? { oj: parsed.oj } : {}),
-      candidateCount: candidates.length,
     },
-    resolved: resolvedCelex ? {
-      celex: resolvedCelex,
-      source: 'eurlex-html',
-    } : null,
+    resolved: null,
     fallback: {
       type: 'open-source-url',
       url: parsed.url.toString(),
@@ -512,6 +508,88 @@ LIMIT 5`;
       url: buildEurlexSearchFallbackUrl(reference, lang),
     },
   };
+  cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+  return payload;
+}
+
+function buildEurlexOjFallbackUrl(oj, lang = 'ENG') {
+  const langCode = toSearchLang(lang).toUpperCase();
+  if (!oj?.ojColl || !oj?.ojYear || !oj?.ojNo) return null;
+  return `${EURLEX_BASE}/legal-content/${langCode}/TXT/?uri=OJ:${oj.ojColl}:${oj.ojYear}:${oj.ojNo}:TOC`;
+}
+
+async function resolveOfficialJournalViaCellar(oj, lang = 'ENG') {
+  if (!oj?.ojYear || !oj?.ojNo) {
+    throw new ClientError('Official Journal reference requires ojYear and ojNo', 400, 'invalid_oj_reference');
+  }
+
+  const cacheKey = JSON.stringify({ type: 'oj-resolve', oj, lang });
+  const cached = cacheGet(resolutionCache, cacheKey);
+  if (cached) return cached;
+
+  const actTypes = ['directive', 'regulation', 'decision'];
+  const tried = [];
+  const resolvedMatches = [];
+
+  for (const actType of actTypes) {
+    const reference = parseStructuredReference({
+      actType,
+      year: oj.ojYear,
+      number: oj.ojNo,
+      ojColl: oj.ojColl,
+      ojYear: oj.ojYear,
+      ojNo: oj.ojNo,
+      raw: `${actType} ${oj.ojYear}/${oj.ojNo}`,
+    });
+
+    const resolution = await resolveReferenceViaCellar(reference, lang);
+    tried.push({
+      actType,
+      reference,
+      resolved: resolution.resolved,
+      attempted: resolution.tried,
+    });
+
+    if (resolution.resolved?.celex) {
+      resolvedMatches.push({
+        actType,
+        reference,
+        resolved: resolution.resolved,
+      });
+    }
+  }
+
+  let payload;
+  if (resolvedMatches.length === 1) {
+    payload = {
+      resolved: resolvedMatches[0].resolved,
+      tried,
+      fallback: null,
+    };
+  } else if (resolvedMatches.length > 1) {
+    payload = {
+      resolved: null,
+      tried,
+      fallback: {
+        type: 'ambiguous-oj-reference',
+        url: buildEurlexOjFallbackUrl(oj, lang),
+      },
+      error: {
+        code: 'ambiguous_oj_reference',
+        message: 'Official Journal reference matched multiple act types',
+      },
+    };
+  } else {
+    payload = {
+      resolved: null,
+      tried,
+      fallback: {
+        type: 'open-source-url',
+        url: buildEurlexOjFallbackUrl(oj, lang),
+      },
+    };
+  }
+
   cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
   return payload;
 }

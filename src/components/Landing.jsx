@@ -1,14 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Github, Trash, Clock } from "lucide-react";
-import { LAWS } from "../constants/laws.js";
 import { TopBar } from "./TopBar.jsx";
 import { SEO } from "./SEO.jsx";
 import { AppResetFooter } from "./AppResetFooter.jsx";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
-import { FormexApiError, resolveOfficialReference } from "../utils/formexApi.js";
+import { fetchFormex, FormexApiError, resolveOfficialReference } from "../utils/formexApi.js";
+import { getImportedLaws, getLibraryLaws } from "../utils/library.js";
 
 export function Landing() {
   const navigate = useNavigate();
@@ -46,6 +46,7 @@ export function Landing() {
       return {};
     }
   });
+  const [importedLawsVersion, setImportedLawsVersion] = useState(() => getImportedLaws().length);
 
   // State for global search
   const [allLawsData, setAllLawsData] = useState({ articles: [], recitals: [], annexes: [] });
@@ -63,24 +64,25 @@ export function Landing() {
     setIsSearchLoading(true);
     try {
       const combined = { articles: [], recitals: [], annexes: [] };
+      const libraryLaws = getLibraryLaws({ hiddenLaws, lastOpened });
 
-      const standardPromises = LAWS.map(async (law) => {
+      const standardPromises = libraryLaws.map(async (law) => {
         try {
-          if (hiddenLaws.includes(law.key)) return null;
-
-          const text = await fetchText(law.value);
+          const text = law.kind === "imported"
+            ? await fetchFormex(law.celex, "EN")
+            : await fetchText(law.value);
           const parsed = parseAnyToCombined(text);
 
           parsed.articles?.forEach(a => {
-            a.law_key = law.key;
+            a.law_key = law.id;
             a.law_label = law.label;
           });
           parsed.recitals?.forEach(r => {
-            r.law_key = law.key;
+            r.law_key = law.id;
             r.law_label = law.label;
           });
           parsed.annexes?.forEach(a => {
-            a.law_key = law.key;
+            a.law_key = law.id;
             a.law_label = law.label;
           });
 
@@ -130,6 +132,31 @@ export function Landing() {
       setAllLawsData({ articles: [], recitals: [], annexes: [] });
     }
   };
+
+  useEffect(() => {
+    const syncLibrary = () => {
+      setImportedLawsVersion(getImportedLaws().length);
+      try {
+        const storedHidden = localStorage.getItem('eurlex_hidden_laws');
+        setHiddenLaws(storedHidden ? JSON.parse(storedHidden) : []);
+      } catch {
+        setHiddenLaws([]);
+      }
+      try {
+        const storedOpened = localStorage.getItem('eurlex_last_opened');
+        setLastOpened(storedOpened ? JSON.parse(storedOpened) : {});
+      } catch {
+        setLastOpened({});
+      }
+    };
+
+    window.addEventListener("focus", syncLibrary);
+    window.addEventListener("storage", syncLibrary);
+    return () => {
+      window.removeEventListener("focus", syncLibrary);
+      window.removeEventListener("storage", syncLibrary);
+    };
+  }, []);
 
   const formatDate = (ts) => {
     if (!ts) return "Never";
@@ -192,12 +219,7 @@ export function Landing() {
     }
   };
 
-  const allLaws = LAWS.map(l => ({
-    ...l,
-    timestamp: lastOpened[l.key] || null
-  }))
-    .filter(l => !hiddenLaws.includes(l.key || l.value)) // Filter out hidden laws
-    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by last opened
+  const allLaws = getLibraryLaws({ hiddenLaws, lastOpened, importedLawsVersion });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
@@ -301,18 +323,18 @@ export function Landing() {
           className="mt-8 w-full"
         >
           <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-            Option 2 · Choose a popular EU law
+            Option 2 · Open a law from your library
           </h2>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {allLaws.map((law) => (
               <motion.div
-                key={law.key || law.value}
+                key={law.id}
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => {
-                  handleLawClick(law.key || law.value);
-                  navigate(`/law/${law.key}`);
+                  handleLawClick(law.id);
+                  navigate(law.route);
                 }}
 
                 className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
@@ -320,8 +342,8 @@ export function Landing() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    handleLawClick(law.key || law.value);
-                    navigate(`/law/${law.key}`);
+                    handleLawClick(law.id);
+                    navigate(law.route);
                   }
                 }}
                 role="button"
@@ -340,7 +362,7 @@ export function Landing() {
                   </div>
 
                   <button
-                    onClick={(e) => handleDelete(e, law.key || law.value)}
+                    onClick={(e) => handleDelete(e, law.id)}
                     className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
                     title="Hide this law"
                   >

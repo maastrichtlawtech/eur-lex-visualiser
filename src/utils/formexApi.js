@@ -5,7 +5,20 @@
  * caches responses locally so repeated loads are instant.
  */
 
-const API_BASE = "https://api.legalviz.eu";
+const API_BASE = (() => {
+  if (typeof import.meta !== "undefined" && import.meta.env?.VITE_FORMEX_API_BASE) {
+    return import.meta.env.VITE_FORMEX_API_BASE;
+  }
+
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://localhost:3000";
+    }
+  }
+
+  return "https://api.legalviz.eu";
+})();
 
 // Cache version — bump to invalidate all cached entries
 const CACHE_VERSION = 1;
