@@ -7,9 +7,10 @@
  * returning the same shape consumed by the rest of the app plus a
  * `crossReferences` map.
  *
- * Cross-references are extracted in two ways:
- *  1. Structural: <REF.DOC.OJ> tags → external OJ references
- *  2. Textual:    "Article N", "paragraph N", "point (x)" patterns in prose
+ * Cross-references are extracted in three ways:
+ *  1. Structural: <REF.DOC.OJ> elements → external OJ references (language-independent)
+ *  2. Textual:    Language-specific "Article N" / "Artikel N" etc. patterns in prose
+ *  3. Textual:    Recital reference patterns in each language
  */
 
 import { getLangConfig, buildMeansRegex } from "./languages.js";
@@ -65,8 +66,19 @@ function fmxToHtml(el) {
   // Date
   if (tag === "DATE") return childrenHtml(el);
 
-  // External OJ reference
-  if (tag === "REF.DOC.OJ" || tag === "REF.DOC") return `<span class="oj-ref">${childrenHtml(el)}</span>`;
+  // External OJ reference — render as a styled span with OJ citation text
+  if (tag === "REF.DOC.OJ" || tag === "REF.DOC") {
+    const coll = el.getAttribute("COLL") || "";
+    const no = el.getAttribute("NO.OJ") || "";
+    const date = el.getAttribute("DATE.PUB") || "";
+    const page = el.getAttribute("PAGE.FIRST") || "";
+    // Build EUR-Lex OJ link if we have enough data
+    if (coll && no && date) {
+      const year = date.slice(0, 4);
+      return `<span class="oj-ref" data-oj-coll="${escapeHtml(coll)}" data-oj-no="${escapeHtml(no)}" data-oj-year="${escapeHtml(year)}" data-oj-page="${escapeHtml(page)}">${childrenHtml(el)}</span>`;
+    }
+    return `<span class="oj-ref">${childrenHtml(el)}</span>`;
+  }
 
   // FT — formatted text (e.g. numbers with spaces)
   if (tag === "FT") return childrenHtml(el);
@@ -191,84 +203,194 @@ function escapeHtml(s) {
 // ---------------------------------------------------------------------------
 
 /**
- * Regex that captures internal cross-references in EU legislation text.
+ * Build a regex that matches article references in prose for a given language.
+ * E.g. "Article 6(1)(a)" in EN, "Artikel 6 Absatz 1" in DE.
  *
- * Matches patterns like:
- *   "Article 6"
- *   "Article 6(1)"
- *   "Article 6(1)(a)"
- *   "Articles 12 to 22"
- *   "Article 23(1)"
- *   "paragraph 1"
- *   "point (a)"
- *   "Directive 95/46/EC"
- *   "Regulation (EU) 2016/679"
+ * Returns a RegExp with groups: (full, artNum, paragraph?, point?, rangeTo?)
  */
-const ARTICLE_REF_RE =
-  /Articles?\s+(\d+[a-z]?\b)(?:\((\d+)\))?(?:\(([a-z])\))?(?:\s+(?:to|and)\s+(\d+[a-z]?\b))?/gi;
+function buildArticleRefRe(lang) {
+  // Extract the article word part from the lang.article regex source
+  // lang.article = /Word\s+(\d+[a-z]*)/i  — we want the "Word" part
+  const src = lang.article.source;
+  // The article word is everything before \s+(\d
+  const wordPart = src.split(/\\s\+\(\\d/)[0];
+  // Build reference pattern: ArticleWord[s?] NUM (PARA)? (POINT)?  [to|and NUM]?
+  // For some languages (like HU), the number comes BEFORE the word: "6. cikk"
+  // We detect this by checking if lang.article captures group 1 at the start
+  const isNumFirst = /^\(\?:/.test(src) || /^\(\\d/.test(src) || src.startsWith("(\\d");
 
-const DIRECTIVE_REF_RE =
-  /(?:Directive|Regulation|Decision)\s+(?:\([A-Z]+\)\s+)?(?:No\s+)?(\d{2,4}\/\d+(?:\/[A-Z]+)?)/gi;
+  if (isNumFirst) {
+    // Hungarian-style: "N. cikk"  or "N cikk"
+    return new RegExp(
+      `(${src}(?:\\(\\d+\\))?(?:\\([a-z]\\))?)`,
+      "gi"
+    );
+  }
 
-const RECITAL_REF_RE = /[Rr]ecitals?\s+(?:\()?(\d+)(?:\))?(?:\s+(?:to|and)\s+(?:\()?(\d+)(?:\))?)?/gi;
+  // Standard: ArticleWord N(para)(point) [to/and N]
+  return new RegExp(
+    `(${wordPart}s?\\s+(\\d+[a-z]?\\b)(?:\\((\\d+)\\))?(?:\\(([a-z])\\))?(?:\\s+(?:to|and)\\s+(\\d+[a-z]?\\b))?)`,
+    "gi"
+  );
+}
 
 /**
- * Extract cross-references from a text string.
- * Returns an array of { type, target, raw } objects.
+ * Build a regex that matches recital references in prose for a given language.
  */
-function extractCrossRefsFromText(text) {
+function buildRecitalRefRe(lang) {
+  const recitalWord = lang.recital ? lang.recital.source : "[Rr]ecitals?";
+  return new RegExp(
+    `${recitalWord}\\s+(?:\\()?(\\d+)(?:\\))?(?:\\s+(?:to|and)\\s+(?:\\()?(\\d+)(?:\\))?)?`,
+    "g"
+  );
+}
+
+/**
+ * Cross-law reference patterns (language-independent — these abbreviations appear
+ * consistently in EU legislation regardless of the document language).
+ * Catches e.g. "Regulation (EU) 2016/679", "Directive 95/46/EC", "Decision 2013/755/EU"
+ */
+const EXTERNAL_LAW_RE =
+  /(?:Regulation|Directive|Decision|Verordnung|Verordnung|Richtlinie|Beschluss|R\u00e8glement|Directive|D\u00e9cision|Reglamento|Directiva|Decisi\u00f3n|Regolamento|Direttiva|Decisione|Regulamento|Diretiva|Decis\u00e3o|Verordening|Richtlijn|Besluit|F\u00f6rordning|Direktiv|Beslut|Forordning|Direktiv|Asetus|Direktiivi|P\u00e4\u00e4t\u00f6s|Na\u0159\u00edzen\u00ed|Sm\u011brnice|Rozhodnut\u00ed|Nariadenie|Smernica|Rozhodnutie|Rendelet|Irányelv|Hat\u00e1rozat|Regulamentul|Directiva|Decizia|Regolamento|Naredba|Odluka|Uredba|Direktiva|Regula|Direktīva|Lēmums|Reglamentas|Direktyva|Sprendimas|Regul\u0101ci\u0101|Direktīva|Rendelet|\u039a\u03b1\u03bd\u03bf\u03bd\u03b9\u03c3\u03bc\u03cc\u03c2|\u039f\u03b4\u03b7\u03b3\u03af\u03b1|\u0391\u03c0\u03cc\u03c6\u03b1\u03c3\u03b7|Regolament|Direttiva|De\u010bizjoni|\u0420\u0435\u0433\u043b\u0430\u043c\u0435\u043d\u0442|\u0414\u0438\u0440\u0435\u043a\u0442\u0438\u0432\u0430|\u0420\u0435\u0448\u0435\u043d\u0438\u0435|Uredba|Direktiva|Odluka|Rialachán|Treoir|Cinneadh)\s+(?:\([A-Z]+\)\s+)?(?:No\.?\s+)?(\d{2,4}\/\d+(?:\/[A-Z]+)?)/gi;
+
+/**
+ * Extract cross-references from a text string, using language-specific patterns.
+ * Returns an array of { type, target, paragraph, point, raw } objects.
+ *
+ * @param {string} text  Plain text to scan
+ * @param {object} lang  Language config from getLangConfig()
+ */
+function extractCrossRefsFromText(text, lang) {
   const refs = [];
-  let m;
+  const seen = new Set();
 
-  ARTICLE_REF_RE.lastIndex = 0;
-  while ((m = ARTICLE_REF_RE.exec(text)) !== null) {
-    const artNum = m[1];
-    const para = m[2] || null;
-    const point = m[3] || null;
-    const rangeTo = m[4] || null;
-
-    if (rangeTo) {
-      // "Articles 12 to 22" — expand range
-      const from = parseInt(artNum, 10);
-      const to = parseInt(rangeTo, 10);
-      for (let i = from; i <= to; i++) {
-        refs.push({ type: "article", target: String(i), paragraph: null, point: null, raw: m[0] });
-      }
-    } else {
-      refs.push({ type: "article", target: artNum, paragraph: para, point, raw: m[0] });
+  function addRef(ref) {
+    const key = `${ref.type}:${ref.target}:${ref.paragraph || ""}:${ref.point || ""}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push(ref);
     }
   }
 
-  RECITAL_REF_RE.lastIndex = 0;
-  while ((m = RECITAL_REF_RE.exec(text)) !== null) {
+  // Article references (language-specific word)
+  const artRe = buildArticleRefRe(lang);
+  artRe.lastIndex = 0;
+  let m;
+  while ((m = artRe.exec(text)) !== null) {
+    // Group indices depend on whether num-first or word-first
+    // For word-first (standard): groups are (full, artNum, para, point, rangeTo)
+    // We just use the article regex to find the number
+    const artMatch = lang.article.exec(m[0]);
+    if (!artMatch) continue;
+    const artNum = artMatch[1];
+    // Try to find paragraph and point from the original match
+    const paraMatch = m[0].match(/\((\d+)\)/);
+    const pointMatch = m[0].match(/\(([a-z])\)/i);
+    const rangeMatch = m[0].match(/\s+(?:to|and)\s+(\d+[a-z]?\b)/i);
+    if (rangeMatch) {
+      const from = parseInt(artNum, 10);
+      const to = parseInt(rangeMatch[1], 10);
+      if (!isNaN(from) && !isNaN(to) && to >= from && to - from <= 50) {
+        for (let i = from; i <= to; i++) {
+          addRef({ type: "article", target: String(i), paragraph: null, point: null, raw: m[0] });
+        }
+      } else {
+        addRef({ type: "article", target: artNum, paragraph: null, point: null, raw: m[0] });
+      }
+    } else {
+      addRef({
+        type: "article",
+        target: artNum,
+        paragraph: paraMatch ? paraMatch[1] : null,
+        point: pointMatch ? pointMatch[1] : null,
+        raw: m[0],
+      });
+    }
+  }
+
+  // Recital references (language-specific)
+  const recRe = buildRecitalRefRe(lang);
+  recRe.lastIndex = 0;
+  while ((m = recRe.exec(text)) !== null) {
     const from = parseInt(m[1], 10);
     const to = m[2] ? parseInt(m[2], 10) : from;
     for (let i = from; i <= to; i++) {
-      refs.push({ type: "recital", target: String(i), raw: m[0] });
+      addRef({ type: "recital", target: String(i), raw: m[0] });
     }
   }
 
-  DIRECTIVE_REF_RE.lastIndex = 0;
-  while ((m = DIRECTIVE_REF_RE.exec(text)) !== null) {
-    refs.push({ type: "external", target: m[1], raw: m[0] });
+  // External law references (mostly language-independent abbreviations)
+  EXTERNAL_LAW_RE.lastIndex = 0;
+  while ((m = EXTERNAL_LAW_RE.exec(text)) !== null) {
+    addRef({ type: "external", target: m[1], raw: m[0] });
   }
 
   return refs;
 }
 
 /**
- * Inject clickable cross-reference links into HTML.
+ * Extract structured REF.DOC.OJ cross-references directly from XML elements.
+ * These are language-independent — they use XML attributes, not text patterns.
  *
- * Wraps "Article N" occurrences with <a> tags that navigate within the viewer.
+ * @param {Element} el  Any XML element to search within
+ * @returns {Array}  Array of { type: "oj_ref", ojColl, ojNo, ojYear, ojPage, raw }
  */
-function injectCrossRefLinks(html) {
-  // Only link Article references (internal navigation)
-  return html.replace(
-    /\b(Articles?\s+(\d+[a-z]?\b)(?:\((\d+)\))?(?:\(([a-z])\))?)/gi,
-    (match, full, artNum) => {
-      return `<a class="cross-ref" data-ref-article="${artNum}" href="#article-${artNum}" title="Go to Article ${artNum}">${full}</a>`;
+function extractOjRefsFromElement(el) {
+  const refs = [];
+  const seen = new Set();
+  for (const refEl of el.querySelectorAll("REF\\.DOC\\.OJ")) {
+    const coll = refEl.getAttribute("COLL") || "";
+    const no = refEl.getAttribute("NO.OJ") || "";
+    const date = refEl.getAttribute("DATE.PUB") || "";
+    const page = refEl.getAttribute("PAGE.FIRST") || "";
+    const raw = allText(refEl);
+    if (!coll || !no) continue;
+    const year = date.slice(0, 4);
+    const key = `oj:${coll}:${no}:${year}:${page}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      refs.push({ type: "oj_ref", ojColl: coll, ojNo: no, ojYear: year, ojPage: page, raw });
     }
-  );
+  }
+  return refs;
+}
+
+/**
+ * Inject clickable cross-reference links into HTML.
+ * Uses the language-specific article word to match references in the text.
+ *
+ * @param {string} html  HTML string to process
+ * @param {object} lang  Language config from getLangConfig()
+ */
+function injectCrossRefLinks(html, lang) {
+  const src = lang.article.source;
+  // Detect num-first languages like Hungarian: "(\d+...)\.?\s+cikk"
+  const isNumFirst = src.startsWith("(\\d");
+
+  let injectRe;
+  if (isNumFirst) {
+    // For num-first languages, use the article pattern directly
+    injectRe = new RegExp(`(${src})`, "gi");
+  } else {
+    // Extract the article word (everything before \s+(\d in the regex source)
+    const wordPart = src.split(/\\s\+\(\\d/)[0];
+    // Build injection regex: ArticleWord[s?] NUM (optional para)(optional point)
+    injectRe = new RegExp(
+      `\\b(${wordPart}s?\\s+\\d+[a-z]?\\b(?:\\(\\d+\\))?(?:\\([a-z]\\))?)`,
+      "gi"
+    );
+  }
+
+  // Use lang.article to extract the number from whatever was matched
+  const articleRe = lang.article;
+  return html.replace(injectRe, (match) => {
+    const m = articleRe.exec(match);
+    // Reset lastIndex in case the regex is stateful (it shouldn't be, but just in case)
+    articleRe.lastIndex = 0;
+    if (!m) return match;
+    const artNum = m[1];
+    return `<a class="cross-ref" data-ref-article="${artNum}" href="#article-${artNum}" title="Go to Article ${artNum}">${match}</a>`;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -336,13 +458,16 @@ export function parseFmxToCombined(xmlText) {
     }
   }
 
-  // Format main title: cut after "of the European Parliament" / "Parlamentu Europejskiego"
-  // or use the language-specific titleSplit pattern
-  const parliamentRe = langCode === "PL"
-    ? /\s+Parlamentu Europejskiego/i
-    : /\s+of the European Parliament/i;
-  let mainTitle = titleText.split(parliamentRe)[0].trim();
-  if (mainTitle === titleText && lang.titleSplit) mainTitle = titleText.split(lang.titleSplit)[0].trim();
+  // Format main title: split at language-specific parliament institution mention
+  // or fall back to the date-based split
+  let mainTitle = titleText;
+  if (lang.parliamentSplit) {
+    const splitResult = titleText.split(lang.parliamentSplit);
+    if (splitResult.length > 1) mainTitle = splitResult[0].trim();
+  }
+  if (mainTitle === titleText && lang.titleSplit) {
+    mainTitle = titleText.split(lang.titleSplit)[0].trim();
+  }
   mainTitle = mainTitle.toLowerCase()
     .replace(/(?:^|\s)\S/g, a => a.toUpperCase())
     .replace(/\b(Eu|Ec|Eec|Euratom)\b/gi, m => m.toUpperCase());
@@ -362,7 +487,7 @@ export function parseFmxToCombined(xmlText) {
     recitals.push({
       recital_number: num,
       recital_text: recitalText,
-      recital_html: injectCrossRefLinks(recitalHtmlRaw),
+      recital_html: injectCrossRefLinks(recitalHtmlRaw, lang),
     });
   }
 
@@ -402,7 +527,7 @@ export function parseFmxToCombined(xmlText) {
           if (c.tagName === "TI.ART") continue;
           bodyHtml += fmxToHtml(c);
         }
-        bodyHtml = injectCrossRefLinks(bodyHtml);
+        bodyHtml = injectCrossRefLinks(bodyHtml, lang);
 
         articles.push({
           article_number,
@@ -414,16 +539,20 @@ export function parseFmxToCombined(xmlText) {
           article_html: bodyHtml,
         });
 
-        // Extract cross-references from the article's full text
+        // Extract cross-references from the article's full text (language-aware)
         const fullText = allText(child);
-        const refs = extractCrossRefsFromText(fullText);
+        const textRefs = extractCrossRefsFromText(fullText, lang);
+        // Also extract structural OJ references from the XML
+        const ojRefs = extractOjRefsFromElement(child);
+        const allRefs = [...textRefs, ...ojRefs];
+
         // Deduplicate and exclude self-references
-        const seen = new Set();
-        const uniqueRefs = refs.filter(r => {
+        const seenKeys = new Set();
+        const uniqueRefs = allRefs.filter(r => {
           if (r.type === "article" && r.target === article_number) return false;
           const key = `${r.type}:${r.target}:${r.paragraph || ""}:${r.point || ""}`;
-          if (seen.has(key)) return false;
-          seen.add(key);
+          if (seenKeys.has(key)) return false;
+          seenKeys.add(key);
           return true;
         });
         if (uniqueRefs.length > 0) {
@@ -445,20 +574,47 @@ export function parseFmxToCombined(xmlText) {
 
   // --- Definitions ---
   const definitions = [];
+  // Find the definitions article by matching its title against the language-specific pattern
   const defArticle = articles.find(a => a.article_title && lang.definition.test(a.article_title));
   if (defArticle) {
-    // Re-parse from the raw XML to get structured items
-    const artEl = root.querySelector(`ARTICLE[IDENTIFIER="${defArticle.article_number.padStart(3, "0")}"]`);
+    // Try multiple IDENTIFIER formats (3-digit padding is standard, but try others too)
+    const artNum = defArticle.article_number;
+    const candidates = [
+      artNum.padStart(3, "0"),
+      artNum.padStart(4, "0"),
+      artNum,
+    ];
+    let artEl = null;
+    for (const id of candidates) {
+      artEl = root.querySelector(`ARTICLE[IDENTIFIER="${id}"]`);
+      if (artEl) break;
+    }
+
     if (artEl) {
       for (const item of artEl.querySelectorAll("ITEM")) {
-        const txtEl = item.querySelector("TXT");
+        // The TXT might be inside NP > TXT or directly under ITEM
+        const txtEl = item.querySelector("TXT") || item.querySelector("NP");
         if (!txtEl) continue;
         const text = allText(txtEl);
-        const termMatch = text.match(meansRegex);
-        if (termMatch) {
-          const term = termMatch[1].trim();
-          const definition = text.replace(termMatch[0], "").trim();
-          definitions.push({ term, definition });
+        if (!text) continue;
+
+        if (lang.definitionFormat === "verb_first") {
+          // Verb-first languages (FR, IT, ES, PT): meansVerb 'term': definition
+          const termMatch = text.match(meansRegex);
+          if (termMatch) {
+            const term = termMatch[1].trim();
+            // The definition is the full text (term is identified by position)
+            const definition = text.slice(termMatch[0].length).trim();
+            definitions.push({ term, definition });
+          }
+        } else {
+          // Term-first languages (EN, PL, DE, ...): 'term' meansVerb definition
+          const termMatch = text.match(meansRegex);
+          if (termMatch) {
+            const term = termMatch[1].trim();
+            const definition = text.replace(termMatch[0], "").trim();
+            definitions.push({ term, definition });
+          }
         }
       }
     }
@@ -469,13 +625,18 @@ export function parseFmxToCombined(xmlText) {
 
   // --- Also extract cross-references from recitals ---
   for (const r of recitals) {
-    const refs = extractCrossRefsFromText(r.recital_text);
-    if (refs.length > 0) {
+    const textRefs = extractCrossRefsFromText(r.recital_text, lang);
+    const allRefs = textRefs;
+    const seenKeys = new Set();
+    const uniqueRefs = allRefs.filter(ref => {
+      const key = `${ref.type}:${ref.target}:${ref.paragraph || ""}:${ref.point || ""}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+    if (uniqueRefs.length > 0) {
       const key = `recital_${r.recital_number}`;
-      crossReferences[key] = refs.filter(ref => {
-        // Deduplicate
-        return true;
-      });
+      crossReferences[key] = uniqueRefs;
     }
   }
 
@@ -489,7 +650,7 @@ export function parseFmxToCombined(xmlText) {
     const tiText = annexTi ? allText(annexTi) : "";
     const stiText = annexSti ? allText(annexSti) : "";
 
-    // Extract annex ID (e.g. "I", "II", "III") from title
+    // Extract annex ID (e.g. "I", "II", "III") from title using language-specific pattern
     const idMatch = tiText.match(lang.annexCapture);
     const annex_id = idMatch ? (idMatch[1] || "").trim() : tiText;
 
@@ -499,7 +660,7 @@ export function parseFmxToCombined(xmlText) {
     const contents = annexEl.querySelector("CONTENTS");
     let annex_html = "";
     if (contents) {
-      annex_html = injectCrossRefLinks(fmxToHtml(contents));
+      annex_html = injectCrossRefLinks(fmxToHtml(contents), lang);
     }
 
     annexes.push({ annex_id, annex_title, annex_html });

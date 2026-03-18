@@ -53,11 +53,13 @@ export function injectDefinitionTooltips(html, definitions, options = {}) {
         return html;
     }
 
-    const useInflection = options.langCode === "PL";
+    // Use stem-based inflection for highly inflected EU languages
+    const INFLECTED_LANGS = new Set(["PL", "CS", "SK", "HR", "SL", "LT", "LV", "ET", "BG", "EL", "HU", "RO", "FI"]);
+    const useInflection = INFLECTED_LANGS.has(options.langCode);
 
-    // Check if this is the definitions article (contains "Definitions" heading in any supported language)
+    // Check if this is the definitions article (contains a "Definitions" heading in any EU language)
     if (options.skipDefinitionsArticle) {
-        const isDefinitionsArticle = /<p[^>]*class="[^"]*oj-sti-art[^"]*"[^>]*>\s*(?:Definitions?|Definicj[ea]|Begriffsbestimmungen?|D[eé]finitions?|Definicion[e]?s?|Definizion[ei])\s*<\/p>/i.test(html);
+        const isDefinitionsArticle = /<p[^>]*class="[^"]*oj-sti-art[^"]*"[^>]*>\s*(?:Definitions?|Definicj[ea]|Begriffsbestimmungen?|D[eé]finitions?|Definicion[e]?s?|Definizion[ei]|Defini[cç][oõ]es?|Definities?|Definitioner?|M[aä][aä]ritelm[iä]|Definice?|Definície?|Fogalomm?eghat[aá]roz[aá]sok?|Defini[tț]ii|Opredelitve?|Apibr[eė][zž]im?ai|Defin[iī]cijas?|M[oõ]isted?|Artikolu|Sainmh[ií]nithe?|Definizzjonijiet?|Ορισμο[ίι]|\u041e\u043f\u0440\u0435\u0434\u0435\u043b\u0435\u043d\u0438\u044f)\s*<\/p>/i.test(html);
         if (isDefinitionsArticle) {
             return html;
         }
