@@ -21,3 +21,25 @@ export const getLawPathFromKey = (key) => {
   return entry ? entry.value : "";
 };
 
+function toEurlexLang(langCode) {
+  return (langCode || "EN").slice(0, 2).toLowerCase();
+}
+
+export function buildEurlexSearchUrl(text, langCode = "EN") {
+  if (!text) return null;
+
+  const searchParams = new URLSearchParams({
+    scope: "EURLEX",
+    text,
+    lang: toEurlexLang(langCode),
+    type: "quick",
+    qid: String(Date.now()),
+  });
+
+  return `https://eur-lex.europa.eu/search.html?${searchParams.toString()}`;
+}
+
+export function buildEurlexOjUrl({ ojColl, ojYear, ojNo, langCode = "EN" }) {
+  if (!ojColl || !ojYear || !ojNo) return null;
+  return `https://eur-lex.europa.eu/legal-content/${toEurlexLang(langCode).toUpperCase()}/TXT/?uri=OJ:${ojColl}:${ojYear}:${ojNo}:TOC`;
+}

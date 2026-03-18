@@ -1,4 +1,5 @@
 import React from "react";
+import { buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
 
 /**
  * Displays cross-references for the currently selected article.
@@ -6,7 +7,7 @@ import React from "react";
  * Shows which other articles are referenced by the current article,
  * and which articles reference the current article (back-references).
  */
-export function CrossReferences({ articleNumber, crossReferences, articles, onSelectArticle }) {
+export function CrossReferences({ articleNumber, crossReferences, articles, onSelectArticle, currentLang = "EN" }) {
   if (!crossReferences || !articleNumber) return null;
 
   const allRefsForArticle = crossReferences[articleNumber] || [];
@@ -120,11 +121,14 @@ export function CrossReferences({ articleNumber, crossReferences, articles, onSe
             </p>
             <div className="flex flex-wrap gap-2">
               {externalRefs.map((ref, i) => {
-                // Build EUR-Lex search URL for OJ references
-                let href = null;
-                if (ref.type === "oj_ref" && ref.ojColl && ref.ojNo && ref.ojYear) {
-                  href = `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:${ref.ojColl}:${ref.ojYear}:${ref.ojNo}:TOC`;
-                }
+                const href = ref.type === "oj_ref"
+                  ? buildEurlexOjUrl({
+                    ojColl: ref.ojColl,
+                    ojYear: ref.ojYear,
+                    ojNo: ref.ojNo,
+                    langCode: currentLang,
+                  })
+                  : buildEurlexSearchUrl(ref.raw, currentLang);
                 const label = ref.type === "oj_ref"
                   ? ref.raw
                   : ref.raw.length > 60 ? ref.raw.slice(0, 57) + "…" : ref.raw;

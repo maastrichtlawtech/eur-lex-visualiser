@@ -6,7 +6,7 @@ import { Info, Menu } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
 import { fetchText } from "../utils/fetch.js";
 import { parseAnyToCombined } from "../utils/parsers.js";
-import { getLawPathFromKey } from "../utils/url.js";
+import { buildEurlexOjUrl, buildEurlexSearchUrl, getLawPathFromKey } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { fetchFormex, extractCelexFromUrl } from "../utils/formexApi.js";
@@ -697,23 +697,22 @@ export function LawViewer() {
     if (!data.crossReferences) return [];
 
     const items = new Map();
+    const currentLang = useFormex ? formexLang : data.langCode;
 
     const buildExternalHref = (ref) => {
       if (ref.type === "oj_ref" && ref.ojColl && ref.ojNo && ref.ojYear) {
-        return `https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=OJ:${ref.ojColl}:${ref.ojYear}:${ref.ojNo}:TOC`;
+        return buildEurlexOjUrl({
+          ojColl: ref.ojColl,
+          ojYear: ref.ojYear,
+          ojNo: ref.ojNo,
+          langCode: currentLang,
+        });
       }
 
       const label = ref.raw || ref.target;
       if (!label) return null;
 
-      const searchParams = new URLSearchParams({
-        scope: "EURLEX",
-        text: label,
-        lang: "en",
-        type: "quick",
-        qid: String(Date.now()),
-      });
-      return `https://eur-lex.europa.eu/search.html?${searchParams.toString()}`;
+      return buildEurlexSearchUrl(label, currentLang);
     };
 
     for (const refs of Object.values(data.crossReferences)) {
@@ -745,7 +744,7 @@ export function LawViewer() {
       if (b.count !== a.count) return b.count - a.count;
       return a.label.localeCompare(b.label);
     });
-  }, [data.crossReferences]);
+  }, [data.crossReferences, data.langCode, useFormex, formexLang]);
 
   // Whether this law can be loaded via the Formex API
   const hasCelex = useMemo(() => {
@@ -893,6 +892,7 @@ export function LawViewer() {
                   crossReferences={data.crossReferences}
                   articles={data.articles}
                   onSelectArticle={onCrossRefArticle}
+                  currentLang={useFormex ? formexLang : data.langCode}
                 />
                 <RelatedRecitals
                   recitals={recitalMap.get(selected.id) || []}
