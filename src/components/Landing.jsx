@@ -1,5 +1,5 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Github, Trash, Clock } from "lucide-react";
 import { LAWS } from "../constants/laws.js";
@@ -12,7 +12,6 @@ import { FormexApiError, resolveOfficialReference } from "../utils/formexApi.js"
 
 export function Landing() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [instructionsDismissed, setInstructionsDismissed] = useState(() => {
     try {
       return localStorage.getItem('eurlex_instructions_dismissed') === 'true';
@@ -29,8 +28,6 @@ export function Landing() {
     setShowExtensionInfo(false);
     localStorage.setItem('eurlex_instructions_dismissed', 'true');
   };
-
-  const [customLaws, setCustomLaws] = useState([]);
 
   const [hiddenLaws, setHiddenLaws] = useState(() => {
     try {
@@ -59,28 +56,6 @@ export function Landing() {
   const [importError, setImportError] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  const fetchCustomLaw = (key) => {
-    return new Promise((resolve) => {
-      const handleMsg = (event) => {
-        if (event.source !== window) return;
-        if (event.data.type === 'EURLEX_LAW_DATA') {
-          // We blindly resolve the first LAW_DATA we get. 
-          // Since we request sequentially, this should be fine.
-          window.removeEventListener('message', handleMsg);
-          resolve(event.data.payload);
-        }
-      };
-      window.addEventListener('message', handleMsg);
-      window.postMessage({ type: 'EURLEX_GET_LAW', key }, '*');
-
-      // Timeout safety
-      setTimeout(() => {
-        window.removeEventListener('message', handleMsg);
-        resolve(null);
-      }, 2000);
-    });
-  };
-
   const handleSearchOpen = async () => {
     // Only load if not already loaded
     if (allLawsData.articles.length > 0) return;
@@ -89,7 +64,6 @@ export function Landing() {
     try {
       const combined = { articles: [], recitals: [], annexes: [] };
 
-      // 1. Fetch Standard Laws
       const standardPromises = LAWS.map(async (law) => {
         try {
           if (hiddenLaws.includes(law.key)) return null;
@@ -117,42 +91,6 @@ export function Landing() {
         }
       });
 
-      // 2. Fetch Custom Laws (Sequentially to avoid bridge congestion/race conditions)
-      // We don't block standard laws loading, but we wait for everything at the end
-      const customLawResults = [];
-      if (customLaws.length > 0) {
-        for (const l of customLaws) {
-          try {
-            // Skip if hidden
-            if (hiddenLaws.includes(l.key)) continue;
-
-            const data = await fetchCustomLaw(l.key);
-            if (data && data.html) {
-              const parsed = parseAnyToCombined(data.html);
-
-              // Use metadata title if available
-              const title = data.metadata?.title || l.title || "Custom Law";
-
-              parsed.articles?.forEach(a => {
-                a.law_key = l.key;
-                a.law_label = title;
-              });
-              parsed.recitals?.forEach(r => {
-                r.law_key = l.key;
-                r.law_label = title;
-              });
-              parsed.annexes?.forEach(a => {
-                a.law_key = l.key;
-                a.law_label = title;
-              });
-              customLawResults.push(parsed);
-            }
-          } catch (e) {
-            console.error("Failed to load custom law for search", l.key, e);
-          }
-        }
-      }
-
       const standardResults = await Promise.allSettled(standardPromises);
 
       standardResults.forEach((res) => {
@@ -161,12 +99,6 @@ export function Landing() {
           combined.recitals.push(...(res.value.recitals || []));
           combined.annexes.push(...(res.value.annexes || []));
         }
-      });
-
-      customLawResults.forEach((res) => {
-        combined.articles.push(...(res.articles || []));
-        combined.recitals.push(...(res.recitals || []));
-        combined.annexes.push(...(res.annexes || []));
       });
 
       setAllLawsData(combined);
@@ -181,81 +113,21 @@ export function Landing() {
   // Handled by SEO component
 
   // Save last opened update when clicking a law
-  const handleLawClick = (key, isCustom) => {
-    // For custom laws, the timestamp is already in the law object from extension
-    if (!isCustom) {
-      const now = Date.now();
-      const newLastOpened = { ...lastOpened, [key]: now };
-      setLastOpened(newLastOpened);
-      localStorage.setItem('eurlex_last_opened', JSON.stringify(newLastOpened));
-    }
+  const handleLawClick = (key) => {
+    const now = Date.now();
+    const newLastOpened = { ...lastOpened, [key]: now };
+    setLastOpened(newLastOpened);
+    localStorage.setItem('eurlex_last_opened', JSON.stringify(newLastOpened));
   };
 
-  // Redirect to extension route if extension params are present
-  useEffect(() => {
-    const isExtension = searchParams.get('extension') === 'true';
-    const key = searchParams.get('key');
-    if (isExtension && key) {
-      navigate(`/extension?extension=true&key=${key}`, { replace: true });
-    }
-  }, [searchParams, navigate]);
-
-  const [isExtensionReady, setIsExtensionReady] = useState(false);
-
-  // Poll for custom laws
-  useEffect(() => {
-    const handleMessage = (event) => {
-      if (event.source !== window) return;
-
-      if (event.data.type === 'EURLEX_LAW_LIST') {
-        setCustomLaws(event.data.payload.laws || []);
-        setIsExtensionReady(true);
-      }
-
-      if (event.data.type === 'EURLEX_DELETE_SUCCESS') {
-        // Clear search cache so it rebuilds next time
-        setAllLawsData({ articles: [], recitals: [], annexes: [] });
-        // Refresh list
-        window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
-      }
-
-      if (event.data.type === 'EURLEX_EXTENSION_READY') {
-        setIsExtensionReady(true);
-        window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-
-    // Initial fetch
-    window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
-
-    // Poll for a bit to ensure we catch it if the extension script loads late
-    let attempts = 0;
-    const interval = setInterval(() => {
-      attempts++;
-      if (attempts > 20) clearInterval(interval); // 10 seconds
-      window.postMessage({ type: 'EURLEX_GET_LIST' }, '*');
-    }, 500);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const handleDelete = (e, key, isCustom) => {
+  const handleDelete = (e, key) => {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this law?")) {
-      if (isCustom) {
-        window.postMessage({ type: 'EURLEX_DELETE_LAW', key }, '*');
-      } else {
-        const newHidden = [...hiddenLaws, key];
-        setHiddenLaws(newHidden);
-        localStorage.setItem('eurlex_hidden_laws', JSON.stringify(newHidden));
-        // Clear search cache
-        setAllLawsData({ articles: [], recitals: [], annexes: [] });
-      }
+      const newHidden = [...hiddenLaws, key];
+      setHiddenLaws(newHidden);
+      localStorage.setItem('eurlex_hidden_laws', JSON.stringify(newHidden));
+      // Clear search cache
+      setAllLawsData({ articles: [], recitals: [], annexes: [] });
     }
   };
 
@@ -320,22 +192,12 @@ export function Landing() {
     }
   };
 
-  const allLaws = [
-    ...customLaws.map(l => ({
-      ...l,
-      label: l.title,
-      isCustom: true
-    })),
-    ...LAWS.map(l => ({
-      ...l,
-      isCustom: false,
-      timestamp: lastOpened[l.key] || null
-    }))
-  ]
+  const allLaws = LAWS.map(l => ({
+    ...l,
+    timestamp: lastOpened[l.key] || null
+  }))
     .filter(l => !hiddenLaws.includes(l.key || l.value)) // Filter out hidden laws
     .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)); // Sort by last opened
-
-  const hasCustomLaws = customLaws.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
@@ -421,6 +283,9 @@ export function Landing() {
             <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
               Choose the act type, year, and number. If automatic import fails, LegalViz opens the corresponding EUR-Lex search page.
             </p>
+            <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-300">
+              Example for GDPR: choose <strong>Regulation</strong>, enter <strong>2016</strong> as the year, and <strong>679</strong> as the number.
+            </div>
             {importError && (
               <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
                 {importError}
@@ -440,18 +305,14 @@ export function Landing() {
           </h2>
 
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {allLaws.map((law, idx) => (
+            {allLaws.map((law) => (
               <motion.div
                 key={law.key || law.value}
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => {
-                  handleLawClick(law.key || law.value, law.isCustom);
-                  if (law.isCustom) {
-                    navigate(`/extension?extension=true&key=${law.key}`);
-                  } else {
-                    navigate(`/law/${law.key}`);
-                  }
+                  handleLawClick(law.key || law.value);
+                  navigate(`/law/${law.key}`);
                 }}
 
                 className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
@@ -459,12 +320,8 @@ export function Landing() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
-                    handleLawClick(law.key || law.value, law.isCustom);
-                    if (law.isCustom) {
-                      navigate(`/extension?extension=true&key=${law.key}`);
-                    } else {
-                      navigate(`/law/${law.key}`);
-                    }
+                    handleLawClick(law.key || law.value);
+                    navigate(`/law/${law.key}`);
                   }
                 }}
                 role="button"
@@ -483,9 +340,9 @@ export function Landing() {
                   </div>
 
                   <button
-                    onClick={(e) => handleDelete(e, law.key || law.value, law.isCustom)}
+                    onClick={(e) => handleDelete(e, law.key || law.value)}
                     className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
-                    title={law.isCustom ? "Delete from local storage" : "Hide this law"}
+                    title="Hide this law"
                   >
                     <Trash className="h-4 w-4" />
                   </button>
@@ -506,7 +363,7 @@ export function Landing() {
               <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
                 Option 3 · Visualise other EU laws
               </h2>
-              <div className={`rounded-2xl border border-gray-200 bg-white shadow-sm ${!isExtensionReady ? "mt-4" : ""} dark:bg-gray-900 dark:border-gray-800`}>
+              <div className="mt-4 rounded-2xl border border-gray-200 bg-white shadow-sm dark:bg-gray-900 dark:border-gray-800">
                 <div className="flex w-full items-center justify-between px-6 py-4 text-left">
                   <button
                     type="button"
@@ -629,7 +486,7 @@ export function Landing() {
                             </li>
                             <li className="flex gap-2">
                               <span className="font-semibold text-gray-500">4.</span>
-                              <span>The extension automatically opens the law in this visualiser</span>
+                              <span>Click the extension icon to open that law in LegalViz directly</span>
                             </li>
                           </ol>
                         </div>
