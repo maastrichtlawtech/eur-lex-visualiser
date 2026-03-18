@@ -48,7 +48,7 @@ export function LanguageSelector({
         ) : null}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-sm text-blue-700 transition-colors dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-800"
           title={t("languageSelector.formexTitle", { lang: currentLang })}
         >
           <span>{getLanguageFlag(currentLang)}</span>

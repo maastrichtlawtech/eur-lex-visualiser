@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { Info, Loader2, Menu, RefreshCw } from "lucide-react";
+import { Info, Loader2, Menu, RefreshCw, X } from "lucide-react";
 
 import { parseFormexToCombined } from "../utils/parsers.js";
 import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
@@ -123,6 +123,7 @@ function LawContentPane({
   t,
   selector = null,
   emptyMessage = null,
+  onClose = null,
 }) {
   const loadErrorTone = loadError?.tone === "notice" ? "notice" : "error";
 
@@ -138,7 +139,20 @@ function LawContentPane({
               <span>{lang}</span>
             </div>
           </div>
-          {selector}
+          <div className="flex items-start gap-2">
+            {selector}
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                title={t("topBar.closeSideBySide")}
+                aria-label={t("topBar.closeSideBySide")}
+              >
+                <X size={16} />
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className="flex min-h-[20rem] flex-col items-center justify-center text-center">
           <Loader2 size={24} className="animate-spin text-blue-600" />
@@ -162,7 +176,20 @@ function LawContentPane({
               <span>{lang}</span>
             </div>
           </div>
-          {selector}
+          <div className="flex items-start gap-2">
+            {selector}
+            {onClose ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                title={t("topBar.closeSideBySide")}
+                aria-label={t("topBar.closeSideBySide")}
+              >
+                <X size={16} />
+              </button>
+            ) : null}
+          </div>
         </div>
         <div className={`rounded-2xl border px-4 py-5 text-sm ${
           loadErrorTone === "notice"
@@ -192,7 +219,20 @@ function LawContentPane({
             ) : null}
           </div>
         </div>
-        {selector}
+        <div className="flex items-start gap-2">
+          {selector}
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+              title={t("topBar.closeSideBySide")}
+              aria-label={t("topBar.closeSideBySide")}
+            >
+              <X size={16} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <article
@@ -1424,6 +1464,7 @@ export function LawViewer() {
                           t={t}
                           selector={secondaryLanguageSelector}
                           emptyMessage={t("lawViewer.selectPrompt")}
+                          onClose={() => setSecondaryLanguage(null)}
                         />
                       </div>
                     </>
