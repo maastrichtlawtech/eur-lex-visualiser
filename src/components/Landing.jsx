@@ -10,6 +10,7 @@ import { FormexApiError, getCachedFormex, resolveOfficialReference } from "../ut
 import { getImportedLaws, getLibraryLaws } from "../utils/library.js";
 import { buildImportedLawCandidate, getCanonicalLawRoute } from "../utils/lawRouting.js";
 import { useI18n } from "../i18n/I18nProvider.jsx";
+import { lawLangFromUiLocale, uiLocaleFromLawLang } from "../i18n/localeMeta.js";
 
 export function Landing({ forcedLocale = null }) {
   const navigate = useNavigate();
@@ -81,6 +82,18 @@ export function Landing({ forcedLocale = null }) {
       setLocale(forcedLocale);
     }
   }, [forcedLocale, locale, setLocale]);
+
+  useEffect(() => {
+    const expectedLawLang = lawLangFromUiLocale(locale);
+    if (formexLang !== expectedLawLang) {
+      setFormexLang(expectedLawLang);
+    }
+  }, [locale, formexLang]);
+
+  const handleUnifiedLanguageChange = useCallback((nextLang) => {
+    setFormexLang(nextLang);
+    setLocale(uiLocaleFromLawLang(nextLang));
+  }, [setLocale]);
 
   const handleSearchOpen = useCallback(async () => {
     if (searchLoadInFlightRef.current) return;
@@ -296,7 +309,7 @@ export function Landing({ forcedLocale = null }) {
         isSearchLoading={isSearchLoading}
         formexLang={formexLang}
         searchableLawCount={searchableLawCount}
-        onFormexLangChange={setFormexLang}
+        onFormexLangChange={handleUnifiedLanguageChange}
         hasCelex={true}
       />
 

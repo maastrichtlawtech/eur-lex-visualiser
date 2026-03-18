@@ -5,7 +5,6 @@ import { ChevronLeft, Search, X, ExternalLink, Printer, Loader2, PanelLeftClose,
 import { Button } from "./Button.jsx";
 import { ThemeToggle } from "./ThemeToggle.jsx";
 import { LanguageSelector } from "./LanguageSelector.jsx";
-import { UiLanguageSelector } from "./UiLanguageSelector.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 import { useI18n } from "../i18n/I18nProvider.jsx";
 
@@ -508,13 +507,6 @@ function ToolsMenu({ onPrint, showPrint, onIncreaseFont, onDecreaseFont, fontSiz
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-700 dark:text-gray-200">{t("common.theme")}</span>
               <ThemeToggle />
-            </div>
-          </div>
-
-          <div className="px-3 py-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700 dark:text-gray-200">{t("uiLanguage.label")}</span>
-              <UiLanguageSelector />
             </div>
           </div>
 

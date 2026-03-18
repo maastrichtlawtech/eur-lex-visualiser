@@ -23,6 +23,7 @@ import { NumberSelector } from "./NumberSelector.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 import { useI18n } from "../i18n/I18nProvider.jsx";
+import { lawLangFromUiLocale, uiLocaleFromLawLang } from "../i18n/localeMeta.js";
 
 const EMPTY_LAW_DATA = { title: "", articles: [], recitals: [], annexes: [], definitions: [] };
 
@@ -75,7 +76,7 @@ export function LawViewer() {
   const { locale: routeLocale, slug, key, kind, id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { locale, localizePath, t } = useI18n();
+  const { locale, localizePath, setLocale, t } = useI18n();
   const [searchParams] = useSearchParams();
   const importCelex = searchParams.get("celex");
   const sourceUrl = searchParams.get("sourceUrl");
@@ -130,6 +131,18 @@ export function LawViewer() {
   useEffect(() => {
     localStorage.setItem("legalviz-formex-lang", formexLang);
   }, [formexLang]);
+
+  useEffect(() => {
+    const expectedLawLang = lawLangFromUiLocale(locale);
+    if (!isImportRoute && !isLegacyLawRoute && !isLegacyExtensionRoute && formexLang !== expectedLawLang) {
+      setFormexLang(expectedLawLang);
+    }
+  }, [locale, formexLang, isImportRoute, isLegacyLawRoute, isLegacyExtensionRoute]);
+
+  const handleUnifiedLanguageChange = useCallback((nextLang) => {
+    setFormexLang(nextLang);
+    setLocale(uiLocaleFromLawLang(nextLang));
+  }, [setLocale]);
 
   const onIncreaseFont = () => setFontScale(s => Math.min(s + 1, 5));
   const onDecreaseFont = () => setFontScale(s => Math.max(s - 1, 1));
@@ -955,7 +968,7 @@ export function LawViewer() {
           onDecreaseFont={onDecreaseFont}
           fontSize={getFontPercent(fontScale)}
           formexLang={formexLang}
-          onFormexLangChange={setFormexLang}
+          onFormexLangChange={handleUnifiedLanguageChange}
           hasCelex={hasCelex}
         />
 
