@@ -25,19 +25,48 @@ import { CrossReferences } from "./CrossReferences.jsx";
 
 const EMPTY_LAW_DATA = { title: "", articles: [], recitals: [], annexes: [], definitions: [] };
 
+function isMissingStructuredLawText(error) {
+  if (!(error instanceof FormexApiError)) return false;
+
+  const message = String(error.message || "").toLowerCase();
+  return (
+    error.status === 404 ||
+    error.code === "fmx_not_found" ||
+    error.code === "law_not_found" ||
+    (
+      (message.includes("fmx") || message.includes("formex")) &&
+      (message.includes("not found") || message.includes("available"))
+    )
+  );
+}
+
 function getLoadErrorDetails(error) {
+  if (isMissingStructuredLawText(error)) {
+    return {
+      title: "This law is not available here yet",
+      message: "We couldn't find the structured text version we use to display this law in LegalViz. The law itself may still be available on EUR-Lex.",
+      fallbackUrl: error.fallback?.url || error.details?.fallback?.url || null,
+      status: error.status || null,
+      tone: "notice",
+    };
+  }
+
   if (error instanceof FormexApiError) {
     return {
+      title: "Law could not be loaded",
       message: error.message || "The law could not be loaded from the Formex service.",
       fallbackUrl: error.fallback?.url || error.details?.fallback?.url || null,
       status: error.status || null,
+      tone: "error",
     };
   }
 
   return {
+    title: "Law could not be loaded",
     message: String(error?.message || error || "The law could not be loaded."),
     fallbackUrl: null,
     status: null,
+    tone: "error",
   };
 }
 
@@ -119,6 +148,16 @@ export function LawViewer() {
   const onDecreaseFont = () => setFontScale(s => Math.max(s - 1, 1));
   const onToggleSidebar = () => setIsSidebarOpen(s => !s);
   const currentContentLang = useMemo(() => (useFormex ? formexLang : data.langCode || "EN"), [useFormex, formexLang, data.langCode]);
+  const loadErrorTone = loadError?.tone === "notice" ? "notice" : "error";
+  const loadErrorPanelClass = loadErrorTone === "notice"
+    ? "border-sky-200 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/20"
+    : "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30";
+  const loadErrorTitleClass = loadErrorTone === "notice"
+    ? "text-sky-950 dark:text-sky-100"
+    : "text-red-900 dark:text-red-200";
+  const loadErrorBodyClass = loadErrorTone === "notice"
+    ? "text-sky-900 dark:text-sky-200"
+    : "text-red-700 dark:text-red-300";
   const storedImportedLaws = useMemo(() => getImportedLaws(), [loadAttempt, slug, importCelex]);
   const bundledLaw = useMemo(() => findBundledLawBySlug(slug) || findBundledLawByKey(key), [slug, key]);
   const celexMatchedBundledLaw = useMemo(() => findBundledLawByCelex(importCelex), [importCelex]);
@@ -1137,27 +1176,35 @@ export function LawViewer() {
                 </div>
               ) : loadError && !hasLoadedContent ? (
                 <div className="flex min-h-[30vh] flex-col items-center justify-center text-center">
-                  <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 dark:border-red-900 dark:bg-red-950/30">
-                    <h2 className="text-2xl font-bold font-serif text-red-900 dark:text-red-200">
-                      Law could not be loaded
+                  <div className={`rounded-2xl border px-6 py-8 ${loadErrorPanelClass}`}>
+                    <div className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${loadErrorTone === "notice" ? "bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200" : "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-200"}`}>
+                      <Info size={22} />
+                    </div>
+                    <h2 className={`mt-4 text-2xl font-bold font-serif ${loadErrorTitleClass}`}>
+                      {loadError.title}
                     </h2>
-                    <p className="mt-3 max-w-xl text-sm leading-6 text-red-700 dark:text-red-300">
+                    <p className={`mt-3 max-w-xl text-sm leading-6 ${loadErrorBodyClass}`}>
                       {loadError.message}
                     </p>
                     <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                      <Button type="button" onClick={retryLoad}>
-                        <RefreshCw size={16} />
-                        Retry
-                      </Button>
                       {eurlexUrl && (
                         <Button
                           type="button"
-                          variant="outline"
+                          className={loadErrorTone === "notice" ? "border border-sky-700 bg-sky-700 text-white hover:bg-sky-800 dark:border-sky-300 dark:bg-sky-300 dark:text-sky-950 dark:hover:bg-sky-200" : ""}
                           onClick={() => window.open(loadError.fallbackUrl || eurlexUrl, "_blank", "noopener,noreferrer")}
                         >
-                          Open on EUR-Lex
+                          Try on EUR-Lex
                         </Button>
                       )}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={loadErrorTone === "notice" ? "border-sky-200 bg-white text-sky-900 hover:bg-sky-100 dark:border-sky-800 dark:bg-sky-950/10 dark:text-sky-100 dark:hover:bg-sky-900/30" : ""}
+                        onClick={retryLoad}
+                      >
+                        <RefreshCw size={16} />
+                        Reload here
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -1238,7 +1285,7 @@ export function LawViewer() {
             )}
 
             {loadError && hasLoadedContent && (
-              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+              <div className={`mt-4 rounded-2xl border p-4 text-sm ${loadErrorTone === "notice" ? "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/20 dark:text-sky-200" : "border-red-200 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400"}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span>{loadError.message}</span>
                   <Button type="button" variant="outline" size="sm" onClick={retryLoad}>
@@ -1343,8 +1390,10 @@ export function LawViewer() {
                     Loading the table of contents...
                   </div>
                 ) : loadError && !hasLoadedContent ? (
-                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-                    The law content is unavailable right now.
+                  <div className={`rounded-2xl border p-4 text-sm ${loadErrorTone === "notice" ? "border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/20 dark:text-sky-200" : "border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300"}`}>
+                    {loadErrorTone === "notice"
+                      ? "The structured LegalViz version of this law is not available right now."
+                      : "The law content is unavailable right now."}
                   </div>
                 ) : toc.length > 0 ? (
                   <div className="space-y-2">
