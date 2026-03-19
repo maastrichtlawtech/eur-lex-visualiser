@@ -9,7 +9,7 @@ import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { EU_LANGUAGES, fetchFormex, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
-import { getImportedLaws, upsertImportedLaw } from "../utils/library.js";
+import { markLawOpened, saveLawMeta } from "../utils/library.js";
 import { buildImportedLawCandidate, findBundledLawByCelex, findBundledLawByKey, findBundledLawBySlug, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
 
 import { Button } from "./Button.jsx";
@@ -389,29 +389,19 @@ export function LawViewer() {
   const loadErrorBodyClass = loadErrorTone === "notice"
     ? "text-sky-900 dark:text-sky-200"
     : "text-red-700 dark:text-red-300";
-  const storedImportedLaws = getImportedLaws();
   const bundledLaw = useMemo(() => findBundledLawBySlug(slug) || findBundledLawByKey(key), [slug, key]);
   const celexMatchedBundledLaw = useMemo(() => findBundledLawByCelex(importCelex), [importCelex]);
-  const celexMatchedImportedLaw = useMemo(() => {
-    if (!importCelex || celexMatchedBundledLaw) return null;
-    return storedImportedLaws.find((entry) => entry.celex === importCelex) || null;
-  }, [importCelex, celexMatchedBundledLaw, storedImportedLaws]);
-  const storedImportedLaw = useMemo(() => {
-    if (celexMatchedImportedLaw) return celexMatchedImportedLaw;
-    if (!slug || bundledLaw) return null;
-    return storedImportedLaws.find((entry) => entry.slug === slug) || null;
-  }, [slug, bundledLaw, storedImportedLaws, celexMatchedImportedLaw]);
   const slugReference = useMemo(() => {
-    if (!slug || bundledLaw || storedImportedLaw || celexMatchedBundledLaw) return null;
+    if (!slug || bundledLaw || celexMatchedBundledLaw) return null;
     return parseOfficialReferenceSlug(slug);
-  }, [slug, bundledLaw, storedImportedLaw, celexMatchedBundledLaw]);
+  }, [slug, bundledLaw, celexMatchedBundledLaw]);
   const derivedSlugLaw = useMemo(() => {
     if (!slugReference) return null;
     return buildImportedLawCandidate({ officialReference: slugReference, slug });
   }, [slugReference, slug]);
   const currentLaw = useMemo(() => (
-    celexMatchedBundledLaw || bundledLaw || storedImportedLaw || derivedSlugLaw || null
-  ), [celexMatchedBundledLaw, bundledLaw, storedImportedLaw, derivedSlugLaw]);
+    celexMatchedBundledLaw || bundledLaw || derivedSlugLaw || null
+  ), [celexMatchedBundledLaw, bundledLaw, derivedSlugLaw]);
   const currentCelex = importCelex || currentLaw?.celex || null;
   const secondaryLang = secondaryLangParam && secondaryLangParam !== effectivePrimaryLang ? secondaryLangParam : null;
   const isSideBySide = !!secondaryLang && !!currentCelex;
@@ -999,26 +989,13 @@ export function LawViewer() {
 
     const rawReference = searchParams.get("raw");
     const officialReference = currentLaw?.officialReference || parseOfficialReference(rawReference || "");
-    const importedLaw = upsertImportedLaw({
+    saveLawMeta({
       celex: currentCelex,
       raw: rawReference,
       officialReference,
-      label: rawReference || data.title || currentLaw?.label || t("landing.importLaw"),
+      label: rawReference || data.title || currentLaw?.label || `CELEX ${currentCelex}`,
       eurlex: buildEurlexCelexUrl(currentCelex, formexLang),
-    });
-
-    if (!importedLaw?.id) return;
-
-    try {
-      const stored = localStorage.getItem("eurlex_last_opened");
-      const existing = stored ? JSON.parse(stored) : {};
-      const now = Date.now();
-      existing[importedLaw.id] = now;
-      existing[currentCelex] = now;
-      localStorage.setItem("eurlex_last_opened", JSON.stringify(existing));
-    } catch {
-      // ignore localStorage failures
-    }
+    }).then(() => markLawOpened(currentCelex));
   }, [isLegacyExtensionRoute, currentCelex, currentLaw, hasLoadedContent, searchParams, data.title, formexLang, t]);
 
   const retryLoad = useCallback(() => {

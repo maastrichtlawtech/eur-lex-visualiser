@@ -7,7 +7,7 @@ import { TopBar } from "./TopBar.jsx";
 import { SEO } from "./SEO.jsx";
 import { parseFormexToCombined } from "../utils/parsers.js";
 import { FormexApiError, getCachedFormex, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
-import { getImportedLaws, getLibraryLaws, upsertImportedLaw } from "../utils/library.js";
+import { getLibraryLaws, markLawOpened, saveLawMeta, setLawHidden } from "../utils/library.js";
 import { buildImportedLawCandidate, getCanonicalLawRoute } from "../utils/lawRouting.js";
 import { useI18n } from "../i18n/useI18n.js";
 import { lawLangFromUiLocale, uiLocaleFromLawLang } from "../i18n/localeMeta.js";
@@ -201,24 +201,8 @@ function AddLawDialog({
 export function Landing({ forcedLocale = null }) {
   const navigate = useNavigate();
   const { locale, setLocale, localizePath, t } = useI18n();
-  const [hiddenLaws, setHiddenLaws] = useState(() => {
-    try {
-      const stored = localStorage.getItem('eurlex_hidden_laws');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [lastOpened, setLastOpened] = useState(() => {
-    try {
-      const stored = localStorage.getItem('eurlex_last_opened');
-      return stored ? JSON.parse(stored) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [importedLawsVersion, setImportedLawsVersion] = useState(() => getImportedLaws().length);
+  const [allLaws, setAllLaws] = useState([]);
+  const [libraryVersion, setLibraryVersion] = useState(0);
   const [formexLang, setFormexLang] = useState(() => {
     try {
       return localStorage.getItem("legalviz-formex-lang") || "EN";
@@ -268,6 +252,11 @@ export function Landing({ forcedLocale = null }) {
     setLocale(uiLocaleFromLawLang(nextLang));
   }, [setLocale]);
 
+  const loadLibraryLaws = useCallback(async () => {
+    const laws = await getLibraryLaws();
+    setAllLaws(laws);
+  }, []);
+
   const handleSearchOpen = useCallback(async () => {
     if (searchLoadInFlightRef.current) return;
 
@@ -275,9 +264,8 @@ export function Landing({ forcedLocale = null }) {
     setIsSearchLoading(true);
     try {
       const combined = { articles: [], recitals: [], annexes: [] };
-      const libraryLaws = getLibraryLaws({ hiddenLaws, lastOpened, importedLawsVersion });
 
-      const standardPromises = libraryLaws.map(async (law) => {
+      const standardPromises = allLaws.map(async (law) => {
         try {
           if (!law.celex) return null;
 
@@ -342,25 +330,17 @@ export function Landing({ forcedLocale = null }) {
       searchLoadInFlightRef.current = false;
       setIsSearchLoading(false);
     }
-  }, [formexLang, hiddenLaws, importedLawsVersion, lastOpened]);
+  }, [allLaws, formexLang]);
 
   // Update document title
   // Handled by SEO component
 
   // Save last opened update when clicking a law
-  const handleLawClick = (key) => {
-    const now = Date.now();
-    const newLastOpened = { ...lastOpened, [key]: now };
-    setLastOpened(newLastOpened);
-    localStorage.setItem('eurlex_last_opened', JSON.stringify(newLastOpened));
-  };
-
-  const handleDelete = (e, key) => {
+  const handleDelete = async (e, celex) => {
     e.stopPropagation();
     if (window.confirm(t("landing.deleteConfirm"))) {
-      const newHidden = [...hiddenLaws, key];
-      setHiddenLaws(newHidden);
-      localStorage.setItem('eurlex_hidden_laws', JSON.stringify(newHidden));
+      await setLawHidden(celex, true);
+      setLibraryVersion((value) => value + 1);
       setAllLawsData({ articles: [], recitals: [], annexes: [] });
       setSearchableLawCount(0);
     }
@@ -368,40 +348,34 @@ export function Landing({ forcedLocale = null }) {
 
   useEffect(() => {
     const syncLibrary = () => {
-      setImportedLawsVersion(getImportedLaws().length);
       try {
         setFormexLang(localStorage.getItem("legalviz-formex-lang") || "EN");
       } catch {
         setFormexLang("EN");
       }
-      try {
-        const storedHidden = localStorage.getItem('eurlex_hidden_laws');
-        setHiddenLaws(storedHidden ? JSON.parse(storedHidden) : []);
-      } catch {
-        setHiddenLaws([]);
-      }
-      try {
-        const storedOpened = localStorage.getItem('eurlex_last_opened');
-        setLastOpened(storedOpened ? JSON.parse(storedOpened) : {});
-      } catch {
-        setLastOpened({});
-      }
+      setLibraryVersion((value) => value + 1);
     };
 
     window.addEventListener("focus", syncLibrary);
     window.addEventListener("storage", syncLibrary);
     window.addEventListener("legalviz-formex-cache-updated", syncLibrary);
+    window.addEventListener("legalviz-library-updated", syncLibrary);
     return () => {
       window.removeEventListener("focus", syncLibrary);
       window.removeEventListener("storage", syncLibrary);
       window.removeEventListener("legalviz-formex-cache-updated", syncLibrary);
+      window.removeEventListener("legalviz-library-updated", syncLibrary);
     };
   }, []);
 
   useEffect(() => {
     setAllLawsData({ articles: [], recitals: [], annexes: [] });
     setSearchableLawCount(0);
-  }, [hiddenLaws, importedLawsVersion, formexLang]);
+  }, [formexLang, libraryVersion]);
+
+  useEffect(() => {
+    loadLibraryLaws();
+  }, [loadLibraryLaws, libraryVersion]);
 
   const formatDate = (ts) => {
     if (!ts) return t("landing.never");
@@ -410,25 +384,11 @@ export function Landing({ forcedLocale = null }) {
     });
   };
 
-  const persistImportedLaw = useCallback((entry) => {
-    const storedLaw = upsertImportedLaw(entry);
-    if (!storedLaw?.id) return null;
-
-    try {
-      const stored = localStorage.getItem("eurlex_last_opened");
-      const existing = stored ? JSON.parse(stored) : {};
-      const now = Date.now();
-      existing[storedLaw.id] = now;
-      if (storedLaw.celex) {
-        existing[storedLaw.celex] = now;
-      }
-      localStorage.setItem("eurlex_last_opened", JSON.stringify(existing));
-      setLastOpened(existing);
-    } catch {
-      // ignore localStorage failures
-    }
-
-    setImportedLawsVersion(getImportedLaws().length);
+  const persistImportedLaw = useCallback(async (entry) => {
+    const storedLaw = await saveLawMeta(entry);
+    if (!storedLaw?.celex) return null;
+    await markLawOpened(storedLaw.celex);
+    setLibraryVersion((value) => value + 1);
     return storedLaw;
   }, []);
 
@@ -454,7 +414,7 @@ export function Landing({ forcedLocale = null }) {
     try {
       const result = await resolveOfficialReference(parsed, "EN");
       if (result?.resolved?.celex) {
-        persistImportedLaw({
+        await persistImportedLaw({
           celex: result.resolved.celex,
           raw: parsed.raw,
           officialReference: parsed,
@@ -535,7 +495,7 @@ export function Landing({ forcedLocale = null }) {
 
       if (resolvedCelex) {
         const officialReference = result?.parsed?.reference || null;
-        persistImportedLaw({
+        await persistImportedLaw({
           celex: resolvedCelex,
           raw: sourceUrl,
           officialReference,
@@ -566,8 +526,6 @@ export function Landing({ forcedLocale = null }) {
       setIsResolvingUrl(false);
     }
   }, [eurlexUrl, locale, navigate, persistImportedLaw, t]);
-
-  const allLaws = getLibraryLaws({ hiddenLaws, lastOpened, importedLawsVersion });
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
@@ -648,8 +606,9 @@ export function Landing({ forcedLocale = null }) {
                 key={law.id}
                 whileHover={{ y: -2, scale: 1.01 }}
                 whileTap={{ scale: 0.99 }}
-                onClick={() => {
-                  handleLawClick(law.id);
+                onClick={async () => {
+                  await markLawOpened(law.celex);
+                  setLibraryVersion((value) => value + 1);
                   navigate(localizePath(law.route, locale));
                 }}
                 className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
@@ -657,7 +616,9 @@ export function Landing({ forcedLocale = null }) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    handleLawClick(law.id);
+                    markLawOpened(law.celex).then(() => {
+                      setLibraryVersion((value) => value + 1);
+                    });
                     navigate(localizePath(law.route, locale));
                   }
                 }}
@@ -675,7 +636,7 @@ export function Landing({ forcedLocale = null }) {
                   </div>
 
                   <button
-                    onClick={(e) => handleDelete(e, law.id)}
+                    onClick={(e) => handleDelete(e, law.celex)}
                     className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
                     title={t("common.hideLaw")}
                   >

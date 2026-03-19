@@ -21,9 +21,11 @@ const API_BASE = (() => {
 })();
 
 // Cache version — bump to invalidate all cached entries
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2;
 const DB_NAME = "formex-cache";
 const STORE_NAME = "laws";
+const META_STORE_NAME = "lawMeta";
+const MAX_CACHED_CELEX_LAWS = 100;
 
 export class FormexApiError extends Error {
   constructor(message, { status = 500, code = null, details = null, fallback = null } = {}) {
@@ -47,6 +49,9 @@ function openDb() {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
+      }
+      if (!db.objectStoreNames.contains(META_STORE_NAME)) {
+        db.createObjectStore(META_STORE_NAME, { keyPath: "celex" });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -85,6 +90,243 @@ async function cacheSet(key, value) {
     });
   } catch {
     // Silently ignore cache write failures
+  }
+}
+
+async function cacheDeleteKeys(keys) {
+  if (!Array.isArray(keys) || keys.length === 0) return;
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readwrite");
+      const store = tx.objectStore(STORE_NAME);
+      keys.forEach((key) => store.delete(key));
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    // ignore
+  }
+}
+
+async function metaGet(celex) {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(META_STORE_NAME, "readonly");
+      const store = tx.objectStore(META_STORE_NAME);
+      const req = store.get(celex);
+      req.onsuccess = () => resolve(req.result ?? null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function metaPut(value) {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(META_STORE_NAME, "readwrite");
+      const store = tx.objectStore(META_STORE_NAME);
+      store.put(value);
+      tx.oncomplete = () => resolve(value);
+      tx.onerror = () => resolve(value);
+    });
+  } catch {
+    return value;
+  }
+}
+
+async function metaDelete(celex) {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(META_STORE_NAME, "readwrite");
+      const store = tx.objectStore(META_STORE_NAME);
+      store.delete(celex);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    // ignore
+  }
+}
+
+async function metaGetAll() {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(META_STORE_NAME, "readonly");
+      const store = tx.objectStore(META_STORE_NAME);
+      if (typeof store.getAll === "function") {
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result ?? []);
+        req.onerror = () => resolve([]);
+        return;
+      }
+
+      const rows = [];
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) {
+          resolve(rows);
+          return;
+        }
+        rows.push(cursor.value);
+        cursor.continue();
+      };
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function listCachedCelexes() {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+
+      const finalize = (keys) => {
+        const celexes = Array.from(new Set(
+          (keys || [])
+            .map((key) => String(key || ""))
+            .map((key) => key.split("_")[0])
+            .filter(Boolean)
+        ));
+        resolve(celexes);
+      };
+
+      if (typeof store.getAllKeys === "function") {
+        const req = store.getAllKeys();
+        req.onsuccess = () => finalize(req.result);
+        req.onerror = () => resolve([]);
+        return;
+      }
+
+      const keys = [];
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) {
+          finalize(keys);
+          return;
+        }
+        keys.push(cursor.key);
+        cursor.continue();
+      };
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+async function listCachedKeys() {
+  try {
+    const db = await openDb();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+
+      const finalize = (keys) => resolve((keys || []).map((key) => String(key || "")).filter(Boolean));
+
+      if (typeof store.getAllKeys === "function") {
+        const req = store.getAllKeys();
+        req.onsuccess = () => finalize(req.result);
+        req.onerror = () => resolve([]);
+        return;
+      }
+
+      const keys = [];
+      const req = store.openCursor();
+      req.onsuccess = () => {
+        const cursor = req.result;
+        if (!cursor) {
+          finalize(keys);
+          return;
+        }
+        keys.push(cursor.key);
+        cursor.continue();
+      };
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function getLawMeta(celex) {
+  if (!celex) return null;
+  return metaGet(celex);
+}
+
+export async function getAllLawMeta() {
+  return metaGetAll();
+}
+
+export async function upsertLawMeta(celex, updates = {}) {
+  if (!celex) return null;
+  const existing = await metaGet(celex);
+  const next = {
+    ...(existing || {}),
+    ...updates,
+    celex,
+  };
+  return metaPut(next);
+}
+
+async function pruneCacheIfNeeded(protectedCelex = null) {
+  const keys = await listCachedKeys();
+  const celexToKeys = new Map();
+  keys.forEach((key) => {
+    const celex = key.split("_")[0];
+    if (!celex) return;
+    const existing = celexToKeys.get(celex) || [];
+    existing.push(key);
+    celexToKeys.set(celex, existing);
+  });
+
+  if (celexToKeys.size <= MAX_CACHED_CELEX_LAWS) return;
+
+  const allMeta = await metaGetAll();
+  const metaByCelex = new Map(allMeta.filter((entry) => entry?.celex).map((entry) => [entry.celex, entry]));
+  const candidates = Array.from(celexToKeys.keys())
+    .filter((celex) => celex !== protectedCelex)
+    .map((celex) => {
+      const meta = metaByCelex.get(celex) || {};
+      return {
+        celex,
+        hiddenRank: meta.hidden ? 0 : 1,
+        recency: meta.lastOpened || meta.cachedAt || meta.addedAt || 0,
+      };
+    })
+    .sort((a, b) => {
+      if (a.hiddenRank !== b.hiddenRank) return a.hiddenRank - b.hiddenRank;
+      return a.recency - b.recency;
+    });
+
+  const overflow = celexToKeys.size - MAX_CACHED_CELEX_LAWS;
+  const toEvict = candidates.slice(0, overflow);
+
+  for (const entry of toEvict) {
+    await cacheDeleteKeys(celexToKeys.get(entry.celex) || []);
+    await metaDelete(entry.celex);
+  }
+
+  if (typeof window !== "undefined" && toEvict.length > 0) {
+    try {
+      window.dispatchEvent(new CustomEvent("legalviz-library-updated", {
+        detail: { evictedCelexes: toEvict.map((entry) => entry.celex) },
+      }));
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -190,6 +432,8 @@ export async function fetchFormex(celex, lang = "EN") {
 
   // 3. Cache it
   await cacheSet(cacheKey, xmlText);
+  await upsertLawMeta(celex, { cachedAt: Date.now() });
+  await pruneCacheIfNeeded(celex);
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent("legalviz-formex-cache-updated", {
       detail: { celex, lang: lang.toUpperCase() },
