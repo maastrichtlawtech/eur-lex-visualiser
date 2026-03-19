@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { Info, Loader2, Menu, RefreshCw, X } from "lucide-react";
@@ -286,6 +286,7 @@ export function LawViewer() {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [printOptions, setPrintOptions] = useState(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
+  const primaryLoadRequestRef = useRef(0);
 
   // View Settings
   const [fontScale, setFontScale] = useState(() => {
@@ -407,6 +408,10 @@ export function LawViewer() {
   const isSideBySide = !!secondaryLang && !!currentCelex;
   const currentLawSlug = currentLaw?.slug || null;
 
+  useEffect(() => () => {
+    primaryLoadRequestRef.current += 1;
+  }, []);
+
   useEffect(() => {
     if (!secondaryLang) return;
     try {
@@ -470,6 +475,8 @@ export function LawViewer() {
 
   const loadLaw = React.useCallback(async (celex, lang) => {
     if (!celex) return;
+    const requestId = primaryLoadRequestRef.current + 1;
+    primaryLoadRequestRef.current = requestId;
     setLoading(true);
     setLoadError(null);
     setData(EMPTY_LAW_DATA);
@@ -477,15 +484,18 @@ export function LawViewer() {
     setReturnToArticle(null);
     try {
       const text = await fetchFormex(celex, lang);
+      if (primaryLoadRequestRef.current !== requestId) return;
       const combined = parseFormexToCombined(text);
       setData(combined);
     } catch (e) {
+      if (primaryLoadRequestRef.current !== requestId) return;
       setLoadError(getLoadErrorDetails(e, t));
       setData(EMPTY_LAW_DATA);
     } finally {
+      if (primaryLoadRequestRef.current !== requestId) return;
       setLoading(false);
     }
-  }, [t]);
+  }, [t, primaryLoadRequestRef]);
 
   useEffect(() => {
     if (data.articles?.length > 0 && data.recitals?.length > 0) {

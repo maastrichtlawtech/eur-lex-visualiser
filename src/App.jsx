@@ -6,7 +6,7 @@ import { ThemeProvider } from "./components/ThemeProvider.jsx";
 import { runOneTimeMigrationReset } from "./utils/resetApp.js";
 import { I18nProvider } from "./i18n/I18nProvider.jsx";
 import { useI18n } from "./i18n/useI18n.js";
-import { getLocaleHomePath, isSupportedUiLocale, normalizeUiLocale } from "./i18n/localeMeta.js";
+import { getLocaleHomePath, isSupportedUiLocale, normalizeUiLocale, SUPPORTED_UI_LOCALES } from "./i18n/localeMeta.js";
 
 function Layout() {
   useEffect(() => {
@@ -99,14 +99,10 @@ const router = createBrowserRouter([
         index: true,
         element: <Landing />,
       },
-      {
-        path: ":locale/:slug/:kind/:id",
+      ...SUPPORTED_UI_LOCALES.map((supportedLocale) => ({
+        path: `${supportedLocale}/:slug/:kind?/:id?`,
         element: <LawViewer />,
-      },
-      {
-        path: ":locale/:slug",
-        element: <LawViewer />,
-      },
+      })),
       {
         path: "extension",
         element: <LawViewer />,
@@ -132,12 +128,8 @@ const router = createBrowserRouter([
         element: <LawViewer />,
       },
       {
-        path: ":slug",
+        path: ":slug/:kind?/:id?",
         element: <SlugRouteResolver />,
-      },
-      {
-        path: ":slug/:kind/:id",
-        element: <LawViewer />,
       },
     ],
   },
