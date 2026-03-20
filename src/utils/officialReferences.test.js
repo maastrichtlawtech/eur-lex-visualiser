@@ -57,6 +57,16 @@ describe("parseOfficialReference", () => {
     });
   });
 
+  it("parses old-style 4-digit number/2-digit year: Regulation 1612/68/EEC", () => {
+    const result = parseOfficialReference("Regulation 1612/68/EEC");
+    expect(result).toMatchObject({
+      actType: "regulation",
+      year: "1968",
+      number: "1612",
+      suffix: "EEC",
+    });
+  });
+
   it("parses old-style without suffix: Directive 93/13", () => {
     const result = parseOfficialReference("Directive 93/13");
     expect(result).toMatchObject({

@@ -27,9 +27,19 @@ export function parseOfficialReference(text = "") {
 
   const first = raw.match(numberPatterns[0]);
   if (first) {
-    year = first[2];
-    number = first[3];
-    suffix = (first[4] || first[1] || "").toUpperCase() || null;
+    const candidate = parseInt(first[2], 10);
+    if (candidate >= 1950 && candidate <= 2100) {
+      // Plausible year — standard interpretation: first = year, second = number
+      year = first[2];
+      number = first[3];
+      suffix = (first[4] || first[1] || "").toUpperCase() || null;
+    } else {
+      // Implausible year (e.g. "1612/68/EEC") — first is the number, second is the year
+      const y = parseInt(first[3], 10);
+      year = first[3].length === 2 ? String(y >= 50 ? 1900 + y : 2000 + y) : first[3];
+      number = first[2];
+      suffix = (first[4] || first[1] || "").toUpperCase() || null;
+    }
   } else {
     const second = raw.match(numberPatterns[1]);
     if (second) {
