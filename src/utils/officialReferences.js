@@ -13,8 +13,12 @@ export function parseOfficialReference(text = "") {
   }
 
   const numberPatterns = [
+    // Modern format: year/number — e.g. "(EU) 2016/679" or plain "2016/679"
     /\b(?:\((EU|EC|EEC|EURATOM|JHA)\)\s*)?(\d{4})\/(\d{1,4})(?:\/([A-Z]+))?\b/i,
+    // "No. N/YYYY" format — e.g. "No. 46/95"
     /\bno\.?\s+(\d{1,4})\/(\d{2,4})(?:\/([A-Z]+))?\b/i,
+    // Old-style number/year without "No." — e.g. "95/46/EC", "1612/68/EEC"
+    /\b(\d{1,4})\/(\d{2,4})(?:\/([A-Z]+))?\b/i,
   ];
 
   let year = null;
@@ -32,6 +36,19 @@ export function parseOfficialReference(text = "") {
       year = second[2].length === 2 ? `19${second[2]}` : second[2];
       number = second[1];
       suffix = (second[3] || "").toUpperCase() || null;
+    } else {
+      const third = raw.match(numberPatterns[2]);
+      if (third) {
+        // Pattern 1 already handles YYYY/N (4-digit year first), so here
+        // the first number is always a short (1-3 digit) year: "95/46/EC",
+        // "93/13" → year comes first even in old-style references.
+        const a = third[1];
+        const b = third[2];
+        suffix = (third[3] || "").toUpperCase() || null;
+        const y = parseInt(a, 10);
+        year = a.length === 2 ? String(y >= 50 ? 1900 + y : 2000 + y) : a;
+        number = b;
+      }
     }
   }
 

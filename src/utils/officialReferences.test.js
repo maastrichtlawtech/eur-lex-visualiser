@@ -47,6 +47,26 @@ describe("parseOfficialReference", () => {
     });
   });
 
+  it("parses old-style number/year: Directive 95/46/EC", () => {
+    const result = parseOfficialReference("Directive 95/46/EC");
+    expect(result).toMatchObject({
+      actType: "directive",
+      year: "1995",
+      number: "46",
+      suffix: "EC",
+    });
+  });
+
+  it("parses old-style without suffix: Directive 93/13", () => {
+    const result = parseOfficialReference("Directive 93/13");
+    expect(result).toMatchObject({
+      actType: "directive",
+      year: "1993",
+      number: "13",
+      suffix: null,
+    });
+  });
+
   it("parses with No. prefix: Directive No. 46/95", () => {
     const result = parseOfficialReference("Directive No. 46/95");
     expect(result).not.toBeNull();
