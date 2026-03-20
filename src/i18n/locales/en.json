@@ -196,6 +196,8 @@
   },
   "amendmentHistory": {
     "title": "Amendment History",
-    "loading": "Loading amendments…"
+    "loading": "Loading amendments…",
+    "amendment": "Amendment",
+    "corrigendum": "Corrigendum"
   }
 }

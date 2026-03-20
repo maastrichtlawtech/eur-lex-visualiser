@@ -1031,24 +1031,33 @@ app.get('/api/laws/:celex/amendments', rateLimitMiddleware, async (req, res) => 
     }
 
     const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+    // Relationships in Cellar are stored as owl:Axiom reifications, not plain triples,
+    // so we must query via owl:annotatedTarget/Property/Source.
+    // We include both amends and corrects (corrigenda).
     const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
-SELECT DISTINCT ?amendingCelex ?date WHERE {
+SELECT DISTINCT ?type ?sourceCelex ?date WHERE {
   ?work owl:sameAs <${celexUri}> .
-  ?amendingWork cdm:resource_legal_amends ?work .
-  ?amendingWork owl:sameAs ?amendingCelex .
-  FILTER(STRSTARTS(STR(?amendingCelex), "http://publications.europa.eu/resource/celex/"))
-  OPTIONAL { ?amendingWork cdm:work_date_document ?date . }
+  ?ax owl:annotatedTarget ?work ;
+      owl:annotatedProperty ?p ;
+      owl:annotatedSource ?sourceWork .
+  FILTER(?p IN (cdm:resource_legal_amends_resource_legal, cdm:resource_legal_corrects_resource_legal))
+  BIND(IF(?p = cdm:resource_legal_corrects_resource_legal, "corrigendum", "amendment") AS ?type)
+  ?sourceWork owl:sameAs ?sourceCelex .
+  FILTER(STRSTARTS(STR(?sourceCelex), "http://publications.europa.eu/resource/celex/"))
+  OPTIONAL { ?sourceWork cdm:work_date_document ?date }
 }
 ORDER BY ?date
 LIMIT 50`;
 
     const data = await runSparqlQuery(query);
     const amendments = (data.results?.bindings || []).map((b) => {
-      const amendingCelex = b.amendingCelex?.value?.split('/').pop() || null;
+      const rawCelex = b.sourceCelex?.value?.split('/').pop() || null;
+      const amendingCelex = rawCelex ? decodeURIComponent(rawCelex) : null;
       const date = b.date?.value || null;
-      return { celex: amendingCelex, date };
+      const type = b.type?.value || 'amendment';
+      return { celex: amendingCelex, date, type };
     }).filter((a) => a.celex);
 
     const payload = { celex, amendments };
