@@ -10,6 +10,7 @@ import { getLangConfig } from "./languages.js";
 
 const DGA_XML = readFileSync(resolve(__dirname, "../__fixtures__/dga.fmx.xml"), "utf-8");
 const GDPR_XML = readFileSync(resolve(__dirname, "../__fixtures__/gdpr.fmx.xml"), "utf-8");
+const AIA_XML = readFileSync(resolve(__dirname, "../__fixtures__/aia.fmx.xml"), "utf-8");
 
 // ---------------------------------------------------------------------------
 // isFmxDocument
@@ -164,6 +165,158 @@ describe("parseFmxToCombined — GDPR", () => {
     const nums = result.recitals.map((r) => parseInt(r.recital_number, 10));
     for (let i = 1; i < nums.length; i++) {
       expect(nums[i]).toBeGreaterThanOrEqual(nums[i - 1]);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseFmxToCombined — AI Act (Combined FMX with annexes)
+// ---------------------------------------------------------------------------
+
+describe("parseFmxToCombined — AI Act", () => {
+  let result;
+  beforeAll(() => {
+    result = parseFmxToCombined(AIA_XML);
+  });
+
+  it("detects as valid FMX document (COMBINED.FMX format)", () => {
+    expect(isFmxDocument(AIA_XML)).toBe(true);
+    expect(AIA_XML).toContain("<COMBINED.FMX");
+  });
+
+  it("extracts a title containing 'Artificial Intelligence'", () => {
+    expect(result.title.toLowerCase()).toContain("artificial intelligence");
+  });
+
+  it("detects English language", () => {
+    expect(result.langCode).toBe("EN");
+  });
+
+  it("extracts 113 articles", () => {
+    expect(result.articles).toHaveLength(113);
+  });
+
+  it("extracts 180 recitals", () => {
+    expect(result.recitals).toHaveLength(180);
+  });
+
+  it("extracts 13 annexes", () => {
+    expect(result.annexes).toHaveLength(13);
+  });
+
+  it("annexes have expected shape", () => {
+    const annex = result.annexes[0];
+    expect(annex).toHaveProperty("annex_id");
+    expect(annex).toHaveProperty("annex_title");
+    expect(annex).toHaveProperty("annex_html");
+    expect(annex.annex_id).toBeTruthy();
+  });
+
+  it("annex IDs use Roman numerals", () => {
+    const ids = result.annexes.map((a) => a.annex_id);
+    expect(ids).toContain("I");
+    expect(ids).toContain("II");
+    expect(ids).toContain("III");
+  });
+
+  it("annexes contain non-empty HTML", () => {
+    for (const annex of result.annexes) {
+      expect(annex.annex_html.length, `Annex ${annex.annex_id} should have HTML`).toBeGreaterThan(0);
+    }
+  });
+
+  it("article numbers cover 1 through 113", () => {
+    const nums = result.articles.map((a) => parseInt(a.article_number, 10));
+    expect(nums[0]).toBe(1);
+    expect(nums[nums.length - 1]).toBe(113);
+    // Check no gaps
+    const uniqueNums = new Set(nums);
+    expect(uniqueNums.size).toBe(113);
+  });
+
+  it("extracts definitions (AI Act Art 3 has 60+ definitions)", () => {
+    expect(result.definitions.length).toBeGreaterThanOrEqual(50);
+  });
+
+  it("definition terms include 'AI system' or 'artificial intelligence system'", () => {
+    const terms = result.definitions.map((d) => d.term.toLowerCase());
+    expect(
+      terms.some((t) => t.includes("ai system") || t.includes("artificial intelligence"))
+    ).toBe(true);
+  });
+
+  it("definitions include 'provider'", () => {
+    const terms = result.definitions.map((d) => d.term.toLowerCase());
+    expect(terms.some((t) => t.includes("provider"))).toBe(true);
+  });
+
+  it("definitions include 'deployer'", () => {
+    const terms = result.definitions.map((d) => d.term.toLowerCase());
+    expect(terms.some((t) => t.includes("deployer"))).toBe(true);
+  });
+
+  it("articles have chapter hierarchy (AI Act has 13 chapters)", () => {
+    const chapters = new Set();
+    for (const art of result.articles) {
+      if (art.division?.chapter?.number) {
+        chapters.add(art.division.chapter.number);
+      }
+    }
+    expect(chapters.size).toBeGreaterThanOrEqual(10);
+  });
+
+  it("some articles have section divisions within chapters", () => {
+    const withSection = result.articles.filter((a) => a.division?.section?.number);
+    expect(withSection.length).toBeGreaterThan(0);
+  });
+
+  it("cross-references include references to GDPR (Regulation 2016/679)", () => {
+    const allRefs = Object.values(result.crossReferences).flat();
+    const gdprRefs = allRefs.filter(
+      (r) => r.type === "external" && r.target && r.target.includes("2016/679")
+    );
+    expect(gdprRefs.length).toBeGreaterThan(0);
+  });
+
+  it("cross-references include annex references", () => {
+    const annexKeys = Object.keys(result.crossReferences).filter((k) => k.startsWith("annex_"));
+    expect(annexKeys.length).toBeGreaterThan(0);
+  });
+
+  it("cross-references include recital references", () => {
+    const recitalKeys = Object.keys(result.crossReferences).filter((k) => k.startsWith("recital_"));
+    expect(recitalKeys.length).toBeGreaterThan(0);
+  });
+
+  it("article HTML contains cross-ref links", () => {
+    // At least some articles should have injected cross-ref links
+    const articlesWithCrossRefs = result.articles.filter(
+      (a) => a.article_html.includes('class="cross-ref"') || a.article_html.includes('class="external-ref"')
+    );
+    expect(articlesWithCrossRefs.length).toBeGreaterThan(0);
+  });
+
+  it("recitals are sorted numerically 1 to 180", () => {
+    const nums = result.recitals.map((r) => parseInt(r.recital_number, 10));
+    for (let i = 1; i < nums.length; i++) {
+      expect(nums[i]).toBeGreaterThanOrEqual(nums[i - 1]);
+    }
+    expect(nums[0]).toBe(1);
+    expect(nums[nums.length - 1]).toBe(180);
+  });
+
+  it("no annexes are empty stubs", () => {
+    for (const annex of result.annexes) {
+      expect(annex.annex_title, `Annex ${annex.annex_id} needs a title`).toBeTruthy();
+    }
+  });
+
+  it("article HTML does not contain raw XML tags", () => {
+    for (const art of result.articles) {
+      expect(art.article_html).not.toMatch(/<ARTICLE\b/);
+      expect(art.article_html).not.toMatch(/<PARAG\b/);
+      expect(art.article_html).not.toMatch(/<ALINEA\b/);
+      expect(art.article_html).not.toMatch(/<TXT\b/);
     }
   });
 });
