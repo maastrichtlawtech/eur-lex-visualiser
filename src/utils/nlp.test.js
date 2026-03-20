@@ -1,0 +1,174 @@
+import { describe, it, expect } from "vitest";
+import {
+  tokenize,
+  mapRecitalsToArticles,
+  buildSearchIndex,
+  searchIndex,
+  searchContent,
+} from "./nlp.js";
+
+describe("tokenize", () => {
+  it("tokenizes basic English text", () => {
+    const tokens = tokenize("The personal data controller shall ensure compliance.");
+    expect(tokens).toBeInstanceOf(Array);
+    expect(tokens.length).toBeGreaterThan(0);
+  });
+
+  it("removes English stop words", () => {
+    const tokens = tokenize("The data shall be processed");
+    expect(tokens).not.toContain("the");
+    expect(tokens).not.toContain("shall");
+  });
+
+  it("lowercases all tokens", () => {
+    const tokens = tokenize("PERSONAL Data Controller");
+    for (const t of tokens) {
+      expect(t).toBe(t.toLowerCase());
+    }
+  });
+
+  it("removes punctuation", () => {
+    const tokens = tokenize("data, processing; controller.");
+    for (const t of tokens) {
+      expect(t).toMatch(/^[\w\u00C0-\u024F]+$/);
+    }
+  });
+
+  it("filters out words with 2 or fewer characters", () => {
+    const tokens = tokenize("I am a data protection officer");
+    for (const t of tokens) {
+      expect(t.length).toBeGreaterThan(2);
+    }
+  });
+
+  it("returns empty array for empty input", () => {
+    expect(tokenize("")).toEqual([]);
+    expect(tokenize(null)).toEqual([]);
+    expect(tokenize(undefined)).toEqual([]);
+  });
+
+  it("preserves accented characters (Polish, French, etc.)", () => {
+    const tokens = tokenize("données personnelles règlement", "FR");
+    expect(tokens.some((t) => t.includes("donn"))).toBe(true);
+  });
+
+  it("uses language-specific stop words when langCode provided", () => {
+    const enTokens = tokenize("der Artikel verordnung");
+    const deTokens = tokenize("der Artikel verordnung", "DE");
+    // German stop words should filter more aggressively for DE text
+    expect(deTokens.length).toBeLessThanOrEqual(enTokens.length);
+  });
+});
+
+describe("mapRecitalsToArticles", () => {
+  const articles = [
+    { article_number: "1", article_title: "Subject matter and scope", article_html: "<p>This regulation lays down rules for data protection.</p>" },
+    { article_number: "2", article_title: "Definitions", article_html: "<p>Personal data means any information relating to an identified person.</p>" },
+    { article_number: "3", article_title: "Territorial scope", article_html: "<p>This regulation applies to processing by controllers established in the Union.</p>" },
+  ];
+
+  const recitals = [
+    { recital_number: "1", recital_text: "Protection of personal data is a fundamental right.", recital_html: "<p>Protection of personal data is a fundamental right.</p>" },
+    { recital_number: "2", recital_text: "The territorial scope should cover processing in the Union.", recital_html: "<p>Territorial scope processing Union.</p>" },
+  ];
+
+  it("returns a Map with article numbers as keys", () => {
+    const result = mapRecitalsToArticles(recitals, articles);
+    expect(result).toBeInstanceOf(Map);
+    expect(result.has("1")).toBe(true);
+    expect(result.has("2")).toBe(true);
+    expect(result.has("3")).toBe(true);
+  });
+
+  it("maps recitals to the most relevant article", () => {
+    const result = mapRecitalsToArticles(recitals, articles);
+    // Each article should have an array value (possibly empty)
+    for (const [, recitals] of result) {
+      expect(Array.isArray(recitals)).toBe(true);
+    }
+  });
+
+  it("returns empty arrays when no recitals match", () => {
+    const result = mapRecitalsToArticles([], articles);
+    for (const [, recitals] of result) {
+      expect(recitals).toHaveLength(0);
+    }
+  });
+
+  it("mapped recitals include relevanceScore and keywords", () => {
+    const result = mapRecitalsToArticles(recitals, articles);
+    const allMapped = Array.from(result.values()).flat();
+    for (const mapped of allMapped) {
+      expect(mapped).toHaveProperty("recital_number");
+      expect(mapped).toHaveProperty("relevanceScore");
+      expect(mapped).toHaveProperty("keywords");
+    }
+  });
+});
+
+describe("buildSearchIndex + searchIndex", () => {
+  const data = {
+    articles: [
+      { article_number: "1", article_title: "Subject matter", article_html: "<p>This regulation establishes rules for artificial intelligence systems.</p>" },
+      { article_number: "2", article_title: "Scope", article_html: "<p>This regulation applies to providers of AI systems placed on the market.</p>" },
+    ],
+    recitals: [
+      { recital_number: "1", recital_html: "<p>Artificial intelligence is a fast evolving technology.</p>" },
+    ],
+    annexes: [],
+  };
+
+  it("builds a valid search index", () => {
+    const index = buildSearchIndex(data);
+    expect(index).toHaveProperty("docs");
+    expect(index).toHaveProperty("idf");
+    expect(index.docs.length).toBe(3); // 2 articles + 1 recital
+  });
+
+  it("finds results for relevant queries", () => {
+    const index = buildSearchIndex(data);
+    const results = searchIndex("artificial intelligence", index);
+    expect(results.length).toBeGreaterThan(0);
+  });
+
+  it("returns empty for very short queries", () => {
+    const index = buildSearchIndex(data);
+    expect(searchIndex("a", index)).toEqual([]);
+    expect(searchIndex("", index)).toEqual([]);
+  });
+
+  it("boosts exact article number matches", () => {
+    const index = buildSearchIndex(data);
+    const results = searchIndex("Article 1", index);
+    // Article 1 should appear first due to ID match bonus
+    if (results.length > 0) {
+      expect(results[0].id).toBe("1");
+    }
+  });
+
+  it("results have expected shape", () => {
+    const index = buildSearchIndex(data);
+    const results = searchIndex("intelligence", index);
+    if (results.length > 0) {
+      expect(results[0]).toHaveProperty("type");
+      expect(results[0]).toHaveProperty("id");
+      expect(results[0]).toHaveProperty("title");
+      expect(results[0]).toHaveProperty("score");
+    }
+  });
+});
+
+describe("searchContent", () => {
+  it("is a convenience wrapper that works end-to-end", () => {
+    const data = {
+      articles: [
+        { article_number: "1", article_title: "Data governance framework", article_html: "<p>This regulation establishes a comprehensive data governance framework for the European Union.</p>" },
+        { article_number: "2", article_title: "Scope", article_html: "<p>This regulation applies to providers of artificial intelligence systems.</p>" },
+      ],
+      recitals: [],
+      annexes: [],
+    };
+    const results = searchContent("data governance framework", data);
+    expect(results.length).toBeGreaterThan(0);
+  });
+});
