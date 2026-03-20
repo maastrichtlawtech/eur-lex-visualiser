@@ -1216,11 +1216,6 @@ export function LawViewer() {
     }
   }, [resolveReferenceInput, currentContentLang, locale, openFallbackReference, navigate]);
 
-  const handleOpenAmendment = useCallback((celex) => {
-    const targetLaw = buildImportedLawCandidate({ celex });
-    navigate(getCanonicalLawRoute(targetLaw, null, null, locale));
-  }, [navigate, locale]);
-
   // Process HTML to inject definition tooltips
   const processedHtml = useMemo(() => {
     if (!selected.html) return "";
@@ -1808,7 +1803,6 @@ export function LawViewer() {
                 amendments={amendments}
                 loading={amendmentsLoading}
                 currentLang={formexLang}
-                onOpenAmendment={handleOpenAmendment}
               />
             </div>
           </aside>
