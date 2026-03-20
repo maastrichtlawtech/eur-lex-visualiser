@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "vite build && node scripts/copy-404.js && node scripts/generate-sitemap.js && node scripts/generate-prerendered-law-pages.js",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.16",
     "vite": "^7.1.7",
-    "vite-plugin-pwa": "^1.2.0"
+    "vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.0"
   }
 }
