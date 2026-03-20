@@ -1015,6 +1015,50 @@ app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
   }
 });
 
+// Get amendment history for a law via Cellar SPARQL
+app.get('/api/laws/:celex/amendments', rateLimitMiddleware, async (req, res) => {
+  try {
+    const { celex } = req.params;
+
+    if (!validateCelex(celex)) {
+      return res.status(400).json({ error: 'Invalid CELEX format' });
+    }
+
+    const cacheKey = `amendments:${celex}`;
+    const cached = cacheGet(resolutionCache, cacheKey);
+    if (cached) {
+      return res.json(cached);
+    }
+
+    const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+    const query = `
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+SELECT DISTINCT ?amendingCelex ?date WHERE {
+  ?work owl:sameAs <${celexUri}> .
+  ?amendingWork cdm:resource_legal_amends ?work .
+  ?amendingWork owl:sameAs ?amendingCelex .
+  FILTER(STRSTARTS(STR(?amendingCelex), "http://publications.europa.eu/resource/celex/"))
+  OPTIONAL { ?amendingWork cdm:work_date_document ?date . }
+}
+ORDER BY ?date
+LIMIT 50`;
+
+    const data = await runSparqlQuery(query);
+    const amendments = (data.results?.bindings || []).map((b) => {
+      const amendingCelex = b.amendingCelex?.value?.split('/').pop() || null;
+      const date = b.date?.value || null;
+      return { celex: amendingCelex, date };
+    }).filter((a) => a.celex);
+
+    const payload = { celex, amendments };
+    cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+    res.json(payload);
+  } catch (err) {
+    safeErrorResponse(res, err, 'Failed to fetch amendment history');
+  }
+});
+
 // Search cached files
 app.get('/api/search', rateLimitMiddleware, (req, res) => {
   try {

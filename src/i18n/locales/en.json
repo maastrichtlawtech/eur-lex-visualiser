@@ -193,5 +193,9 @@
     "documentTitle": "EU Law Document",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Printed from LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "title": "Amendment History",
+    "loading": "Loading amendments…"
   }
 }
