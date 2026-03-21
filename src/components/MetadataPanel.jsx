@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Loader2, ChevronRight, ExternalLink } from "lucide-react";
+import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
 import { fetchLawMetadata, fetchAmendments, fetchImplementingActs } from "../utils/formexApi.js";
 import { buildEurlexCelexUrl } from "../utils/url.js";
 import { Accordion } from "./Accordion.jsx";
@@ -31,36 +31,27 @@ const TYPE_BADGE = {
 /**
  * A button that loads data on click and shows a loading spinner.
  */
+// Renders with the same shell as Accordion so there's no layout shift on load
 function LoadButton({ label, count, loading, loaded, onClick }) {
-  if (loaded && count === 0) {
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-400 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-500">
-        {label}
-        <span className="ml-auto text-[10px]">None found</span>
-      </div>
-    );
-  }
-
-  if (!loaded) {
-    return (
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
       <button
         type="button"
-        onClick={onClick}
+        onClick={!loaded && !loading ? onClick : undefined}
         disabled={loading}
-        className="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium dark:text-gray-200 disabled:opacity-60"
       >
-        {loading ? (
-          <Loader2 size={12} className="animate-spin text-gray-400" />
-        ) : (
-          <ChevronRight size={12} className="text-gray-400" />
-        )}
-        {label}
-        {loading && <span className="ml-auto text-[10px] text-gray-400">Loading…</span>}
+        <span className="flex items-center gap-2">
+          {loading && <Loader2 size={12} className="animate-spin text-gray-400" />}
+          {label}
+          {loaded && count === 0 && (
+            <span className="text-xs font-normal text-gray-400 dark:text-gray-500">— none found</span>
+          )}
+        </span>
+        {!loaded && !loading && <ChevronDown size={16} />}
       </button>
-    );
-  }
-
-  return null; // when loaded with results, the list renders instead
+    </div>
+  );
 }
 
 /**
