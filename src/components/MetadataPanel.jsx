@@ -204,13 +204,21 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
 
         {metaLoaded && metadata && (
           <div className="space-y-2 text-xs">
-            {/* In-force status */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 dark:text-gray-400">{t("metadata.status")}:</span>
-              <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[metadata.inForce]}`}>
-                {metadata.inForce ? t("metadata.inForce") : t("metadata.notInForce")}
-              </span>
-            </div>
+            {/* In-force status — derived from endOfValidity (reliable) not the CDM boolean (unreliable after amendments) */}
+            {(() => {
+              const eov = metadata.endOfValidity;
+              // 9999-12-31 is Cellar's sentinel for "open-ended" (still in force)
+              const noLongerInForce = eov && eov !== "9999-12-31" && new Date(eov) < new Date();
+              if (!noLongerInForce) return null; // don't show anything when in force — it's the normal/expected state
+              return (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">{t("metadata.status")}:</span>
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[false]}`}>
+                    {t("metadata.notInForce")}
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* Entry into force date(s) */}
             {metadata.entryIntoForce?.length > 0 && (
@@ -222,7 +230,7 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
               </div>
             )}
 
-            {/* End of validity */}
+            {/* End of validity — only show if it's a real (finite) date */}
             {metadata.endOfValidity && metadata.endOfValidity !== "9999-12-31" && (
               <div className="flex items-center gap-2">
                 <span className="text-gray-500 dark:text-gray-400">{t("metadata.endOfValidity")}:</span>
