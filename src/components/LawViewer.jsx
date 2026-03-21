@@ -7,7 +7,7 @@ import { parseFormexToCombined } from "../utils/parsers.js";
 import { buildEurlexCelexUrl, buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
 import { mapRecitalsToArticles, NLP_VERSION } from "../utils/nlp.js";
 import { injectDefinitionTooltips } from "../utils/definitions.js";
-import { EU_LANGUAGES, fetchFormex, fetchAmendments, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
+import { EU_LANGUAGES, fetchFormex, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
 import { findCachedCelexByOfficialReference, markLawOpened, saveLawMeta } from "../utils/library.js";
 import { buildImportedLawCandidate, findBundledLawByCelex, findBundledLawByKey, findBundledLawBySlug, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
@@ -22,7 +22,7 @@ import { SEO } from "./SEO.jsx";
 import { NumberSelector } from "./NumberSelector.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
-import { AmendmentHistory } from "./AmendmentHistory.jsx";
+import { MetadataPanel } from "./MetadataPanel.jsx";
 import { LanguageSelector } from "./LanguageSelector.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { lawLangFromUiLocale, uiLocaleFromLawLang } from "../i18n/localeMeta.js";
@@ -289,8 +289,6 @@ export function LawViewer() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [resolvedCelex, setResolvedCelex] = useState(null);
   const primaryLoadRequestRef = useRef(0);
-  const [amendments, setAmendments] = useState(null);
-  const [amendmentsLoading, setAmendmentsLoading] = useState(false);
 
   // View Settings
   const [fontScale, setFontScale] = useState(() => {
@@ -1065,25 +1063,6 @@ export function LawViewer() {
     }).then(() => markLawOpened(effectiveCelex));
   }, [isLegacyExtensionRoute, effectiveCelex, currentLaw, hasLoadedContent, searchParams, data.title, formexLang, t]);
 
-  useEffect(() => {
-    if (!currentCelex) {
-      setAmendments(null);
-      return;
-    }
-    let cancelled = false;
-    setAmendmentsLoading(true);
-    fetchAmendments(currentCelex)
-      .then((result) => {
-        if (!cancelled) setAmendments(result.amendments || []);
-      })
-      .catch(() => {
-        if (!cancelled) setAmendments([]);
-      })
-      .finally(() => {
-        if (!cancelled) setAmendmentsLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, [currentCelex]);
 
   const retryLoad = useCallback(() => {
     setLoadAttempt((attempt) => attempt + 1);
@@ -1799,9 +1778,8 @@ export function LawViewer() {
                   </Accordion>
                 </div>
               )}
-              <AmendmentHistory
-                amendments={amendments}
-                loading={amendmentsLoading}
+              <MetadataPanel
+                celex={currentCelex}
                 currentLang={formexLang}
               />
             </div>

@@ -1,0 +1,317 @@
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import { Loader2, ChevronRight, ExternalLink } from "lucide-react";
+import { fetchLawMetadata, fetchAmendments, fetchImplementingActs } from "../utils/formexApi.js";
+import { buildEurlexCelexUrl } from "../utils/url.js";
+import { Accordion } from "./Accordion.jsx";
+import { useI18n } from "../i18n/useI18n.js";
+
+function formatDate(isoDate) {
+  if (!isoDate) return null;
+  try {
+    return new Date(isoDate).toLocaleDateString("en-GB", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return isoDate;
+  }
+}
+
+const STATUS_BADGE = {
+  true: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  false: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+};
+
+const TYPE_BADGE = {
+  corrigendum: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  amendment: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+};
+
+/**
+ * A button that loads data on click and shows a loading spinner.
+ */
+function LoadButton({ label, count, loading, loaded, onClick }) {
+  if (loaded && count === 0) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-400 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-500">
+        {label}
+        <span className="ml-auto text-[10px]">None found</span>
+      </div>
+    );
+  }
+
+  if (!loaded) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={loading}
+        className="flex w-full items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-gray-700 transition hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-700"
+      >
+        {loading ? (
+          <Loader2 size={12} className="animate-spin text-gray-400" />
+        ) : (
+          <ChevronRight size={12} className="text-gray-400" />
+        )}
+        {label}
+        {loading && <span className="ml-auto text-[10px] text-gray-400">Loading…</span>}
+      </button>
+    );
+  }
+
+  return null; // when loaded with results, the list renders instead
+}
+
+/**
+ * Renders a list of acts (amendments or implementing acts) as cards.
+ */
+function ActList({ acts, currentLang, type = "amendment" }) {
+  if (!acts || acts.length === 0) return null;
+
+  return (
+    <ul className="space-y-2">
+      {acts.map((a) => {
+        const eurlexUrl = buildEurlexCelexUrl(a.celex, currentLang);
+        const dateLabel = formatDate(a.date);
+        const badgeCls = type === "implementing"
+          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+          : (TYPE_BADGE[a.type] || TYPE_BADGE.amendment);
+        const typeLabel = type === "implementing"
+          ? "Impl/Del"
+          : (a.type === "corrigendum" ? "Corrigendum" : "Amendment");
+
+        return (
+          <li key={a.celex}>
+            <a
+              href={eurlexUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col gap-0.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold ${badgeCls}`}>
+                  {typeLabel}
+                </span>
+                {dateLabel && (
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
+                    {dateLabel}
+                  </span>
+                )}
+                <ExternalLink size={10} className="ml-auto shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500" />
+              </div>
+              <span className="font-medium text-gray-700 group-hover:text-blue-700 dark:text-gray-300 dark:group-hover:text-blue-400 truncate">
+                {a.title || a.celex}
+              </span>
+            </a>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+/**
+ * Sidebar panel showing law metadata (dates, in-force status) fetched on mount,
+ * plus on-demand buttons for amendments and implementing/delegated acts.
+ */
+export function MetadataPanel({ celex, currentLang = "EN" }) {
+  const { t } = useI18n();
+
+  // Metadata (auto-fetched when celex changes)
+  const [metadata, setMetadata] = useState(null);
+  const [metaLoading, setMetaLoading] = useState(false);
+  const [metaLoaded, setMetaLoaded] = useState(false);
+  const prevCelexRef = useRef(null);
+
+  // Amendments (on-demand)
+  const [amendments, setAmendments] = useState(null);
+  const [amendLoading, setAmendLoading] = useState(false);
+  const [amendLoaded, setAmendLoaded] = useState(false);
+
+  // Implementing acts (on-demand)
+  const [implActs, setImplActs] = useState(null);
+  const [implLoading, setImplLoading] = useState(false);
+  const [implLoaded, setImplLoaded] = useState(false);
+
+  // Auto-fetch metadata when celex changes
+  useEffect(() => {
+    if (!celex) return;
+    if (celex === prevCelexRef.current) return;
+    prevCelexRef.current = celex;
+
+    // Reset all state for new celex
+    setMetadata(null);
+    setMetaLoaded(false);
+    setAmendments(null);
+    setAmendLoaded(false);
+    setImplActs(null);
+    setImplLoaded(false);
+
+    let cancelled = false;
+    setMetaLoading(true);
+    fetchLawMetadata(celex)
+      .then((result) => { if (!cancelled) setMetadata(result); })
+      .catch(() => { if (!cancelled) setMetadata(null); })
+      .finally(() => {
+        if (!cancelled) {
+          setMetaLoading(false);
+          setMetaLoaded(true);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [celex]);
+
+  const loadAmendments = useCallback(async () => {
+    if (!celex || amendLoaded) return;
+    setAmendLoading(true);
+    try {
+      const result = await fetchAmendments(celex);
+      setAmendments(result.amendments || []);
+    } catch {
+      setAmendments([]);
+    } finally {
+      setAmendLoading(false);
+      setAmendLoaded(true);
+    }
+  }, [celex, amendLoaded]);
+
+  const loadImplementing = useCallback(async () => {
+    if (!celex || implLoaded) return;
+    setImplLoading(true);
+    try {
+      const result = await fetchImplementingActs(celex);
+      setImplActs(result.acts || []);
+    } catch {
+      setImplActs([]);
+    } finally {
+      setImplLoading(false);
+      setImplLoaded(true);
+    }
+  }, [celex, implLoaded]);
+
+  if (!celex) return null;
+
+  return (
+    <div className="pt-4 space-y-3">
+      {/* EU Metadata accordion — auto-fetched */}
+      <Accordion
+        title={t("metadata.title")}
+        defaultOpen={false}
+      >
+        {metaLoading && (
+          <div className="py-2 text-sm text-gray-400 dark:text-gray-500 animate-pulse">
+            {t("metadata.loading")}
+          </div>
+        )}
+
+        {metaLoaded && metadata && (
+          <div className="space-y-2 text-xs">
+            {/* In-force status */}
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 dark:text-gray-400">{t("metadata.status")}:</span>
+              <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${STATUS_BADGE[metadata.inForce]}`}>
+                {metadata.inForce ? t("metadata.inForce") : t("metadata.notInForce")}
+              </span>
+            </div>
+
+            {/* Entry into force date(s) */}
+            {metadata.entryIntoForce?.length > 0 && (
+              <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+                <span className="text-gray-500 dark:text-gray-400">{t("metadata.entryIntoForce")}:</span>
+                <span className="text-gray-700 dark:text-gray-300 tabular-nums">
+                  {metadata.entryIntoForce.map(formatDate).join(", ")}
+                </span>
+              </div>
+            )}
+
+            {/* End of validity */}
+            {metadata.endOfValidity && metadata.endOfValidity !== "9999-12-31" && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 dark:text-gray-400">{t("metadata.endOfValidity")}:</span>
+                <span className="text-gray-700 dark:text-gray-300 tabular-nums">
+                  {formatDate(metadata.endOfValidity)}
+                </span>
+              </div>
+            )}
+
+            {/* Date of document */}
+            {metadata.dateDocument && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 dark:text-gray-400">{t("metadata.dateOfDocument")}:</span>
+                <span className="text-gray-700 dark:text-gray-300 tabular-nums">
+                  {formatDate(metadata.dateDocument)}
+                </span>
+              </div>
+            )}
+
+            {/* EEA relevance */}
+            {metadata.eea && (
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 dark:text-gray-400">{t("metadata.eea")}:</span>
+                <span className="text-gray-700 dark:text-gray-300">{t("metadata.yes")}</span>
+              </div>
+            )}
+
+            {/* ELI link */}
+            {metadata.eli && (
+              <div className="flex items-start gap-2">
+                <span className="shrink-0 text-gray-500 dark:text-gray-400">ELI:</span>
+                <a
+                  href={metadata.eli}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 break-all"
+                >
+                  {metadata.eli.replace("http://data.europa.eu/eli/", "")}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+
+        {metaLoaded && !metadata && (
+          <div className="py-2 text-sm text-gray-400 dark:text-gray-500">
+            {t("metadata.unavailable")}
+          </div>
+        )}
+      </Accordion>
+
+      {/* Amendment History — load on demand */}
+      {amendLoaded && amendments && amendments.length > 0 ? (
+        <Accordion
+          title={`${t("amendmentHistory.title")} (${amendments.length})`}
+          defaultOpen={false}
+        >
+          <ActList acts={amendments} currentLang={currentLang} type="amendment" />
+        </Accordion>
+      ) : (
+        <LoadButton
+          label={t("amendmentHistory.title")}
+          count={amendments?.length ?? 0}
+          loading={amendLoading}
+          loaded={amendLoaded}
+          onClick={loadAmendments}
+        />
+      )}
+
+      {/* Implementing / Delegated Acts — load on demand */}
+      {implLoaded && implActs && implActs.length > 0 ? (
+        <Accordion
+          title={`${t("metadata.implementingActs")} (${implActs.length})`}
+          defaultOpen={false}
+        >
+          <ActList acts={implActs} currentLang={currentLang} type="implementing" />
+        </Accordion>
+      ) : (
+        <LoadButton
+          label={t("metadata.implementingActs")}
+          count={implActs?.length ?? 0}
+          loading={implLoading}
+          loaded={implLoaded}
+          onClick={loadImplementing}
+        />
+      )}
+    </div>
+  );
+}
