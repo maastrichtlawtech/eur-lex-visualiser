@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Loader2, ChevronRight, ExternalLink } from "lucide-react";
 import { fetchLawMetadata, fetchAmendments, fetchImplementingActs } from "../utils/formexApi.js";
 import { buildEurlexCelexUrl } from "../utils/url.js";
@@ -122,7 +122,6 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
   const [metadata, setMetadata] = useState(null);
   const [metaLoading, setMetaLoading] = useState(false);
   const [metaLoaded, setMetaLoaded] = useState(false);
-  const prevCelexRef = useRef(null);
 
   // Amendments (on-demand)
   const [amendments, setAmendments] = useState(null);
@@ -137,8 +136,6 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
   // Auto-fetch metadata when celex changes
   useEffect(() => {
     if (!celex) return;
-    if (celex === prevCelexRef.current) return;
-    prevCelexRef.current = celex;
 
     // Reset all state for new celex
     setMetadata(null);
