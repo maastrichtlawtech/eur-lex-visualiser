@@ -163,7 +163,6 @@ export function Landing({ forcedLocale = null }) {
         lawKey=""
         title=""
         lists={allLawsData}
-        isExtensionMode={false}
         eurlexUrl={null}
         showPrint={false}
         onSearchOpen={handleSearchOpen}

@@ -104,14 +104,6 @@ const router = createBrowserRouter([
         element: <LawViewer />,
       })),
       {
-        path: "extension",
-        element: <LawViewer />,
-      },
-      {
-        path: "extension/:kind/:id",
-        element: <LawViewer />,
-      },
-      {
         path: "import",
         element: <LawViewer />,
       },

@@ -317,6 +317,7 @@ export function SearchBox({
     runCurrentSearch,
     runGlobalMatchSearch,
     runLawSearch,
+    searchableLawCount,
   ]);
 
   // Trigger search data loading on open
@@ -877,7 +878,6 @@ export function TopBar({
   title,
   lists,
   globalLists = null,
-  isExtensionMode,
   eurlexUrl,
   onPrint,
   showPrint = true,
@@ -906,10 +906,6 @@ export function TopBar({
   const { locale, localizePath, t } = useI18n();
 
   const onNavigate = async (item) => {
-    const extensionParams = isExtensionMode && lawKey === 'extension'
-      ? window.location.search
-      : '';
-
     if (item.search_kind === "law") {
       const officialReference = inferOfficialReferenceFromCelex(item.celex);
       const targetLaw = buildImportedLawCandidate({
@@ -934,9 +930,7 @@ export function TopBar({
     const safeId = encodeURIComponent(String(item.id));
     const targetLawSlug = item.law_slug || item.law_key || lawKey;
 
-    if (isExtensionMode) {
-      navigate(`/extension/${item.type}/${safeId}${extensionParams}`);
-    } else if (targetLawSlug) {
+    if (targetLawSlug) {
       navigate(`${localizePath(`/${targetLawSlug}/${item.type}/${safeId}`, locale)}${location.search}`);
     }
   };

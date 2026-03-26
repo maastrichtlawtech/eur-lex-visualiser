@@ -76,7 +76,7 @@ legalviz.eu/
 │   ├── App.jsx            # Router and layout
 │   └── main.jsx           # Entry point
 ├── backend/               # REST API & eurlex CLI (see backend/README.md)
-├── legalviz-extension/    # Browser extension (Chrome & Firefox)
+├── extension/             # Browser extension (Chrome & Firefox)
 ├── scripts/               # Build & utility scripts
 └── public/                # Static assets
 ```

@@ -28,7 +28,7 @@ export const UI_LOCALES = {
 };
 
 export const SUPPORTED_UI_LOCALES = Object.keys(UI_LOCALES);
-export const RESERVED_ROOT_SEGMENTS = new Set(["import", "extension", "law"]);
+export const RESERVED_ROOT_SEGMENTS = new Set(["import", "law"]);
 
 export function normalizeUiLocale(value) {
   const normalized = String(value || "").trim().toLowerCase();

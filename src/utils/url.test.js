@@ -28,11 +28,6 @@ describe("getLawSlugFromPath", () => {
     expect(getLawSlugFromPath("/import/something")).toBeNull();
   });
 
-  it("excludes /extension paths", () => {
-    expect(getLawSlugFromPath("/extension")).toBeNull();
-    expect(getLawSlugFromPath("/extension/popup")).toBeNull();
-  });
-
   it("handles regulation-style slugs", () => {
     expect(getLawSlugFromPath("/regulation-2016-679")).toBe("regulation-2016-679");
   });
