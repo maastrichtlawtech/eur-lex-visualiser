@@ -343,6 +343,7 @@ legalviz-api/
    ├─ api-utils.js
    ├─ fmx-parser-node.js  # Node.js wrapper for browser-side Formex parser
    ├─ fmx-service.js
+   ├─ law-queries.js       # Shared SPARQL queries (metadata, amendments, implementing)
    ├─ rate-limit.js
    ├─ reference-utils.js
    └─ reference-utils.test.js
