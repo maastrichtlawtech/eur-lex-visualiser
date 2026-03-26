@@ -4,6 +4,7 @@
   "description": "REST API for serving EU law FMX files",
   "main": "server.js",
   "bin": {
+    "eurlex": "./bin/eurlex.js",
     "parse-fmx": "./bin/parse-fmx.js"
   },
   "scripts": {
