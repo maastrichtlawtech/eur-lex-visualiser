@@ -2,6 +2,7 @@ const fs = require("fs");
 
 const { ClientError } = require("../shared/api-utils");
 const { createSearchHandler } = require("../search/search-route");
+const { parseFmxXml } = require("../shared/fmx-parser-node");
 
 function registerApiRoutes(app, deps) {
   const {
@@ -118,6 +119,37 @@ function registerApiRoutes(app, deps) {
     } catch (err) {
       if (!res.headersSent) {
         safeErrorResponse(res, err, 'Failed to fetch law');
+      }
+    }
+  });
+
+  app.get('/api/laws/:celex/parsed', rateLimitMiddleware, async (req, res) => {
+    try {
+      const { celex } = req.params;
+      const rawLang = req.query.lang || 'ENG';
+
+      if (!validateCelex(celex)) {
+        return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
+      }
+
+      const lang = validateLang(rawLang);
+      if (!lang) {
+        return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+      }
+
+      const { servePath } = await prepareLawPayload(celex, lang);
+      const xmlText = fs.readFileSync(servePath, 'utf8');
+      const parsed = await parseFmxXml(xmlText);
+
+      res.json({
+        celex,
+        lang,
+        name: CELEX_NAMES[celex] || null,
+        ...parsed,
+      });
+    } catch (err) {
+      if (!res.headersSent) {
+        safeErrorResponse(res, err, 'Failed to fetch and parse law');
       }
     }
   });
@@ -383,7 +415,8 @@ LIMIT 100`;
         'GET /': 'This documentation',
         'GET /health': 'Health check',
         'GET /api/laws': 'List cached FMX files',
-        'GET /api/laws/:celex?lang=ENG': 'Get law by CELEX (fetches & caches)',
+        'GET /api/laws/:celex?lang=ENG': 'Get raw FMX XML by CELEX (fetches & caches)',
+        'GET /api/laws/:celex/parsed?lang=ENG': 'Get parsed law as structured JSON (articles, recitals, definitions, annexes, cross-references)',
         'GET /api/laws/:celex/info': 'Get metadata only',
         'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
         'GET /api/search?q=keyword&limit=10': 'Search cached primary-law metadata',
