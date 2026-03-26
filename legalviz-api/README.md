@@ -2,19 +2,44 @@
 
 REST API **and** command-line tool for downloading, parsing, and searching EU legislation in [Formex](https://op.europa.eu/en/web/eu-vocabularies/formex) format.
 
-## Quick start
+## Prerequisites
+
+- **Node.js >= 18** (uses `fetch`, `AbortController`, and dynamic `import()`)
+- npm (comes with Node.js)
+
+## Installation
 
 ```bash
 cd legalviz-api
 npm install
-npm start          # API server on port 3000
 ```
 
-Or use the CLI directly (no server needed):
+### CLI setup
+
+After `npm install`, you can run commands via `npx`:
 
 ```bash
-npx eurlex get 32016R0679           # Download & parse GDPR → JSON
-npx eurlex search "digital markets" # Search law metadata
+npx eurlex get 32016R0679
+```
+
+Or link globally to use `eurlex` anywhere:
+
+```bash
+npm link                   # run once from legalviz-api/
+eurlex get 32016R0679      # now works globally
+```
+
+### API server setup
+
+```bash
+npm start                  # starts on port 3000 (or PORT env var)
+```
+
+To also enable law search, build the search cache first:
+
+```bash
+npm run build:search-cache
+npm start
 ```
 
 ## CLI
@@ -147,6 +172,96 @@ cat input.xml | parse-fmx > output.json
 
 `/api/search` searches a local metadata cache of primary regulations/directives/decisions.
 
+## Using from Python (and other languages)
+
+There are three ways to consume EU law data from outside JavaScript.
+
+### Option 1: Call the CLI from a subprocess
+
+The simplest approach — no server needed. The CLI outputs JSON to stdout.
+
+```python
+import subprocess, json
+
+def get_law(celex, lang="ENG"):
+    result = subprocess.run(
+        ["npx", "eurlex", "get", celex, "--lang", lang],
+        capture_output=True, text=True, check=True,
+        cwd="path/to/legalviz-api"
+    )
+    return json.loads(result.stdout)
+
+gdpr = get_law("32016R0679")
+print(f"{gdpr['title']} — {len(gdpr['articles'])} articles")
+
+for defn in gdpr["definitions"]:
+    print(f"  {defn['term']}: {defn['definition'][:80]}...")
+```
+
+Works the same for any command:
+
+```python
+# Metadata
+meta = json.loads(subprocess.run(
+    ["npx", "eurlex", "metadata", "32016R0679"],
+    capture_output=True, text=True, cwd="path/to/legalviz-api"
+).stdout)
+
+# Resolve a reference
+ref = json.loads(subprocess.run(
+    ["npx", "eurlex", "resolve", "Directive 2018/1972"],
+    capture_output=True, text=True, cwd="path/to/legalviz-api"
+).stdout)
+```
+
+### Option 2: HTTP API with `requests`
+
+Start the server (`npm start`), then call it from any language:
+
+```python
+import requests
+
+base = "http://localhost:3000"
+
+# Parsed law as JSON
+law = requests.get(f"{base}/api/laws/32016R0679/parsed", params={"lang": "ENG"}).json()
+
+# Search
+results = requests.get(f"{base}/api/search", params={"q": "digital markets", "limit": 5}).json()
+
+# Metadata
+meta = requests.get(f"{base}/api/laws/32016R0679/metadata").json()
+```
+
+### Option 3: CLI + file output for batch processing
+
+For batch jobs, write JSON files and process them separately:
+
+```bash
+# Download multiple laws
+for celex in 32016R0679 32024R1689 32022R1925 32022R2065; do
+  eurlex get "$celex" -o "${celex}.json"
+done
+```
+
+```python
+import json, glob
+
+for path in glob.glob("*.json"):
+    law = json.load(open(path))
+    print(f"{law['celex']}: {law['title'][:60]}... ({len(law['articles'])} articles)")
+```
+
+### Using from R, Julia, or other languages
+
+The same patterns work — call the CLI via your language's subprocess API, or make HTTP requests to the running API server. All output is JSON.
+
+```r
+# R example
+library(jsonlite)
+gdpr <- fromJSON(system("npx eurlex get 32016R0679", intern = TRUE))
+```
+
 ## Search
 
 Search is intentionally narrow and conservative:
@@ -200,8 +315,8 @@ Builder behavior:
 - persists resumable build state
 
 Default files:
-- search cache: [search/data/search-cache.json](/Users/konrad/Documents/legalviz.eu/legalviz-api/search/data/search-cache.json)
-- build state: [search/data/search-build-state.json](/Users/konrad/Documents/legalviz.eu/legalviz-api/search/data/search-build-state.json)
+- search cache: `search/data/search-cache.json`
+- build state: `search/data/search-build-state.json`
 
 Important: restart the API server after rebuilding the cache, because the cache is loaded on startup.
 
@@ -233,23 +348,18 @@ legalviz-api/
    └─ reference-utils.test.js
 ```
 
-## Local Development
+## Development
 
 ```bash
-cd legalviz-api
-npm install
-npm start
+npm run dev                # start with --watch (auto-restart on changes)
 ```
 
-Quick checks:
+Verify the server is running:
 
 ```bash
 curl http://localhost:3000/health
-curl http://localhost:3000/api/laws
-curl http://localhost:3000/api/laws/32016R0679?lang=ENG
+curl http://localhost:3000/api/laws/32016R0679/parsed?lang=ENG | jq .title
 curl "http://localhost:3000/api/search?q=gdpr"
-curl "http://localhost:3000/api/resolve-reference?actType=directive&year=2018&number=1972&lang=ENG"
-curl "http://localhost:3000/api/resolve-url?url=https%3A%2F%2Feur-lex.europa.eu%2Feli%2Freg%2F2016%2F679%2Foj&lang=ENG"
 ```
 
 ## Tests
