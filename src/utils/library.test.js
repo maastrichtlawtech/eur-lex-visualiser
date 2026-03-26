@@ -68,12 +68,14 @@ describe("setLawHidden", () => {
 });
 
 describe("getLibraryLaws", () => {
-  it("returns empty array when no cached/meta data", async () => {
+  it("returns curated flagship laws when no cached/meta data", async () => {
     getAllLawMeta.mockResolvedValue([]);
     listCachedCelexes.mockResolvedValue([]);
 
     const laws = await getLibraryLaws();
-    expect(laws).toEqual([]);
+    expect(laws.length).toBeGreaterThanOrEqual(4);
+    expect(laws.some((law) => law.slug === "gdpr")).toBe(true);
+    expect(laws.some((law) => law.slug === "dma")).toBe(true);
   });
 
   it("includes imported laws from cache", async () => {

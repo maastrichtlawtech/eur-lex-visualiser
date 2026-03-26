@@ -1,5 +1,5 @@
 {
-  "name": "eur-lex-fmx-api",
+  "name": "legalviz-backend",
   "version": "1.0.0",
   "description": "REST API for serving EU law FMX files",
   "main": "server.js",

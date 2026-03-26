@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://legalviz.eu/</loc></url>
+<url><loc>https://legalviz.eu/aia</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/I</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/II</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/III</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/IV</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/IX</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/V</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/VI</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/VII</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/VIII</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/X</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/XI</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/XII</loc></url>
+<url><loc>https://legalviz.eu/aia/annex/XIII</loc></url>
+<url><loc>https://legalviz.eu/da</loc></url>
+<url><loc>https://legalviz.eu/dga</loc></url>
+<url><loc>https://legalviz.eu/dma</loc></url>
+<url><loc>https://legalviz.eu/dsa</loc></url>
+<url><loc>https://legalviz.eu/gdpr</loc></url>
+<url><loc>https://legalviz.eu/nis-2</loc></url>
+<url><loc>https://legalviz.eu/nis-2/annex/I</loc></url>
+<url><loc>https://legalviz.eu/nis-2/annex/II</loc></url>
+<url><loc>https://legalviz.eu/nis-2/annex/III</loc></url>
+<url><loc>https://legalviz.eu/p2b</loc></url>
 </urlset>

@@ -5,12 +5,14 @@ import { JSDOM } from "jsdom";
 
 import { parseFormexToCombined } from "../src/utils/parsers.js";
 import { toApiLang } from "../src/utils/formexApi.js";
+import { getBundledLaws } from "../src/utils/lawRouting.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
 const siteUrl = "https://legalviz.eu";
+const FEATURED_LAWS = getBundledLaws();
 
 function installDomGlobals() {
   const { window } = new JSDOM("<!doctype html><html><body></body></html>");
@@ -55,6 +57,10 @@ function summarize(value = "", maxLength = 160) {
   return `${text.slice(0, maxLength - 1).trim()}…`;
 }
 
+function getValidAnnexes(data) {
+  return (data?.annexes || []).filter((annex) => String(annex?.annex_id || "").trim());
+}
+
 function readBuiltIndexHtml() {
   const indexPath = path.join(distDir, "index.html");
   if (!fs.existsSync(indexPath)) {
@@ -97,7 +103,7 @@ async function fetchLawData(law, lang = "EN") {
 function buildLawBody(law, data) {
   const articleTotal = data?.articles?.length || law.articles || 0;
   const recitalTotal = data?.recitals?.length || law.recitals || 0;
-  const annexes = data?.annexes || [];
+  const annexes = getValidAnnexes(data);
   const articleLinks = Array.from({ length: articleTotal }, (_, index) => {
     const number = String(index + 1);
     return `<li><a href="/${law.slug}/article/${number}">Article ${number}</a></li>`;
@@ -172,7 +178,7 @@ function buildArticleBody(law, data, articleNumber) {
     ? `Article ${articleNumber} - ${article.article_title}`
     : `Article ${articleNumber}`;
   const articleTotal = data?.articles?.length || law.articles || 0;
-  const annexes = data?.annexes || [];
+  const annexes = getValidAnnexes(data);
   const annexLinks = annexes.slice(0, 6).map((annex) => (
     `<li><a href="/${law.slug}/annex/${encodeURIComponent(annex.annex_id)}">Annex ${escapeHtml(annex.annex_id)}</a></li>`
   )).join("");
@@ -208,7 +214,7 @@ function buildArticleBody(law, data, articleNumber) {
 function buildRecitalBody(law, data, recitalNumber) {
   const recital = data?.recitals?.find((entry) => String(entry.recital_number) === String(recitalNumber));
   const recitalTotal = data?.recitals?.length || law.recitals || 0;
-  const annexes = data?.annexes || [];
+  const annexes = getValidAnnexes(data);
 
   return `
     <main class="lv-prerender">
@@ -234,7 +240,7 @@ function buildRecitalBody(law, data, recitalNumber) {
 }
 
 function buildAnnexBody(law, data, annexId) {
-  const annex = data?.annexes?.find((entry) => String(entry.annex_id) === String(annexId));
+  const annex = getValidAnnexes(data).find((entry) => String(entry.annex_id) === String(annexId));
   const displayTitle = annex?.annex_title
     ? `Annex ${annexId} - ${annex.annex_title}`
     : `Annex ${annexId}`;
@@ -376,7 +382,7 @@ async function buildLawPages(template, law) {
     }));
   }
 
-  for (const annex of data?.annexes || []) {
+  for (const annex of getValidAnnexes(data)) {
     const annexTitle = annex?.annex_title
       ? `Read Annex ${annex.annex_id}: ${annex.annex_title} | ${lawTitle} | LegalViz.EU`
       : `Read Annex ${annex.annex_id} | ${lawTitle} | LegalViz.EU`;
@@ -397,8 +403,13 @@ async function main() {
   }
 
   installDomGlobals();
-  readBuiltIndexHtml();
-  console.log("[prerender] No bundled laws configured; skipping static law-page generation");
+  const template = readBuiltIndexHtml();
+
+  for (const law of FEATURED_LAWS) {
+    await buildLawPages(template, law);
+  }
+
+  console.log(`[prerender] Generated static pages for ${FEATURED_LAWS.length} flagship laws`);
 }
 
 main().catch((error) => {

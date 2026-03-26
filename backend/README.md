@@ -1,16 +1,16 @@
-# EUR-Lex FMX API & CLI
+# LegalViz Backend
 
-REST API **and** command-line tool for downloading, parsing, and searching EU legislation in [Formex](https://op.europa.eu/en/web/eu-vocabularies/formex) format. Part of [LegalViz.EU](../README.md) — shares the Formex parser with the web app (`src/utils/fmxParser.js`).
+REST API **and** command-line tool for downloading, parsing, and searching EU legislation in [Formex](https://op.europa.eu/en/web/eu-vocabularies/formex) format. Part of [LegalViz.EU](../README.md) — shares the Formex parser with the web app through `backend/shared/formex-parser/`.
 
 ## Prerequisites
 
-- **Node.js >= 18** (uses `fetch`, `AbortController`, and dynamic `import()`)
+- **Node.js >= 24** (uses `fetch`, `AbortController`, and dynamic `import()`)
 - npm (comes with Node.js)
 
 ## Installation
 
 ```bash
-cd legalviz-api
+cd backend
 npm install
 ```
 
@@ -25,7 +25,7 @@ npx eurlex get 32016R0679
 Or link globally to use `eurlex` anywhere:
 
 ```bash
-npm link                   # run once from legalviz-api/
+npm link                   # run once from backend/
 eurlex get 32016R0679      # now works globally
 ```
 
@@ -187,7 +187,7 @@ def get_law(celex, lang="ENG"):
     result = subprocess.run(
         ["npx", "eurlex", "get", celex, "--lang", lang],
         capture_output=True, text=True, check=True,
-        cwd="path/to/legalviz-api"
+        cwd="path/to/backend"
     )
     return json.loads(result.stdout)
 
@@ -204,13 +204,13 @@ Works the same for any command:
 # Metadata
 meta = json.loads(subprocess.run(
     ["npx", "eurlex", "metadata", "32016R0679"],
-    capture_output=True, text=True, cwd="path/to/legalviz-api"
+    capture_output=True, text=True, cwd="path/to/backend"
 ).stdout)
 
 # Resolve a reference
 ref = json.loads(subprocess.run(
     ["npx", "eurlex", "resolve", "Directive 2018/1972"],
-    capture_output=True, text=True, cwd="path/to/legalviz-api"
+    capture_output=True, text=True, cwd="path/to/backend"
 ).stdout)
 ```
 
@@ -323,7 +323,7 @@ Important: restart the API server after rebuilding the cache, because the cache 
 ## Project Layout
 
 ```text
-legalviz-api/
+backend/
 ├─ package.json
 ├─ server.js
 ├─ README.md
@@ -387,7 +387,7 @@ Current test coverage includes:
 | Variable | Description |
 |----------|-------------|
 | `PORT` | Port for the API server. |
-| `FMX_DIR` | Directory for cached FMX/XML/ZIP downloads. Defaults to `legalviz-api/fmx-downloads`. |
+| `FMX_DIR` | Directory for cached FMX/XML/ZIP downloads. Defaults to `backend/fmx-downloads`. |
 | `RATE_LIMIT_MAX` | Per-IP request cap for the 15-minute window. |
 | `STORAGE_LIMIT_MB` | Max size of the FMX download cache before eviction starts. Default `500`. |
 | `TIMEOUT_MS` | HTTP request timeout in ms. Default `30000`. |

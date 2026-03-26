@@ -4,10 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && node scripts/copy-404.js && node scripts/generate-sitemap.js && node scripts/generate-prerendered-law-pages.js",
+    "dev": "node scripts/dev.js",
+    "dev:web": "vite",
+    "dev:api": "npm --prefix backend start",
+    "dev:api:watch": "npm --prefix backend run dev",
+    "build": "vite build && node scripts/copy-404.js && node scripts/generate-prerendered-law-pages.js && node scripts/generate-sitemap.js",
     "lint": "eslint .",
-    "test": "vitest run",
+    "test": "npm run test:web && npm run test:api",
+    "test:web": "vitest run",
+    "test:api": "npm --prefix backend test",
     "test:watch": "vitest",
     "preview": "vite preview"
   },

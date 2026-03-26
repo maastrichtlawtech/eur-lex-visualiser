@@ -4,204 +4,101 @@
   <img src="public/wizard.png" alt="LegalViz Wizard" height="128">
 </p>
 
-A beautiful, interactive web application for reading and navigating European Union legal instruments. Built by [Konrad Kollnig](https://kollnig.net) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/law-tech-lab).
+An interactive reader for EU legislation. Search for any EU law, navigate its structure, and understand how articles, recitals, and definitions connect — all in the browser or from the command line.
 
-## 🌐 Try It Now
+Built by [Konrad Kollnig](https://kollnig.net) at the [Law & Tech Lab, Maastricht University](https://www.maastrichtuniversity.nl/law-tech-lab).
 
 **[Open LegalViz.EU](https://legalviz.eu)**
 
-## ✨ Key Features
+## Features
 
-### 📖 Interactive Reading Experience
-- **Smart Table of Contents**: Navigate through chapters, sections, and articles with an organized, collapsible structure.
-- **Recitals Viewer**: Quick access to all recitals with a grid-based navigation interface.
-- **Annexes Browser**: Easy browsing of supplementary materials and annexes.
+**Read** — Collapsible table of contents, grid-based recitals viewer, annexes browser, side-by-side dual-language reading in all 24 official EU languages, dark mode, and responsive layout for desktop and mobile.
 
+**Search** — Instant full-text search across articles, recitals, and annexes. Press `Cmd+K` / `Ctrl+K` to jump to any section. Deep links update as you navigate so you can share exact locations.
 
-### 🔍 Powerful Search & Navigation
-- **Instant Search**: Full-text search across articles, recitals, and annexes.
-- **Keyboard Shortcuts**: Press `Cmd+K` (Mac) or `Ctrl+K` (Windows) to jump to any section instantly.
-- **Deep Linking**: Share exact locations in the text. URLs automatically update as you scroll or navigate.
-- **Article Navigation**: Seamlessly move between articles with Previous/Next controls.
+**Understand context** — Client-side TF-IDF analysis links related recitals to articles automatically. Defined terms (e.g. "online platform") are highlighted with their legal definition on hover. Cross-law references are resolved and linked.
 
-### 🤖 AI-Powered Context
-- **Related Recitals**: The tool automatically analyzes the text to find connections between articles and recitals.
-- **Inline Context**: View relevant recitals side-by-side with articles to better understand the legislative intent.
-- **Definitions Context**: Automatically highlights defined terms (e.g., "online platform") and shows their legal definition on hover.
-- **TF-IDF Analysis**: Uses transparent, client-side text analysis (TF-IDF & Cosine Similarity) to suggest relationships without external API calls.
-
-### 🎨 Design & Accessibility
-- **Dark Mode**: Fully supported dark theme that respects system settings.
-- **Responsive Design**: Optimized for reading on desktop, tablet, and mobile devices.
-
-### 🖨️ Professional Export
-- **Customizable Printing**: Create clean, print-ready documents or PDFs.
-- **Selective Export**: Choose exactly what to include—Articles, Recitals, Annexes, or specific combinations.
-- **Inline Context in PDF**: Option to include "Related Recitals" directly next to articles in the printed output.
-
-### 🌐 Browser Extension
-- **Universal Support**: Open recent EU laws directly from EUR-Lex using the browser extension.
-- **Direct Import Flow**: The extension sends the current EUR-Lex URL to LegalViz through the existing `/import?...` compatibility entrypoint.
-- **Lightweight Design**: The extension does not capture or store full HTML pages locally.
-- **Canonical Imports**: Once resolved, LegalViz redirects imported laws to clean canonical URLs like `/gdpr` or `/regulation-2018-1972`.
+**Export** — Print or save to PDF with selectable sections (articles, recitals, annexes) and optional inline recitals next to articles.
 
 ## How to Use
 
-### Option 1: Use Pre-loaded Laws (No Extension Required)
+Go to [legalviz.eu](https://legalviz.eu) and search for any EU law by name, reference, or CELEX number. The app fetches the Formex XML source from EUR-Lex, parses it, and renders it for reading. Metadata for opened laws is cached locally so they load instantly on return.
 
-Visit [LegalViz.EU](https://legalviz.eu) and select from the pre-loaded legal instruments:
+## Working with EU Law Data
 
-- **AI Act** (EU 2024/1689)
-- **GDPR** (EU 2016/679) – Unconsolidated
-- **DMA** (EU 2022/1925) – Unconsolidated
-- **DSA** (EU 2022/2065)
-- **Data Act** (EU 2023/2854)
-- **Data Governance Act** (EU 2022/868)
+Beyond the web app, this repository includes tools for anyone who wants to work with EU legislation as structured data — useful for legal research, automated analysis, or building your own applications on top of EU law.
 
-### Option 2: Visualize Any EU Law from EUR-Lex (Extension Required)
+The `eurlex` command-line tool lets you download any EU law and get it back as clean, structured JSON instead of raw XML. You can look up metadata (entry into force, amendments, implementing acts), search across legislation by keyword, or resolve a legal reference like "Regulation 2016/679" to its official identifier. A REST API provides the same functionality over HTTP, so you can integrate it into scripts in any language.
 
-The visualiser can open **any EU law** (at least newer ones) directly from EUR-Lex. To use this feature, you need to install a browser extension.
+A few examples:
 
-#### Install the Browser Extension
+```bash
+# Download the GDPR as structured JSON
+eurlex get 32016R0679
 
-[![Chrome Web Store](https://img.shields.io/badge/Chrome-4285F4?style=for-the-badge&logo=GoogleChrome&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
-[![Brave](https://img.shields.io/badge/Brave-FB542B?style=for-the-badge&logo=Brave&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
-[![Edge](https://img.shields.io/badge/Edge-0078D7?style=for-the-badge&logo=Microsoft-Edge&logoColor=white)](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
-[![Firefox](https://img.shields.io/badge/Firefox-FF7139?style=for-the-badge&logo=Firefox-Browser&logoColor=white)](https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/)
+# Get the AI Act in German
+eurlex get 32024R1689 --lang DEU
 
-- **Chrome, Brave, or Edge**: [Install from Chrome Web Store](https://chrome.google.com/webstore/detail/eur-lex-visualiser/akkfdjadggheloggnfonppfkbifanpbc)
-- **Firefox**: [Install from Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/eur-lex-visualiser/)
+# Find legislation about artificial intelligence
+eurlex search "artificial intelligence"
 
-#### Using the Extension
+# Look up what amended the GDPR
+eurlex amendments 32016R0679
 
-1. Install the extension for your browser (see links above).
-2. Visit any EU law page on [EUR-Lex](https://eur-lex.europa.eu) — for example, the [GDPR](https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng).
-3. On supported EUR-Lex text pages, the extension opens LegalViz and passes the current EUR-Lex URL for server-side resolution.
-4. LegalViz resolves that URL to a CELEX identifier, fetches the corresponding Formex document, and redirects to the canonical law URL for the act.
+# Resolve a human-readable reference to a CELEX ID
+eurlex resolve "Regulation 2016/679"
+```
 
-![EUR-Lex language selector showing available languages](public/language-selector.png)
-
-> 💡 **Note:** LegalViz now uses a Formex-only import flow. If you still have an older extension version installed, update it before importing laws from EUR-Lex.
-
-## Browser Support
-
-The application works in most modern browsers:
-- Chrome, Brave, Edge (Chromium-based browsers)
-- Firefox
-- Other modern browsers with ES6+ JavaScript support
+See the [full documentation](backend/README.md) for installation and all available commands.
 
 ## For Developers
 
-### Installation
+### Setup
 
-#### Prerequisites
+Requires Node.js v24+.
 
-- Node.js (v18 or higher recommended)
-- npm or yarn
-
-#### Setup
-
-1. Clone the repository:
 ```bash
 git clone https://github.com/maastrichtlawtech/eur-lex-visualiser.git
-cd eu-law-visualiser
-```
-
-2. Install dependencies:
-```bash
+cd eur-lex-visualiser
 npm install
+npm run dev          # frontend on http://localhost:5173
 ```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-4. Open your browser and navigate to `http://localhost:5173`
-
-### Development Commands
-
-- `npm run dev` – Start the development server with hot module replacement
-- `npm run build` – Build the project for production
-- `npm run preview` – Preview the production build locally
-- `npm run lint` – Run ESLint to check code quality
-
-### Adding Laws
-
-LegalViz now loads laws through CELEX/Formex-backed routes and stored metadata rather than a bundled pre-loaded list. Import or open a law by CELEX, official reference, or EUR-Lex URL and the app will persist its metadata locally for later reuse.
 
 ### Project Structure
 
 ```
 legalviz.eu/
 ├── src/
-│   ├── components/        # React components
-│   │   ├── Accordion.jsx   # Collapsible accordion component
-│   │   ├── Landing.jsx     # Landing page
-│   │   ├── LawViewer.jsx   # Main document viewer
-│   │   ├── PrintModal.jsx  # Printing configuration
-│   │   ├── RelatedRecitals.jsx # AI context viewer
-│   │   └── TopBar.jsx      # Navigation & Search
-│   ├── utils/
-│   │   ├── fmxParser.js    # Formex XML parsing logic (shared with API & CLI)
-│   │   ├── nlp.js          # TF-IDF & Search logic
-│   │   └── url.js          # URL state management
-│   ├── App.jsx             # Main application component
-│   └── main.jsx            # Application entry point
-├── legalviz-api/            # REST API & CLI — see legalviz-api/README.md
-├── extension/              # Browser extension files
-├── package.json
-└── README.md
+│   ├── components/        # React components (LawViewer, TopBar, Landing, …)
+│   ├── utils/             # Formex parser, NLP/search, routing, API client
+│   ├── hooks/             # Custom React hooks
+│   ├── i18n/              # Internationalization
+│   ├── App.jsx            # Router and layout
+│   └── main.jsx           # Entry point
+├── backend/               # REST API & eurlex CLI (see backend/README.md)
+├── legalviz-extension/    # Browser extension (Chrome & Firefox)
+├── scripts/               # Build & utility scripts
+└── public/                # Static assets
 ```
-
-### API Server & CLI
-
-The `legalviz-api/` directory contains a standalone REST API and `eurlex` CLI tool for downloading, parsing, and searching EU legislation programmatically — no browser needed.
-
-```bash
-cd legalviz-api && npm install
-
-# CLI: download & parse the GDPR as structured JSON
-npx eurlex get 32016R0679
-
-# API: start server, then fetch parsed law via HTTP
-npm start
-curl http://localhost:3000/api/laws/32016R0679/parsed?lang=ENG
-```
-
-The CLI and API reuse the same Formex parser as the web app (`src/utils/fmxParser.js`) — no code duplication. See **[legalviz-api/README.md](legalviz-api/README.md)** for full documentation, including usage from Python and other languages.
 
 ### Tech Stack
 
-- **React** – UI framework
-- **Vite** – Build tool and dev server
-- **Tailwind CSS** – Styling
-- **Framer Motion** – Animations
-- **Lucide React** – Icons
+React 19, React Router 7, Vite, Tailwind CSS 4, Framer Motion, Lucide React, Express (API).
 
 ### How It Works
 
-1. **Parsing**: The application fetches Formex XML for CELEX-backed EU laws and parses that structure into Articles, Chapters, Sections, Recitals, and Annexes.
-2. **Indexing**: A client-side inverted index is built on the fly to enable instant full-text search.
-3. **Analysis**: The `nlp.js` module computes TF-IDF vectors for all articles and recitals to find semantic similarities, linking recitals to relevant articles automatically.
-4. **State Management**: The selected law and current view are synchronized with the URL, allowing for bookmarkable links and browser back/forward navigation.
-5. **Extension Integration**: The browser extension detects supported EUR-Lex pages and opens LegalViz with the current EUR-Lex `sourceUrl`.
-6. **URL Resolution**: The backend resolves the EUR-Lex URL to a canonical CELEX identifier, and the app redirects from `/import?...` to the canonical public law URL.
+The app fetches Formex XML for a given CELEX identifier, parses it into articles, chapters, recitals, and annexes, then builds a client-side inverted index for full-text search. A TF-IDF module computes similarity vectors to link recitals to relevant articles. The current view is synced to the URL so every position is bookmarkable. The same Formex parser powers the web app, the REST API, and the CLI — no code duplication.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+Contributions are welcome. Please open an issue first for major changes.
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.
+GPLv3.0 — see [LICENSE](LICENSE).
 
 ## Credits
 
-Built by **Konrad Kollnig** at the **Law & Tech Lab, Maastricht University**.
-
-For questions or feedback, please contact [eu-law@trackercontrol.org](mailto:eu-law@trackercontrol.org).
-
-## Acknowledgments
+Built by **Konrad Kollnig** at the **Law & Tech Lab, Maastricht University**. Contact: [eu-law@trackercontrol.org](mailto:eu-law@trackercontrol.org).
 
 This project uses legal documents from EUR-Lex, the official database of EU law.

@@ -10,7 +10,7 @@ import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { EU_LANGUAGES, fetchFormex, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
 import { findCachedCelexByOfficialReference, markLawOpened, saveLawMeta } from "../utils/library.js";
-import { buildImportedLawCandidate, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
+import { buildImportedLawCandidate, findBundledLawBySlug, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -430,6 +430,8 @@ export function LawViewer() {
     return parseOfficialReferenceSlug(slug);
   }, [slug]);
   const derivedSlugLaw = useMemo(() => {
+    const bundledLaw = findBundledLawBySlug(slug);
+    if (bundledLaw) return bundledLaw;
     if (!slugReference) return null;
     return buildImportedLawCandidate({ officialReference: slugReference, slug });
   }, [slugReference, slug]);

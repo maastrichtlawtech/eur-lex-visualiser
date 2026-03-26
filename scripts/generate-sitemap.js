@@ -7,13 +7,44 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const DOMAIN = 'https://legalviz.eu';
+const distDir = path.join(__dirname, '../dist');
+
+function collectIndexRoutes(rootDir) {
+  const routes = new Set(['/']);
+
+  function walk(currentDir) {
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        walk(fullPath);
+        continue;
+      }
+
+      if (entry.name !== 'index.html') continue;
+
+      const relativeDir = path.relative(rootDir, path.dirname(fullPath));
+      const route = relativeDir ? `/${relativeDir.split(path.sep).join('/')}` : '/';
+      routes.add(route);
+    }
+  }
+
+  if (fs.existsSync(rootDir)) {
+    walk(rootDir);
+  }
+
+  return Array.from(routes).sort((left, right) => left.localeCompare(right));
+}
 
 function generateSitemap() {
+  const routes = collectIndexRoutes(distDir);
   let sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n';
   sitemap += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
 
-  // Home
-  sitemap += `<url><loc>${DOMAIN}/</loc></url>\n`;
+  for (const route of routes) {
+    sitemap += `<url><loc>${DOMAIN}${route}</loc></url>\n`;
+  }
 
   sitemap += '</urlset>';
 

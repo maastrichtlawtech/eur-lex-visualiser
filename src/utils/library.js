@@ -1,5 +1,5 @@
 import { parseOfficialReference } from "./officialReferences.js";
-import { getCanonicalLawRoute, buildImportedLawCandidate } from "./lawRouting.js";
+import { getCanonicalLawRoute, buildImportedLawCandidate, getBundledLaws } from "./lawRouting.js";
 import { buildEurlexCelexUrl } from "./url.js";
 import { getAllLawMeta, listCachedCelexes, upsertLawMeta } from "./formexApi.js";
 
@@ -124,25 +124,30 @@ export async function getLibraryLaws() {
   const metaEntries = await getAllLawMeta();
   const metaByCelex = new Map(metaEntries.filter((entry) => entry?.celex).map((entry) => [entry.celex, entry]));
   const cachedCelexes = await listCachedCelexes();
+  const bundledLaws = getBundledLaws();
   const knownCelexes = Array.from(new Set([
+    ...bundledLaws.map((law) => law.celex).filter(Boolean),
     ...metaByCelex.keys(),
     ...cachedCelexes,
   ]));
 
   const cached = knownCelexes.map((celex) => {
+    const bundled = bundledLaws.find((law) => law.celex === celex) || null;
     const meta = metaByCelex.get(celex);
-    const officialReference = meta?.officialReference || inferOfficialReferenceFromCelex(celex);
+    const officialReference = meta?.officialReference || bundled?.officialReference || inferOfficialReferenceFromCelex(celex);
     const candidate = buildImportedLawCandidate({
+      ...bundled,
       celex,
       officialReference,
     });
 
     return {
       ...candidate,
-      id: `import:${celex}`,
-      kind: "imported",
+      id: bundled?.key || `import:${celex}`,
+      key: bundled?.key || null,
+      kind: bundled ? "bundled" : "imported",
       celex,
-      label: meta?.label || meta?.raw || getFallbackLabel(celex, officialReference),
+      label: meta?.label || bundled?.label || meta?.raw || getFallbackLabel(celex, officialReference),
       raw: meta?.raw || null,
       officialReference: candidate?.officialReference || officialReference || null,
       slug: candidate?.slug || null,

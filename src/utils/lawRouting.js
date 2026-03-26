@@ -1,6 +1,56 @@
 import { normalizeUiLocale } from "../i18n/localeMeta.js";
 
 const VALID_ACT_TYPES = new Set(["regulation", "directive", "decision"]);
+const FEATURED_LAWS = [
+  {
+    slug: "gdpr",
+    celex: "32016R0679",
+    label: "GDPR",
+    officialReference: { actType: "regulation", year: "2016", number: "679" },
+  },
+  {
+    slug: "dma",
+    celex: "32022R1925",
+    label: "Digital Markets Act",
+    officialReference: { actType: "regulation", year: "2022", number: "1925" },
+  },
+  {
+    slug: "dsa",
+    celex: "32022R2065",
+    label: "Digital Services Act",
+    officialReference: { actType: "regulation", year: "2022", number: "2065" },
+  },
+  {
+    slug: "aia",
+    celex: "32024R1689",
+    label: "AI Act",
+    officialReference: { actType: "regulation", year: "2024", number: "1689" },
+  },
+  {
+    slug: "da",
+    celex: "32023R2854",
+    label: "Data Act",
+    officialReference: { actType: "regulation", year: "2023", number: "2854" },
+  },
+  {
+    slug: "dga",
+    celex: "32022R0868",
+    label: "Data Governance Act",
+    officialReference: { actType: "regulation", year: "2022", number: "868" },
+  },
+  {
+    slug: "p2b",
+    celex: "32019R1150",
+    label: "Platform-to-Business Regulation",
+    officialReference: { actType: "regulation", year: "2019", number: "1150" },
+  },
+  {
+    slug: "nis-2",
+    celex: "32022L2555",
+    label: "NIS 2 Directive",
+    officialReference: { actType: "directive", year: "2022", number: "2555" },
+  },
+];
 
 function slugifySegment(value) {
   return String(value || "")
@@ -36,6 +86,9 @@ function buildImportedLawSlug(entry) {
 }
 
 export function getLawSlug(law) {
+  const explicitSlug = slugifySegment(law?.slug);
+  if (explicitSlug) return explicitSlug;
+
   const shortname = slugifySegment(law?.shortname);
   if (shortname) return shortname;
 
@@ -48,6 +101,7 @@ export function enrichLaw(law) {
 
   return {
     ...law,
+    key: law?.key || slug || null,
     officialReference,
     shownInUi: law?.shownInUi !== false,
     slug,
@@ -55,19 +109,23 @@ export function enrichLaw(law) {
 }
 
 export function getBundledLaws() {
-  return [];
+  return FEATURED_LAWS.map((law) => enrichLaw(law));
 }
 
 export function findBundledLawByKey(key) {
-  return null;
+  return findBundledLawBySlug(key);
 }
 
 export function findBundledLawByCelex(celex) {
-  return null;
+  const normalized = String(celex || "").trim().toUpperCase();
+  if (!normalized) return null;
+  return getBundledLaws().find((law) => law.celex === normalized) || null;
 }
 
 export function findBundledLawBySlug(slug) {
-  return null;
+  const normalized = slugifySegment(slug);
+  if (!normalized) return null;
+  return getBundledLaws().find((law) => law.slug === normalized) || null;
 }
 
 export function getCanonicalLawRoute(law, kind = null, id = null, locale = "en") {
@@ -79,12 +137,20 @@ export function getCanonicalLawRoute(law, kind = null, id = null, locale = "en")
 }
 
 export function buildImportedLawCandidate(entry = {}) {
+  const bundledLaw = findBundledLawByCelex(entry.celex)
+    || findBundledLawBySlug(entry.slug)
+    || findBundledLawByKey(entry.key);
   const officialReference = normalizeOfficialReference(entry.officialReference);
-  const slug = buildImportedLawSlug({ ...entry, officialReference });
+  const merged = {
+    ...bundledLaw,
+    ...entry,
+    officialReference: officialReference || bundledLaw?.officialReference || null,
+  };
+  const slug = getLawSlug(merged);
 
   return {
-    ...entry,
-    officialReference,
+    ...merged,
+    officialReference: merged.officialReference,
     slug,
   };
 }

@@ -78,17 +78,22 @@ describe("enrichLaw", () => {
 });
 
 describe("getBundledLaws", () => {
-  it("returns an empty array", () => {
+  it("returns flagship bundled laws", () => {
     const laws = getBundledLaws();
-    expect(laws).toEqual([]);
+    expect(laws.length).toBeGreaterThanOrEqual(4);
+    expect(laws.some((law) => law.slug === "gdpr")).toBe(true);
+    expect(laws.some((law) => law.slug === "dma")).toBe(true);
   });
 });
 
 describe("findBundledLawByKey / ByCelex / BySlug", () => {
-  it("returns null for all lookups", () => {
-    expect(findBundledLawByKey("gdpr")).toBeNull();
-    expect(findBundledLawByCelex("32016R0679")).toBeNull();
-    expect(findBundledLawBySlug("gdpr")).toBeNull();
+  it("finds configured flagship laws", () => {
+    expect(findBundledLawByKey("gdpr")?.celex).toBe("32016R0679");
+    expect(findBundledLawByCelex("32016R0679")?.slug).toBe("gdpr");
+    expect(findBundledLawBySlug("gdpr")?.key).toBe("gdpr");
+  });
+
+  it("returns null for missing lookups", () => {
     expect(findBundledLawByKey("nonexistent")).toBeNull();
     expect(findBundledLawByCelex("00000X0000")).toBeNull();
     expect(findBundledLawBySlug("nope")).toBeNull();
@@ -131,7 +136,7 @@ describe("buildImportedLawCandidate", () => {
   it("builds candidate when celex matches a previously bundled law", () => {
     const result = buildImportedLawCandidate({ celex: "32016R0679" });
     expect(result.celex).toBe("32016R0679");
-    expect(result.slug).toBeNull();
+    expect(result.slug).toBe("gdpr");
   });
 
   it("builds candidate for unknown celex", () => {

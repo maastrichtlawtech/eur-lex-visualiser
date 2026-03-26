@@ -3,7 +3,7 @@
 /**
  * eurlex — CLI for downloading, parsing, and searching EU legislation.
  *
- * Wraps the same services used by the legalviz-api server so everything
+ * Wraps the same services used by the backend server so everything
  * works locally without running the API.
  */
 
@@ -266,7 +266,7 @@ COMMANDS.search = {
     const { SearchIndex, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
     const searchIndex = new SearchIndex(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
     if (!searchIndex.loadFromDisk()) {
-      die(`Search cache not available: ${searchIndex.loadError}\nRun "npm run build:search-cache" in legalviz-api/ first.`);
+      die(`Search cache not available: ${searchIndex.loadError}\nRun "npm run build:search-cache" in backend/ first.`);
     }
 
     const results = searchIndex.searchLaws(flags.query, {
