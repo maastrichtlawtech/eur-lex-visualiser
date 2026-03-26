@@ -473,6 +473,7 @@ export function SearchBox({
     setLawSearchError("");
     if (isLawMode && q.trim() !== lastLawSearchQuery) {
       setResults([]);
+      return;
     }
     executeSearch(searchMode, q);
   };
@@ -494,9 +495,16 @@ export function SearchBox({
   useEffect(() => {
     if (!isOpen) return;
     setSelectedIndex(-1);
+    setResults([]);
     setLawSearchError("");
+    if (isLawMode) {
+      if (query.trim().length >= 2) {
+        runLawSearch(query);
+      }
+      return;
+    }
     executeSearch(searchMode, query);
-  }, [executeSearch, isOpen, searchMode]);
+  }, [executeSearch, isLawMode, isOpen, query, runLawSearch, searchMode]);
 
   useEffect(() => {
     if (!isOpen) return;
