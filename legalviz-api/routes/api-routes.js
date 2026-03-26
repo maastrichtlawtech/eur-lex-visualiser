@@ -2,6 +2,8 @@ const fs = require("fs");
 
 const { ClientError } = require("../shared/api-utils");
 const { createSearchHandler } = require("../search/search-route");
+const { parseFmxXml } = require("../shared/fmx-parser-node");
+const { fetchMetadata, fetchAmendments, fetchImplementing } = require("../shared/law-queries");
 
 function registerApiRoutes(app, deps) {
   const {
@@ -122,6 +124,37 @@ function registerApiRoutes(app, deps) {
     }
   });
 
+  app.get('/api/laws/:celex/parsed', rateLimitMiddleware, async (req, res) => {
+    try {
+      const { celex } = req.params;
+      const rawLang = req.query.lang || 'ENG';
+
+      if (!validateCelex(celex)) {
+        return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
+      }
+
+      const lang = validateLang(rawLang);
+      if (!lang) {
+        return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+      }
+
+      const { servePath } = await prepareLawPayload(celex, lang);
+      const xmlText = fs.readFileSync(servePath, 'utf8');
+      const parsed = await parseFmxXml(xmlText);
+
+      res.json({
+        celex,
+        lang,
+        name: CELEX_NAMES[celex] || null,
+        ...parsed,
+      });
+    } catch (err) {
+      if (!res.headersSent) {
+        safeErrorResponse(res, err, 'Failed to fetch and parse law');
+      }
+    }
+  });
+
   app.get('/api/laws/:celex/info', rateLimitMiddleware, async (req, res) => {
     try {
       const { celex } = req.params;
@@ -164,42 +197,7 @@ function registerApiRoutes(app, deps) {
         return res.json(cached);
       }
 
-      const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
-      const query = `
-PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-SELECT DISTINCT
-  ?dateEntryIntoForce ?dateEndOfValidity ?inForce
-  ?eli ?dateSignature ?dateDocument ?eea
-WHERE {
-  ?work owl:sameAs <${celexUri}> .
-  OPTIONAL { ?work cdm:resource_legal_date_entry-into-force ?dateEntryIntoForce }
-  OPTIONAL { ?work cdm:resource_legal_date_end-of-validity ?dateEndOfValidity }
-  OPTIONAL { ?work cdm:resource_legal_in-force ?inForce }
-  OPTIONAL { ?work cdm:resource_legal_eli ?eli }
-  OPTIONAL { ?work cdm:resource_legal_date_signature ?dateSignature }
-  OPTIONAL { ?work cdm:work_date_document ?dateDocument }
-  OPTIONAL { ?work cdm:resource_legal_eea ?eea }
-}
-LIMIT 10`;
-
-      const data = await runSparqlQuery(query);
-      const bindings = data.results?.bindings || [];
-      const entryDates = [...new Set(bindings.map((binding) => binding.dateEntryIntoForce?.value).filter(Boolean))].sort();
-      const firstBinding = bindings[0] || {};
-
-      const payload = {
-        celex,
-        entryIntoForce: entryDates,
-        endOfValidity: firstBinding.dateEndOfValidity?.value || null,
-        inForce: firstBinding.inForce?.value === 'true',
-        eli: firstBinding.eli?.value || null,
-        dateSignature: firstBinding.dateSignature?.value || null,
-        dateDocument: firstBinding.dateDocument?.value || null,
-        eea: firstBinding.eea?.value === 'true',
-      };
-
+      const payload = await fetchMetadata(celex, runSparqlQuery);
       cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
       res.json(payload);
     } catch (err) {
@@ -221,36 +219,7 @@ LIMIT 10`;
         return res.json(cached);
       }
 
-      const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
-      const query = `
-PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-SELECT DISTINCT ?type ?sourceCelex ?date WHERE {
-  ?work owl:sameAs <${celexUri}> .
-  ?ax owl:annotatedTarget ?work ;
-      owl:annotatedProperty ?p ;
-      owl:annotatedSource ?sourceWork .
-  FILTER(?p IN (cdm:resource_legal_amends_resource_legal, cdm:resource_legal_corrects_resource_legal))
-  BIND(IF(?p = cdm:resource_legal_corrects_resource_legal, "corrigendum", "amendment") AS ?type)
-  ?sourceWork owl:sameAs ?sourceCelex .
-  FILTER(STRSTARTS(STR(?sourceCelex), "http://publications.europa.eu/resource/celex/"))
-  OPTIONAL { ?sourceWork cdm:work_date_document ?date }
-}
-ORDER BY ?date
-LIMIT 50`;
-
-      const data = await runSparqlQuery(query);
-      const amendments = (data.results?.bindings || []).map((binding) => {
-        const rawCelex = binding.sourceCelex?.value?.split('/').pop() || null;
-        const amendingCelex = rawCelex ? decodeURIComponent(rawCelex) : null;
-        return {
-          celex: amendingCelex,
-          date: binding.date?.value || null,
-          type: binding.type?.value || 'amendment'
-        };
-      }).filter((amendment) => amendment.celex);
-
-      const payload = { celex, amendments };
+      const payload = await fetchAmendments(celex, runSparqlQuery);
       cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
       res.json(payload);
     } catch (err) {
@@ -272,39 +241,7 @@ LIMIT 50`;
         return res.json(cached);
       }
 
-      const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
-      const query = `
-PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
-PREFIX owl: <http://www.w3.org/2002/07/owl#>
-SELECT DISTINCT ?actCelex ?date ?title WHERE {
-  ?work owl:sameAs <${celexUri}> .
-  ?ax owl:annotatedTarget ?work ;
-      owl:annotatedProperty cdm:resource_legal_based_on_resource_legal ;
-      owl:annotatedSource ?actWork .
-  ?actWork owl:sameAs ?actCelex .
-  FILTER(STRSTARTS(STR(?actCelex), "http://publications.europa.eu/resource/celex/"))
-  OPTIONAL { ?actWork cdm:work_date_document ?date }
-  OPTIONAL {
-    ?actWork cdm:resource_legal_title ?titleExpr .
-    FILTER(LANG(?titleExpr) = "en")
-    BIND(STR(?titleExpr) AS ?title)
-  }
-}
-ORDER BY ?date
-LIMIT 100`;
-
-      const data = await runSparqlQuery(query);
-      const acts = (data.results?.bindings || []).map((binding) => {
-        const rawCelex = binding.actCelex?.value?.split('/').pop() || null;
-        const actCelex = rawCelex ? decodeURIComponent(rawCelex) : null;
-        return {
-          celex: actCelex,
-          date: binding.date?.value || null,
-          title: binding.title?.value || null,
-        };
-      }).filter((act) => act.celex);
-
-      const payload = { celex, acts };
+      const payload = await fetchImplementing(celex, runSparqlQuery);
       cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
       res.json(payload);
     } catch (err) {
@@ -383,7 +320,8 @@ LIMIT 100`;
         'GET /': 'This documentation',
         'GET /health': 'Health check',
         'GET /api/laws': 'List cached FMX files',
-        'GET /api/laws/:celex?lang=ENG': 'Get law by CELEX (fetches & caches)',
+        'GET /api/laws/:celex?lang=ENG': 'Get raw FMX XML by CELEX (fetches & caches)',
+        'GET /api/laws/:celex/parsed?lang=ENG': 'Get parsed law as structured JSON (articles, recitals, definitions, annexes, cross-references)',
         'GET /api/laws/:celex/info': 'Get metadata only',
         'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
         'GET /api/search?q=keyword&limit=10': 'Search cached primary-law metadata',

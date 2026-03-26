@@ -143,15 +143,33 @@ legalviz.eu/
 │   │   ├── RelatedRecitals.jsx # AI context viewer
 │   │   └── TopBar.jsx      # Navigation & Search
 │   ├── utils/
-│   │   ├── fmxParser.js    # Formex XML parsing logic
+│   │   ├── fmxParser.js    # Formex XML parsing logic (shared with API & CLI)
 │   │   ├── nlp.js          # TF-IDF & Search logic
 │   │   └── url.js          # URL state management
 │   ├── App.jsx             # Main application component
 │   └── main.jsx            # Application entry point
+├── legalviz-api/            # REST API & CLI — see legalviz-api/README.md
 ├── extension/              # Browser extension files
 ├── package.json
 └── README.md
 ```
+
+### API Server & CLI
+
+The `legalviz-api/` directory contains a standalone REST API and `eurlex` CLI tool for downloading, parsing, and searching EU legislation programmatically — no browser needed.
+
+```bash
+cd legalviz-api && npm install
+
+# CLI: download & parse the GDPR as structured JSON
+npx eurlex get 32016R0679
+
+# API: start server, then fetch parsed law via HTTP
+npm start
+curl http://localhost:3000/api/laws/32016R0679/parsed?lang=ENG
+```
+
+The CLI and API reuse the same Formex parser as the web app (`src/utils/fmxParser.js`) — no code duplication. See **[legalviz-api/README.md](legalviz-api/README.md)** for full documentation, including usage from Python and other languages.
 
 ### Tech Stack
 
