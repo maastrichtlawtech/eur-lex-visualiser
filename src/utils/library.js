@@ -124,8 +124,12 @@ export async function getLibraryLaws() {
   const metaEntries = await getAllLawMeta();
   const metaByCelex = new Map(metaEntries.filter((entry) => entry?.celex).map((entry) => [entry.celex, entry]));
   const cachedCelexes = await listCachedCelexes();
+  const knownCelexes = Array.from(new Set([
+    ...metaByCelex.keys(),
+    ...cachedCelexes,
+  ]));
 
-  const cached = cachedCelexes.map((celex) => {
+  const cached = knownCelexes.map((celex) => {
     const meta = metaByCelex.get(celex);
     const officialReference = meta?.officialReference || inferOfficialReferenceFromCelex(celex);
     const candidate = buildImportedLawCandidate({
