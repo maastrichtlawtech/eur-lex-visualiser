@@ -1,6 +1,6 @@
 # EUR-Lex FMX API & CLI
 
-REST API **and** command-line tool for downloading, parsing, and searching EU legislation in [Formex](https://op.europa.eu/en/web/eu-vocabularies/formex) format.
+REST API **and** command-line tool for downloading, parsing, and searching EU legislation in [Formex](https://op.europa.eu/en/web/eu-vocabularies/formex) format. Part of [LegalViz.EU](../README.md) — shares the Formex parser with the web app (`src/utils/fmxParser.js`).
 
 ## Prerequisites
 
