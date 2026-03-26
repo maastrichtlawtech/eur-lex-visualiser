@@ -4,7 +4,7 @@ import { useI18n } from "../i18n/useI18n.js";
 export function AppResetFooter({ className = "" }) {
   const { t } = useI18n();
   return (
-    <div className={`text-center ${className}`.trim()}>
+    <div className={`w-full text-left ${className}`.trim()}>
       <p className="text-xs text-gray-500 dark:text-gray-400">
         {t("resetFooter.title")}{" "}
         <button
