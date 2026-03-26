@@ -1213,7 +1213,7 @@ export function LawViewer() {
           celex: result.resolved.celex,
           officialReference: reference,
         });
-        navigate(getCanonicalLawRoute(targetLaw, null, null, locale));
+        navigate(getCanonicalLawRoute(targetLaw, refLike?.articleNumber ? "article" : null, refLike?.articleNumber || null, locale));
         return;
       }
       openFallbackReference(result?.fallback?.url || fallbackUrl);
@@ -1275,6 +1275,9 @@ export function LawViewer() {
       e.preventDefault();
       handleOpenExternalLaw({
         raw: externalLink.getAttribute("data-ref-raw") || externalLink.textContent,
+        articleNumber: externalLink.getAttribute("data-ref-article") || null,
+        paragraph: externalLink.getAttribute("data-ref-paragraph") || null,
+        point: externalLink.getAttribute("data-ref-point") || null,
         actType: externalLink.getAttribute("data-ref-act-type") || null,
         year: externalLink.getAttribute("data-ref-year") || null,
         number: externalLink.getAttribute("data-ref-number") || null,

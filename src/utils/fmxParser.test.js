@@ -353,6 +353,14 @@ describe("injectCrossRefLinks", () => {
     expect(result).toContain('target="_blank"');
   });
 
+  it("prefers the external act when an article reference is qualified by it", () => {
+    const html = "<p>See Article 4(3) of Regulation (EC) No 300/2008.</p>";
+    const result = injectCrossRefLinks(html, lang);
+    expect(result).toContain('class="external-ref"');
+    expect(result).toContain('data-ref-article="4"');
+    expect(result).not.toContain('href="#article-4"');
+  });
+
   it("returns empty/falsy html unchanged", () => {
     expect(injectCrossRefLinks("", lang)).toBe("");
     expect(injectCrossRefLinks(null, lang)).toBe(null);

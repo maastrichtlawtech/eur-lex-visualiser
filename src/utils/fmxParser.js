@@ -447,6 +447,63 @@ function parseExternalLawMeta(raw, target) {
   };
 }
 
+function getArticleExternalConnectorRe(langCode = "EN") {
+  switch (String(langCode || "").toUpperCase()) {
+    case "DE":
+      return /^\s+der\s+$/i;
+    case "FR":
+      return /^\s+du\s+$/i;
+    case "ES":
+      return /^\s+del\s+$/i;
+    case "IT":
+      return /^\s+del\s+$/i;
+    case "PT":
+      return /^\s+do\s+$/i;
+    case "NL":
+      return /^\s+van\s+$/i;
+    default:
+      return /^\s+of\s+$/i;
+  }
+}
+
+function mergeArticleRefsWithExternalContext(text, articleRefs, externalRefs, langCode) {
+  const connectorRe = getArticleExternalConnectorRe(langCode);
+  const mergedExternalIndices = new Set();
+  const mergedArticles = new Set();
+  const contextualExternalRefs = [];
+
+  for (let i = 0; i < articleRefs.length; i++) {
+    const articleRef = articleRefs[i];
+    const externalIndex = externalRefs.findIndex((externalRef, idx) => (
+      !mergedExternalIndices.has(idx)
+      && externalRef.start >= articleRef.end
+      && connectorRe.test(text.slice(articleRef.end, externalRef.start))
+    ));
+
+    if (externalIndex === -1) continue;
+
+    const externalRef = externalRefs[externalIndex];
+    mergedArticles.add(i);
+    mergedExternalIndices.add(externalIndex);
+    contextualExternalRefs.push({
+      ...externalRef,
+      start: articleRef.start,
+      raw: text.slice(articleRef.start, externalRef.end),
+      articleNumber: articleRef.target,
+      paragraph: articleRef.paragraph,
+      point: articleRef.point,
+    });
+  }
+
+  return {
+    articleRefs: articleRefs.filter((_, index) => !mergedArticles.has(index)),
+    externalRefs: [
+      ...externalRefs.filter((_, index) => !mergedExternalIndices.has(index)),
+      ...contextualExternalRefs,
+    ],
+  };
+}
+
 /**
  * Extract cross-references from a text string, using language-specific patterns.
  * Returns an array of { type, target, paragraph, point, raw } objects.
@@ -457,6 +514,9 @@ function parseExternalLawMeta(raw, target) {
 function extractCrossRefsFromText(text, lang) {
   const refs = [];
   const seen = new Set();
+  const articleRefs = [];
+  const recitalRefs = [];
+  const externalRefs = [];
 
   function addRef(ref) {
     const key = `${ref.type}:${ref.target}:${ref.paragraph || ""}:${ref.point || ""}`;
@@ -486,18 +546,36 @@ function extractCrossRefsFromText(text, lang) {
       const to = parseInt(rangeMatch[1], 10);
       if (!isNaN(from) && !isNaN(to) && to >= from && to - from <= 50) {
         for (let i = from; i <= to; i++) {
-          addRef({ type: "article", target: String(i), paragraph: null, point: null, raw: m[0] });
+          articleRefs.push({
+            type: "article",
+            target: String(i),
+            paragraph: null,
+            point: null,
+            raw: m[0],
+            start: m.index,
+            end: m.index + m[0].length,
+          });
         }
       } else {
-        addRef({ type: "article", target: artNum, paragraph: null, point: null, raw: m[0] });
+        articleRefs.push({
+          type: "article",
+          target: artNum,
+          paragraph: null,
+          point: null,
+          raw: m[0],
+          start: m.index,
+          end: m.index + m[0].length,
+        });
       }
     } else {
-      addRef({
+      articleRefs.push({
         type: "article",
         target: artNum,
         paragraph: paraMatch ? paraMatch[1] : null,
         point: pointMatch ? pointMatch[1] : null,
         raw: m[0],
+        start: m.index,
+        end: m.index + m[0].length,
       });
     }
   }
@@ -509,20 +587,28 @@ function extractCrossRefsFromText(text, lang) {
     const from = parseInt(m[1], 10);
     const to = m[2] ? parseInt(m[2], 10) : from;
     for (let i = from; i <= to; i++) {
-      addRef({ type: "recital", target: String(i), raw: m[0] });
+      recitalRefs.push({ type: "recital", target: String(i), raw: m[0] });
     }
   }
 
   // External law references (mostly language-independent abbreviations)
   EXTERNAL_LAW_RE.lastIndex = 0;
   while ((m = EXTERNAL_LAW_RE.exec(text)) !== null) {
-    addRef({
+    externalRefs.push({
       type: "external",
       target: m[1],
       raw: m[0],
+      start: m.index,
+      end: m.index + m[0].length,
       ...parseExternalLawMeta(m[0], m[1]),
     });
   }
+
+  const mergedRefs = mergeArticleRefsWithExternalContext(text, articleRefs, externalRefs, lang.code);
+
+  for (const ref of mergedRefs.articleRefs) addRef(ref);
+  for (const ref of recitalRefs) addRef(ref);
+  for (const ref of mergedRefs.externalRefs) addRef(ref);
 
   return refs;
 }
@@ -598,7 +684,8 @@ export function injectCrossRefLinks(html, lang) {
     const text = node.textContent;
     if (!text) continue;
 
-    const refs = [];
+    const articleRefs = [];
+    const externalRefs = [];
 
     articleInjectRe.lastIndex = 0;
     let match;
@@ -606,11 +693,15 @@ export function injectCrossRefLinks(html, lang) {
       const articleMatch = lang.article.exec(match[0]);
       lang.article.lastIndex = 0;
       if (!articleMatch) continue;
-      refs.push({
+      const paraMatch = match[0].match(/\((\d+)\)/);
+      const pointMatch = match[0].match(/\(([a-z])\)/i);
+      articleRefs.push({
         start: match.index,
         end: match.index + match[0].length,
         kind: "article",
         articleNumber: articleMatch[1],
+        paragraph: paraMatch ? paraMatch[1] : null,
+        point: pointMatch ? pointMatch[1] : null,
         label: match[0],
       });
     }
@@ -618,7 +709,7 @@ export function injectCrossRefLinks(html, lang) {
     EXTERNAL_LAW_RE.lastIndex = 0;
     while ((match = EXTERNAL_LAW_RE.exec(text)) !== null) {
       const meta = parseExternalLawMeta(match[0], match[1]);
-      refs.push({
+      externalRefs.push({
         start: match.index,
         end: match.index + match[0].length,
         kind: "external",
@@ -627,6 +718,36 @@ export function injectCrossRefLinks(html, lang) {
         ...meta,
       });
     }
+
+    const mergedRefs = mergeArticleRefsWithExternalContext(
+      text,
+      articleRefs.map((ref) => ({
+        start: ref.start,
+        end: ref.end,
+        target: ref.articleNumber,
+        paragraph: ref.paragraph,
+        point: ref.point,
+      })),
+      externalRefs,
+      lang.code
+    );
+
+    const refs = [
+      ...mergedRefs.articleRefs.map((ref) => ({
+        kind: "article",
+        start: ref.start,
+        end: ref.end,
+        articleNumber: ref.target,
+        paragraph: ref.paragraph,
+        point: ref.point,
+        label: text.slice(ref.start, ref.end),
+      })),
+      ...mergedRefs.externalRefs.map((ref) => ({
+        ...ref,
+        kind: "external",
+        label: ref.raw || text.slice(ref.start, ref.end),
+      })),
+    ];
 
     refs.sort((a, b) => a.start - b.start || b.end - a.end);
 
@@ -662,6 +783,9 @@ export function injectCrossRefLinks(html, lang) {
         link.setAttribute("rel", "noopener noreferrer");
         link.setAttribute("title", `Open ${ref.target} on EUR-Lex`);
         link.setAttribute("data-ref-raw", ref.label);
+        if (ref.articleNumber) link.setAttribute("data-ref-article", ref.articleNumber);
+        if (ref.paragraph) link.setAttribute("data-ref-paragraph", ref.paragraph);
+        if (ref.point) link.setAttribute("data-ref-point", ref.point);
         if (ref.actType) link.setAttribute("data-ref-act-type", ref.actType);
         if (ref.year) link.setAttribute("data-ref-year", ref.year);
         if (ref.number) link.setAttribute("data-ref-number", ref.number);
