@@ -63,6 +63,24 @@ function getSelectedEntry(data, selected) {
   return null;
 }
 
+function getAnnexSidebarTitle(annex) {
+  if (!annex) return "";
+
+  const title = String(annex.annex_title || "").trim();
+  if (!title) return "";
+
+  const parts = title.split("—").map((part) => part.trim()).filter(Boolean);
+  if (parts.length > 1) return parts.slice(1).join(" — ");
+
+  const normalizedTitle = title.toLowerCase();
+  const normalizedId = String(annex.annex_id || "").trim().toLowerCase();
+  if (normalizedId && (normalizedTitle === normalizedId || normalizedTitle.endsWith(` ${normalizedId}`))) {
+    return "";
+  }
+
+  return title;
+}
+
 function isMissingStructuredLawText(error) {
   if (!(error instanceof FormexApiError)) return false;
 
@@ -280,6 +298,7 @@ export function LawViewer() {
   const [selected, setSelected] = useState({ kind: "article", id: null, html: "" });
   const [_returnToArticle, setReturnToArticle] = useState(null); // { id: string, title: string } | null
   const [openChapter, setOpenChapter] = useState(null);
+  const [isAnnexesOpen, setIsAnnexesOpen] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -841,9 +860,21 @@ export function LawViewer() {
       );
       if (foundCh) {
         setOpenChapter(foundCh.label);
+        return;
       }
     }
+
+    setOpenChapter(null);
   }, [selected.kind, selected.id, toc]);
+
+  useEffect(() => {
+    if (selected.kind === "annex" && selected.id) {
+      setIsAnnexesOpen(true);
+      return;
+    }
+
+    setIsAnnexesOpen(false);
+  }, [selected.kind, selected.id]);
 
   // --- Selection helpers ---
 
@@ -1670,7 +1701,7 @@ export function LawViewer() {
                       ? t("lawViewer.structuredVersionUnavailable")
                       : t("lawViewer.lawContentUnavailable")}
                   </div>
-                ) : toc.length > 0 ? (
+                ) : (toc.length > 0 || data.annexes?.length > 0) ? (
                   <div className="space-y-2">
                     {toc.map((ch) => {
                       const isOpen = openChapter === ch.label;
@@ -1746,6 +1777,46 @@ export function LawViewer() {
                         </Accordion>
                       );
                     })}
+
+                    {data.annexes?.length > 0 && (
+                      <Accordion
+                        title={`${t("common.annexes")} (${data.annexes.length})`}
+                        isOpen={isAnnexesOpen}
+                        onToggle={() => setIsAnnexesOpen((current) => !current)}
+                      >
+                        <ul className="space-y-1">
+                          {data.annexes.map((annex) => {
+                            const annexSidebarTitle = getAnnexSidebarTitle(annex);
+
+                            return (
+                              <li key={`toc-annex-${annex.annex_id}`}>
+                                <Button
+                                  variant="ghost"
+                                  className={`w-full justify-start text-left ${selected.kind === "annex" && selected.id === annex.annex_id
+                                    ? "bg-blue-50 text-blue-700"
+                                    : ""
+                                    }`}
+                                  onClick={() => {
+                                    const idx = data.annexes.findIndex((entry) => entry.annex_id === annex.annex_id);
+                                    if (idx !== -1) selectAnnexIdx(idx);
+                                    setMobileMenuOpen(false);
+                                  }}
+                                >
+                                  <span className="truncate text-left w-full">
+                                    <span className="font-medium">{t("common.annex")} {annex.annex_id}</span>
+                                    {annexSidebarTitle && (
+                                      <span className="ml-1 text-gray-500 font-normal opacity-80 dark:text-gray-400 dark:opacity-100">
+                                        - {annexSidebarTitle}
+                                      </span>
+                                    )}
+                                  </span>
+                                </Button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </Accordion>
+                    )}
                   </div>
                 ) : (
                   <div className="p-4 text-sm text-gray-500 text-center">{t("lawViewer.noArticles")}</div>
