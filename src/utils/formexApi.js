@@ -5,8 +5,6 @@
  * caches responses locally so repeated loads are instant.
  */
 
-import { LAWS } from "../constants/laws.js";
-
 const API_BASE = (() => {
   if (typeof import.meta !== "undefined" && import.meta.env?.VITE_FORMEX_API_BASE) {
     return import.meta.env.VITE_FORMEX_API_BASE;
@@ -28,7 +26,7 @@ const DB_NAME = "formex-cache";
 const STORE_NAME = "laws";
 const META_STORE_NAME = "lawMeta";
 const MAX_CACHED_CELEX_LAWS = 100;
-const PROTECTED_BUNDLED_CELEXES = LAWS.map((law) => law.celex).filter(Boolean);
+const PROTECTED_BUNDLED_CELEXES = [];
 
 export class FormexApiError extends Error {
   constructor(message, { status = 500, code = null, details = null, fallback = null } = {}) {

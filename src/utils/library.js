@@ -1,5 +1,5 @@
 import { parseOfficialReference } from "./officialReferences.js";
-import { getBundledLaws, getCanonicalLawRoute, buildImportedLawCandidate, findBundledLawByCelex } from "./lawRouting.js";
+import { getCanonicalLawRoute, buildImportedLawCandidate } from "./lawRouting.js";
 import { buildEurlexCelexUrl } from "./url.js";
 import { getAllLawMeta, listCachedCelexes, upsertLawMeta } from "./formexApi.js";
 
@@ -41,8 +41,7 @@ function normalizeLawMetaEntry(entry) {
   const parsedReference = entry.officialReference
     || parseOfficialReference(entry.raw || "")
     || parseOfficialReference(entry.label || "");
-  const bundledLaw = findBundledLawByCelex(entry.celex);
-  const routeCandidate = bundledLaw || buildImportedLawCandidate({
+  const routeCandidate = buildImportedLawCandidate({
     ...entry,
     officialReference: parsedReference,
   });
@@ -124,32 +123,9 @@ export async function setLawHidden(celex, hidden) {
 export async function getLibraryLaws() {
   const metaEntries = await getAllLawMeta();
   const metaByCelex = new Map(metaEntries.filter((entry) => entry?.celex).map((entry) => [entry.celex, entry]));
-  const bundled = getBundledLaws().map((law) => {
-    const meta = law.celex ? metaByCelex.get(law.celex) : null;
-    return {
-      ...law,
-      id: law.key,
-      kind: "bundled",
-      route: getCanonicalLawRoute(law),
-      timestamp: meta?.lastOpened || null,
-      addedAt: meta?.addedAt || 0,
-    };
-  });
-
-  const bundledByCelex = new Map(bundled.filter((law) => law.celex).map((law) => [law.celex, law]));
   const cachedCelexes = await listCachedCelexes();
 
   const cached = cachedCelexes.map((celex) => {
-    const bundledLaw = bundledByCelex.get(celex);
-    if (bundledLaw) {
-      const meta = metaByCelex.get(celex);
-      return {
-        ...bundledLaw,
-        timestamp: meta?.lastOpened || bundledLaw.timestamp || null,
-        addedAt: meta?.addedAt || bundledLaw.addedAt || 0,
-      };
-    }
-
     const meta = metaByCelex.get(celex);
     const officialReference = meta?.officialReference || inferOfficialReferenceFromCelex(celex);
     const candidate = buildImportedLawCandidate({
@@ -173,11 +149,10 @@ export async function getLibraryLaws() {
     };
   });
 
-  return [...bundled, ...cached.filter((law) => !bundledByCelex.has(law.celex))]
+  return cached
     .filter((law) => {
       const meta = law.celex ? metaByCelex.get(law.celex) : null;
       if (meta?.hidden) return false;
-      if (law.kind === "bundled" && law.shownInUi === false && !law.timestamp) return false;
       return true;
     })
     .sort((a, b) => {

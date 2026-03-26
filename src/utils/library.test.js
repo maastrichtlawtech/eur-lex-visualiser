@@ -68,13 +68,12 @@ describe("setLawHidden", () => {
 });
 
 describe("getLibraryLaws", () => {
-  it("returns bundled laws when no cached/meta data", async () => {
+  it("returns empty array when no cached/meta data", async () => {
     getAllLawMeta.mockResolvedValue([]);
     listCachedCelexes.mockResolvedValue([]);
 
     const laws = await getLibraryLaws();
-    expect(laws.length).toBeGreaterThanOrEqual(6);
-    expect(laws.every((l) => l.kind === "bundled")).toBe(true);
+    expect(laws).toEqual([]);
   });
 
   it("includes imported laws from cache", async () => {
@@ -89,19 +88,21 @@ describe("getLibraryLaws", () => {
     expect(imported.kind).toBe("imported");
   });
 
-  it("hides laws with hidden flag", async () => {
+  it("hides imported laws with hidden flag", async () => {
     getAllLawMeta.mockResolvedValue([
       { celex: "32016R0679", hidden: true },
     ]);
-    listCachedCelexes.mockResolvedValue([]);
+    listCachedCelexes.mockResolvedValue(["32016R0679"]);
 
     const laws = await getLibraryLaws();
     const gdpr = laws.find((l) => l.celex === "32016R0679");
     expect(gdpr).toBeFalsy();
   });
 
-  it("deduplicates bundled and cached laws", async () => {
-    getAllLawMeta.mockResolvedValue([]);
+  it("returns one entry per cached celex", async () => {
+    getAllLawMeta.mockResolvedValue([
+      { celex: "32016R0679", label: "General Data Protection Regulation" },
+    ]);
     listCachedCelexes.mockResolvedValue(["32016R0679"]);
 
     const laws = await getLibraryLaws();

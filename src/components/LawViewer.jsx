@@ -10,7 +10,7 @@ import { injectDefinitionTooltips } from "../utils/definitions.js";
 import { EU_LANGUAGES, fetchFormex, FormexApiError, resolveEurlexUrl, resolveOfficialReference } from "../utils/formexApi.js";
 import { parseOfficialReference } from "../utils/officialReferences.js";
 import { findCachedCelexByOfficialReference, markLawOpened, saveLawMeta } from "../utils/library.js";
-import { buildImportedLawCandidate, findBundledLawByCelex, findBundledLawByKey, findBundledLawBySlug, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
+import { buildImportedLawCandidate, getCanonicalLawRoute, parseOfficialReferenceSlug } from "../utils/lawRouting.js";
 
 import { Button } from "./Button.jsx";
 import { Accordion } from "./Accordion.jsx";
@@ -425,19 +425,15 @@ export function LawViewer() {
   const loadErrorBodyClass = loadErrorTone === "notice"
     ? "text-sky-900 dark:text-sky-200"
     : "text-red-700 dark:text-red-300";
-  const bundledLaw = useMemo(() => findBundledLawBySlug(slug) || findBundledLawByKey(key), [slug, key]);
-  const celexMatchedBundledLaw = useMemo(() => findBundledLawByCelex(importCelex), [importCelex]);
   const slugReference = useMemo(() => {
-    if (!slug || bundledLaw || celexMatchedBundledLaw) return null;
+    if (!slug) return null;
     return parseOfficialReferenceSlug(slug);
-  }, [slug, bundledLaw, celexMatchedBundledLaw]);
+  }, [slug]);
   const derivedSlugLaw = useMemo(() => {
     if (!slugReference) return null;
     return buildImportedLawCandidate({ officialReference: slugReference, slug });
   }, [slugReference, slug]);
-  const currentLaw = useMemo(() => (
-    celexMatchedBundledLaw || bundledLaw || derivedSlugLaw || null
-  ), [celexMatchedBundledLaw, bundledLaw, derivedSlugLaw]);
+  const currentLaw = useMemo(() => derivedSlugLaw || null, [derivedSlugLaw]);
   const currentCelex = importCelex || currentLaw?.celex || null;
   const effectiveCelex = currentCelex || resolvedCelex || null;
   const secondaryLang = secondaryLangParam && secondaryLangParam !== effectivePrimaryLang ? secondaryLangParam : null;

@@ -126,17 +126,9 @@ npm run dev
 - `npm run preview` – Preview the production build locally
 - `npm run lint` – Run ESLint to check code quality
 
-### Adding New Pre-loaded Laws
+### Adding Laws
 
-To add a new legal instrument to the pre-loaded list:
-
-1. Obtain the Formex XML or a CELEX-backed source for the law you want to support
-2. Add an entry to `src/constants/laws.js`:
-```javascript
-{ key: "law-key", label: "Law Name (EU YYYY/XXXX)", celex: "32016R0679", shortname: "gdpr" }
-```
-
-LegalViz now loads supported laws through CELEX/Formex-backed routes rather than generic runtime XHTML/HTML parsing.
+LegalViz now loads laws through CELEX/Formex-backed routes and stored metadata rather than a bundled pre-loaded list. Import or open a law by CELEX, official reference, or EUR-Lex URL and the app will persist its metadata locally for later reuse.
 
 ### Project Structure
 
@@ -150,8 +142,6 @@ legalviz.eu/
 │   │   ├── PrintModal.jsx  # Printing configuration
 │   │   ├── RelatedRecitals.jsx # AI context viewer
 │   │   └── TopBar.jsx      # Navigation & Search
-│   ├── constants/
-│   │   └── laws.js         # Supported laws configuration
 │   ├── utils/
 │   │   ├── fmxParser.js    # Formex XML parsing logic
 │   │   ├── nlp.js          # TF-IDF & Search logic

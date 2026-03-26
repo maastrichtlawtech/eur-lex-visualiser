@@ -33,9 +33,9 @@ describe("getLawSlug", () => {
     expect(getLawSlug({ shortname: "AI Act" })).toBe("ai-act");
   });
 
-  it("looks up bundled law by celex for slug", () => {
+  it("does not derive a slug from celex alone", () => {
     const slug = getLawSlug({ celex: "32016R0679" });
-    expect(slug).toBe("gdpr");
+    expect(slug).toBeNull();
   });
 });
 
@@ -78,37 +78,17 @@ describe("enrichLaw", () => {
 });
 
 describe("getBundledLaws", () => {
-  it("returns array of enriched laws", () => {
+  it("returns an empty array", () => {
     const laws = getBundledLaws();
-    expect(laws.length).toBeGreaterThanOrEqual(6);
-    for (const law of laws) {
-      expect(law).toHaveProperty("slug");
-      expect(law).toHaveProperty("shownInUi");
-      expect(law).toHaveProperty("officialReference");
-    }
+    expect(laws).toEqual([]);
   });
 });
 
 describe("findBundledLawByKey / ByCelex / BySlug", () => {
-  it("finds GDPR by key", () => {
-    const law = findBundledLawByKey("gdpr");
-    expect(law).toBeTruthy();
-    expect(law.celex).toBe("32016R0679");
-  });
-
-  it("finds GDPR by celex", () => {
-    const law = findBundledLawByCelex("32016R0679");
-    expect(law).toBeTruthy();
-    expect(law.key).toBe("gdpr");
-  });
-
-  it("finds GDPR by slug", () => {
-    const law = findBundledLawBySlug("gdpr");
-    expect(law).toBeTruthy();
-    expect(law.key).toBe("gdpr");
-  });
-
-  it("returns null for unknown values", () => {
+  it("returns null for all lookups", () => {
+    expect(findBundledLawByKey("gdpr")).toBeNull();
+    expect(findBundledLawByCelex("32016R0679")).toBeNull();
+    expect(findBundledLawBySlug("gdpr")).toBeNull();
     expect(findBundledLawByKey("nonexistent")).toBeNull();
     expect(findBundledLawByCelex("00000X0000")).toBeNull();
     expect(findBundledLawBySlug("nope")).toBeNull();
@@ -148,9 +128,10 @@ describe("getCanonicalLawRoute", () => {
 });
 
 describe("buildImportedLawCandidate", () => {
-  it("returns bundled law when celex matches", () => {
+  it("builds candidate when celex matches a previously bundled law", () => {
     const result = buildImportedLawCandidate({ celex: "32016R0679" });
-    expect(result.key).toBe("gdpr");
+    expect(result.celex).toBe("32016R0679");
+    expect(result.slug).toBeNull();
   });
 
   it("builds candidate for unknown celex", () => {
@@ -205,7 +186,6 @@ describe("parseOfficialReferenceSlug", () => {
     const slug = getLawSlug({ officialReference: ref });
     if (slug) {
       const parsed = parseOfficialReferenceSlug(slug);
-      // Slug for bundled laws uses shortname, not reference, so only test non-bundled
       if (parsed) {
         expect(parsed).toEqual(ref);
       }

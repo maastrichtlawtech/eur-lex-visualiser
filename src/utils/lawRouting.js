@@ -1,4 +1,3 @@
-import { LAWS } from "../constants/laws.js";
 import { normalizeUiLocale } from "../i18n/localeMeta.js";
 
 const VALID_ACT_TYPES = new Set(["regulation", "directive", "decision"]);
@@ -40,11 +39,6 @@ export function getLawSlug(law) {
   const shortname = slugifySegment(law?.shortname);
   if (shortname) return shortname;
 
-  if (law?.celex) {
-    const bundledMatch = LAWS.find((entry) => entry.celex === law.celex && slugifySegment(entry.shortname));
-    if (bundledMatch) return slugifySegment(bundledMatch.shortname);
-  }
-
   return buildOfficialReferenceSlug(law?.officialReference);
 }
 
@@ -60,25 +54,20 @@ export function enrichLaw(law) {
   };
 }
 
-const ENRICHED_LAWS = LAWS.map(enrichLaw);
-const LAWS_BY_KEY = new Map(ENRICHED_LAWS.map((law) => [law.key, law]));
-const LAWS_BY_CELEX = new Map(ENRICHED_LAWS.filter((law) => law.celex).map((law) => [law.celex, law]));
-const LAWS_BY_SLUG = new Map(ENRICHED_LAWS.filter((law) => law.slug).map((law) => [law.slug, law]));
-
 export function getBundledLaws() {
-  return ENRICHED_LAWS;
+  return [];
 }
 
 export function findBundledLawByKey(key) {
-  return key ? LAWS_BY_KEY.get(key) || null : null;
+  return null;
 }
 
 export function findBundledLawByCelex(celex) {
-  return celex ? LAWS_BY_CELEX.get(celex) || null : null;
+  return null;
 }
 
 export function findBundledLawBySlug(slug) {
-  return slug ? LAWS_BY_SLUG.get(slug) || null : null;
+  return null;
 }
 
 export function getCanonicalLawRoute(law, kind = null, id = null, locale = "en") {
@@ -90,9 +79,6 @@ export function getCanonicalLawRoute(law, kind = null, id = null, locale = "en")
 }
 
 export function buildImportedLawCandidate(entry = {}) {
-  const bundled = findBundledLawByCelex(entry.celex);
-  if (bundled) return bundled;
-
   const officialReference = normalizeOfficialReference(entry.officialReference);
   const slug = buildImportedLawSlug({ ...entry, officialReference });
 

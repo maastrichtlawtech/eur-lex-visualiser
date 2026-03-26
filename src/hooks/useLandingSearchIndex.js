@@ -40,7 +40,7 @@ export function useLandingSearchIndex({ formexLang, laws, libraryVersion }) {
 
             const parsed = parseFormexToCombined(text);
             const metadata = {
-              routeKind: law.kind === "imported" ? "imported" : "bundled",
+              routeKind: law.kind || "imported",
               law_key: law.key || null,
               law_slug: law.slug || null,
               celex: law.celex,

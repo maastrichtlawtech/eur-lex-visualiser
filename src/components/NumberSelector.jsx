@@ -31,16 +31,16 @@ export function NumberSelector({ label, total, onSelect }) {
               setVal(e.target.value);
               setError(false);
             }}
-            className={`block w-full rounded-lg border px-3 py-2 text-sm outline-none transition pr-14 bg-gray-50 dark:bg-gray-800 dark:text-white ${error
-                ? "border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
-                : "border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:bg-white dark:border-gray-700 dark:focus:bg-gray-900"
+            className={`block w-full rounded-lg border px-3 py-2 pr-16 text-sm text-gray-900 placeholder:text-gray-500 outline-none transition bg-white dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 ${error
+                ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 bg-red-50 dark:border-red-700 dark:bg-red-900/20"
+                : "border-gray-300 focus:border-blue-600 focus:ring-2 focus:ring-blue-600/20 dark:border-gray-600 dark:focus:border-blue-400 dark:focus:ring-blue-400/20 dark:focus:bg-gray-900"
               }`}
             placeholder={`${label} (1-${total})`}
           />
           <button
             type="submit"
             disabled={!val}
-            className="absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-white hover:bg-gray-100 text-gray-600 text-xs font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-gray-200 shadow-sm dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-600"
+            className="absolute right-1.5 top-1.5 bottom-1.5 rounded-md border border-blue-700 bg-blue-600 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400 dark:disabled:border-gray-600 dark:disabled:bg-gray-700 dark:disabled:text-gray-400"
           >
             {t("common.go")}
           </button>

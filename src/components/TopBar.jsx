@@ -8,7 +8,7 @@ import { LanguageSelector } from "./LanguageSelector.jsx";
 import { searchContent, searchIndex as searchWithIndex, buildSearchIndex } from "../utils/nlp.js";
 import { useI18n } from "../i18n/useI18n.js";
 import { searchLaws as searchLawsApi } from "../utils/formexApi.js";
-import { buildImportedLawCandidate, findBundledLawByCelex, getCanonicalLawRoute } from "../utils/lawRouting.js";
+import { buildImportedLawCandidate, getCanonicalLawRoute } from "../utils/lawRouting.js";
 import { saveLawMeta } from "../utils/library.js";
 
 function inferOfficialReferenceFromCelex(celex) {
@@ -60,8 +60,7 @@ function extractShortLawTitle(title) {
 }
 
 function getLawResultDisplay(item) {
-  const bundledLaw = findBundledLawByCelex(item.celex);
-  const officialReference = bundledLaw?.officialReference || inferOfficialReferenceFromCelex(item.celex);
+  const officialReference = inferOfficialReferenceFromCelex(item.celex);
   const referenceLabel = formatOfficialReference(officialReference);
   const rawTitle = String(item.title || "").replace(/\s+/g, " ").trim();
   const cleanedTitle = cleanLawTitle(rawTitle, referenceLabel);
@@ -70,14 +69,12 @@ function getLawResultDisplay(item) {
     ? `${shortTitle} — ${referenceLabel}`
     : shortTitle
       ? shortTitle
-      : bundledLaw?.label || referenceLabel || rawTitle || item.celex;
+      : referenceLabel || rawTitle || item.celex;
   const secondaryTitle = cleanedTitle && cleanedTitle !== primaryTitle
     ? cleanedTitle
     : rawTitle && rawTitle !== primaryTitle
       ? rawTitle
-      : bundledLaw?.label && bundledLaw.label !== primaryTitle
-        ? bundledLaw.label
-        : "";
+      : "";
   const metaLine = [item.date, item.celex].filter(Boolean).join(" · ");
 
   return {

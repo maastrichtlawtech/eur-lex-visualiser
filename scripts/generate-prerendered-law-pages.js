@@ -4,7 +4,6 @@ import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 
 import { parseFormexToCombined } from "../src/utils/parsers.js";
-import { getBundledLaws } from "../src/utils/lawRouting.js";
 import { toApiLang } from "../src/utils/formexApi.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -12,8 +11,6 @@ const __dirname = path.dirname(__filename);
 const projectRoot = path.join(__dirname, "..");
 const distDir = path.join(projectRoot, "dist");
 const siteUrl = "https://legalviz.eu";
-
-const bundledLaws = getBundledLaws().filter((law) => law.shownInUi !== false && law.slug);
 
 function installDomGlobals() {
   const { window } = new JSDOM("<!doctype html><html><body></body></html>");
@@ -400,13 +397,8 @@ async function main() {
   }
 
   installDomGlobals();
-  const template = readBuiltIndexHtml();
-
-  for (const law of bundledLaws) {
-    await buildLawPages(template, law);
-  }
-
-  console.log(`[prerender] Generated static HTML for ${bundledLaws.length} bundled laws`);
+  readBuiltIndexHtml();
+  console.log("[prerender] No bundled laws configured; skipping static law-page generation");
 }
 
 main().catch((error) => {
