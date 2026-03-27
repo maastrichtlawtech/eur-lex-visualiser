@@ -61,6 +61,14 @@ function getValidAnnexes(data) {
   return (data?.annexes || []).filter((annex) => String(annex?.annex_id || "").trim());
 }
 
+function getArticleTotal(law, data) {
+  return data?.articles?.length || law.articles || 0;
+}
+
+function getRecitalTotal(law, data) {
+  return data?.recitals?.length || law.recitals || 0;
+}
+
 function readBuiltIndexHtml() {
   const indexPath = path.join(distDir, "index.html");
   if (!fs.existsSync(indexPath)) {
@@ -101,8 +109,8 @@ async function fetchLawData(law, lang = "EN") {
 }
 
 function buildLawBody(law, data) {
-  const articleTotal = data?.articles?.length || law.articles || 0;
-  const recitalTotal = data?.recitals?.length || law.recitals || 0;
+  const articleTotal = getArticleTotal(law, data);
+  const recitalTotal = getRecitalTotal(law, data);
   const annexes = getValidAnnexes(data);
   const articleLinks = Array.from({ length: articleTotal }, (_, index) => {
     const number = String(index + 1);
@@ -152,9 +160,11 @@ function buildLawBody(law, data) {
   `;
 }
 
-function buildNearbyNumberLinks(law, kind, currentNumber, total) {
+function buildNearbyNumberLinks(law, data, kind, currentNumber, total) {
   const current = Number(currentNumber);
   const items = [];
+  const articleTotal = getArticleTotal(law, data);
+  const recitalTotal = getRecitalTotal(law, data);
 
   if (current > 1) {
     items.push(`<a href="/${law.slug}/${kind}/${current - 1}">${kind === "article" ? "Previous article" : "Previous recital"}</a>`);
@@ -162,10 +172,10 @@ function buildNearbyNumberLinks(law, kind, currentNumber, total) {
   if (current < total) {
     items.push(`<a href="/${law.slug}/${kind}/${current + 1}">${kind === "article" ? "Next article" : "Next recital"}</a>`);
   }
-  if (kind !== "article" && law.articles) {
+  if (kind !== "article" && articleTotal > 0) {
     items.push(`<a href="/${law.slug}/article/1">Start with Article 1</a>`);
   }
-  if (kind !== "recital" && law.recitals) {
+  if (kind !== "recital" && recitalTotal > 0) {
     items.push(`<a href="/${law.slug}/recital/1">Start with Recital 1</a>`);
   }
 
@@ -177,7 +187,7 @@ function buildArticleBody(law, data, articleNumber) {
   const displayTitle = article?.article_title
     ? `Article ${articleNumber} - ${article.article_title}`
     : `Article ${articleNumber}`;
-  const articleTotal = data?.articles?.length || law.articles || 0;
+  const articleTotal = getArticleTotal(law, data);
   const annexes = getValidAnnexes(data);
   const annexLinks = annexes.slice(0, 6).map((annex) => (
     `<li><a href="/${law.slug}/annex/${encodeURIComponent(annex.annex_id)}">Annex ${escapeHtml(annex.annex_id)}</a></li>`
@@ -197,7 +207,7 @@ function buildArticleBody(law, data, articleNumber) {
       </header>
       <section class="lv-callout">
         <p><strong>Navigate this law:</strong> <a href="/${law.slug}">Law overview</a> · <a href="/${law.slug}/recital/1">Recitals</a>${annexLinks ? ` · <a href="/${law.slug}/annex/${encodeURIComponent(annexes[0].annex_id)}">Annexes</a>` : ""}</p>
-        ${buildNearbyNumberLinks(law, "article", articleNumber, articleTotal)}
+        ${buildNearbyNumberLinks(law, data, "article", articleNumber, articleTotal)}
       </section>
       ${article?.article_html
         ? `<article class="lv-content">${article.article_html}</article>`
@@ -213,7 +223,7 @@ function buildArticleBody(law, data, articleNumber) {
 
 function buildRecitalBody(law, data, recitalNumber) {
   const recital = data?.recitals?.find((entry) => String(entry.recital_number) === String(recitalNumber));
-  const recitalTotal = data?.recitals?.length || law.recitals || 0;
+  const recitalTotal = getRecitalTotal(law, data);
   const annexes = getValidAnnexes(data);
 
   return `
@@ -230,7 +240,7 @@ function buildRecitalBody(law, data, recitalNumber) {
       </header>
       <section class="lv-callout">
         <p><strong>Navigate this law:</strong> <a href="/${law.slug}">Law overview</a> · <a href="/${law.slug}/article/1">Articles</a>${annexes.length ? ` · <a href="/${law.slug}/annex/${encodeURIComponent(annexes[0].annex_id)}">Annexes</a>` : ""}</p>
-        ${buildNearbyNumberLinks(law, "recital", recitalNumber, recitalTotal)}
+        ${buildNearbyNumberLinks(law, data, "recital", recitalNumber, recitalTotal)}
       </section>
       ${recital?.recital_html
         ? `<article class="lv-content">${recital.recital_html}</article>`
@@ -354,7 +364,10 @@ async function buildLawPages(template, law) {
     bodyHtml: buildLawBody(law, data),
   }));
 
-  for (let index = 1; index <= (law.articles || 0); index += 1) {
+  const articleTotal = getArticleTotal(law, data);
+  const recitalTotal = getRecitalTotal(law, data);
+
+  for (let index = 1; index <= articleTotal; index += 1) {
     const article = data?.articles?.find((entry) => String(entry.article_number) === String(index));
     const articleTitle = article?.article_title
       ? `Read Article ${index}: ${article.article_title} | ${lawTitle} | LegalViz.EU`
@@ -369,7 +382,7 @@ async function buildLawPages(template, law) {
     }));
   }
 
-  for (let index = 1; index <= (law.recitals || 0); index += 1) {
+  for (let index = 1; index <= recitalTotal; index += 1) {
     const recital = data?.recitals?.find((entry) => String(entry.recital_number) === String(index));
     const recitalTitle = `Read Recital ${index} | ${lawTitle} | LegalViz.EU`;
     const recitalDescription = summarize(recital?.recital_html || `Read Recital ${index} of ${lawTitle} with LegalViz.EU, a tool for easier navigation of EU legislation.`);
