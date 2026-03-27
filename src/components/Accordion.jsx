@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
+const MotionDiv = motion.div;
+
 export function Accordion({ title, children, defaultOpen = false, isOpen, onToggle }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -31,7 +33,7 @@ export function Accordion({ title, children, defaultOpen = false, isOpen, onTogg
       </button>
       <AnimatePresence initial={false}>
         {open && (
-          <motion.div
+          <MotionDiv
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
@@ -39,7 +41,7 @@ export function Accordion({ title, children, defaultOpen = false, isOpen, onTogg
             className="overflow-hidden border-t p-2 dark:border-gray-700 dark:text-gray-300"
           >
             {children}
-          </motion.div>
+          </MotionDiv>
         )}
       </AnimatePresence>
     </div>

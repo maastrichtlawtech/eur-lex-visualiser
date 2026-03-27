@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest";
+import { resolveSelectionFromData } from "./selection.js";
+
+const data = {
+  articles: [{ article_number: "1", article_html: "<p>A1</p>" }],
+  recitals: [{ recital_number: "3", recital_html: "<p>R3</p>" }],
+  annexes: [{ annex_id: "I", annex_html: "<p>X</p>" }],
+};
+
+describe("resolveSelectionFromData", () => {
+  it("returns the requested matching entry", () => {
+    expect(resolveSelectionFromData(data, "recital", "3")).toEqual({
+      kind: "recital",
+      id: "3",
+      html: "<p>R3</p>",
+    });
+  });
+
+  it("falls back to the first article when route params are missing", () => {
+    expect(resolveSelectionFromData(data, null, null)).toEqual({
+      kind: "article",
+      id: "1",
+      html: "<p>A1</p>",
+    });
+  });
+
+  it("falls back to the first article when route params are invalid", () => {
+    expect(resolveSelectionFromData(data, "article", "99")).toEqual({
+      kind: "article",
+      id: "1",
+      html: "<p>A1</p>",
+    });
+  });
+});

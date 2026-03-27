@@ -79,12 +79,6 @@ function buildOfficialReferenceSlug(reference) {
   return `${normalized.actType}-${normalized.year}-${normalized.number}`;
 }
 
-function buildImportedLawSlug(entry) {
-  const reference = normalizeOfficialReference(entry?.officialReference);
-  if (reference) return buildOfficialReferenceSlug(reference);
-  return null;
-}
-
 export function getLawSlug(law) {
   const explicitSlug = slugifySegment(law?.slug);
   if (explicitSlug) return explicitSlug;

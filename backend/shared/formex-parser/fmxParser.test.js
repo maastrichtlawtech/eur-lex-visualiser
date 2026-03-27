@@ -1,16 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
-import { resolve } from "path";
-import { isFmxDocument, parseFmxToCombined, injectCrossRefLinks } from "./fmxParser.js";
-import { getLangConfig } from "./languages.js";
+import { dirname, resolve } from "path";
+import { fileURLToPath } from "url";
+import { isFmxDocument, parseFmxToCombined, injectCrossRefLinks } from "./fmxParser.mjs";
+import { getLangConfig } from "./languages.mjs";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DGA_XML = readFileSync(resolve(__dirname, "../__fixtures__/dga.fmx.xml"), "utf-8");
-const GDPR_XML = readFileSync(resolve(__dirname, "../__fixtures__/gdpr.fmx.xml"), "utf-8");
-const AIA_XML = readFileSync(resolve(__dirname, "../__fixtures__/aia.fmx.xml"), "utf-8");
+const DGA_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/dga.fmx.xml"), "utf-8");
+const GDPR_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/gdpr.fmx.xml"), "utf-8");
+const AIA_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/aia.fmx.xml"), "utf-8");
 
 // ---------------------------------------------------------------------------
 // isFmxDocument
@@ -163,7 +166,7 @@ describe("parseFmxToCombined — GDPR", () => {
 
   it("recitals are sorted numerically", () => {
     const nums = result.recitals.map((r) => parseInt(r.recital_number, 10));
-    for (let i = 1; i < nums.length; i++) {
+    for (let i = 1; i < nums.length; i += 1) {
       expect(nums[i]).toBeGreaterThanOrEqual(nums[i - 1]);
     }
   });
@@ -229,7 +232,6 @@ describe("parseFmxToCombined — AI Act", () => {
     const nums = result.articles.map((a) => parseInt(a.article_number, 10));
     expect(nums[0]).toBe(1);
     expect(nums[nums.length - 1]).toBe(113);
-    // Check no gaps
     const uniqueNums = new Set(nums);
     expect(uniqueNums.size).toBe(113);
   });
@@ -289,7 +291,6 @@ describe("parseFmxToCombined — AI Act", () => {
   });
 
   it("article HTML contains cross-ref links", () => {
-    // At least some articles should have injected cross-ref links
     const articlesWithCrossRefs = result.articles.filter(
       (a) => a.article_html.includes('class="cross-ref"') || a.article_html.includes('class="external-ref"')
     );
@@ -298,7 +299,7 @@ describe("parseFmxToCombined — AI Act", () => {
 
   it("recitals are sorted numerically 1 to 180", () => {
     const nums = result.recitals.map((r) => parseInt(r.recital_number, 10));
-    for (let i = 1; i < nums.length; i++) {
+    for (let i = 1; i < nums.length; i += 1) {
       expect(nums[i]).toBeGreaterThanOrEqual(nums[i - 1]);
     }
     expect(nums[0]).toBe(1);
@@ -369,7 +370,6 @@ describe("injectCrossRefLinks", () => {
   it("does not double-wrap existing links", () => {
     const html = '<p><a class="cross-ref" href="#article-5">Article 5</a> and Article 6</p>';
     const result = injectCrossRefLinks(html, lang);
-    // Article 5 should NOT get double-wrapped, Article 6 should get wrapped
     const matches = result.match(/class="cross-ref"/g);
     expect(matches).toHaveLength(2);
   });
