@@ -1,8 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import { Button } from "./Button.jsx";
-import { getCachedFormex } from "../utils/formexApi.js";
-import { parseFormexToCombined } from "../utils/parsers.js";
 
 const MOBILE_VISIBLE_LIMIT = 8;
 const DESKTOP_VISIBLE_LIMIT = 10;
@@ -130,20 +128,10 @@ function limitGroups(groups, limit) {
   return limitedGroups;
 }
 
-function getLawStructureBadges(stats, t) {
-  if (!stats) return [];
-
-  return [
-    stats.articles > 0 ? `${stats.articles} ${t("common.articles")}` : null,
-    stats.recitals > 0 ? `${stats.recitals} ${t("common.recitals")}` : null,
-  ].filter(Boolean);
-}
-
-function LawLibraryCard({ law, onOpen, stats, t }) {
+function LawLibraryCard({ law, onOpen, t }) {
   const title = getCardTitle(law);
   const officialReference = formatOfficialReference(law);
   const actTypeLabel = getActTypeLabel(law, t);
-  const structureBadges = getLawStructureBadges(stats, t);
 
   return (
     <Motion.div
@@ -181,14 +169,6 @@ function LawLibraryCard({ law, onOpen, stats, t }) {
                 CELEX {law.celex}
               </span>
             ) : null}
-            {structureBadges.map((badge) => (
-              <span
-                key={badge}
-                className="inline-flex rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400"
-              >
-                {badge}
-              </span>
-            ))}
           </div>
         </div>
 
@@ -197,23 +177,16 @@ function LawLibraryCard({ law, onOpen, stats, t }) {
   );
 }
 
-export function LandingLibrary({ laws, onOpenLaw, locale, t, formexLang = "EN" }) {
+export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
     return window.matchMedia("(min-width: 640px)").matches;
   });
   const [isExpanded, setIsExpanded] = useState(false);
-  const [lawStatsByCelex, setLawStatsByCelex] = useState({});
   const recentGroups = groupLaws(laws, locale, t);
   const visibleLimit = isDesktop ? DESKTOP_VISIBLE_LIMIT : MOBILE_VISIBLE_LIMIT;
   const hasOverflow = laws.length > visibleLimit;
   const visibleGroups = isExpanded ? recentGroups : limitGroups(recentGroups, visibleLimit);
-  const visibleCelexes = useMemo(
-    () => Array.from(new Set(
-      visibleGroups.flatMap((group) => group.laws.map((law) => law.celex).filter(Boolean)),
-    )),
-    [visibleGroups],
-  );
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
@@ -231,41 +204,6 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t, formexLang = "EN" }
   useEffect(() => {
     setIsExpanded(false);
   }, [visibleLimit, laws.length]);
-
-  useEffect(() => {
-    let isCancelled = false;
-
-    if (visibleCelexes.length === 0) {
-      setLawStatsByCelex({});
-      return undefined;
-    }
-
-    void (async () => {
-      const entries = await Promise.all(visibleCelexes.map(async (celex) => {
-        try {
-          const text = await getCachedFormex(celex, formexLang);
-          if (!text) return [celex, null];
-
-          const parsed = parseFormexToCombined(text);
-          return [celex, {
-            articles: parsed.articles?.length || 0,
-            recitals: parsed.recitals?.length || 0,
-            annexes: parsed.annexes?.length || 0,
-          }];
-        } catch (error) {
-          console.error(`Failed to read cached structure counts for ${celex}`, error);
-          return [celex, null];
-        }
-      }));
-
-      if (isCancelled) return;
-      setLawStatsByCelex(Object.fromEntries(entries.filter(([, stats]) => stats)));
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [formexLang, visibleCelexes]);
 
   return (
     <>
@@ -313,7 +251,6 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t, formexLang = "EN" }
                     key={law.id}
                     law={law}
                     onOpen={onOpenLaw}
-                    stats={lawStatsByCelex[law.celex] || null}
                     t={t}
                   />
                 ))}
