@@ -1,5 +1,10 @@
+import { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
 import { Clock, Trash } from "lucide-react";
+import { Button } from "./Button.jsx";
+
+const MOBILE_VISIBLE_LIMIT = 8;
+const DESKTOP_VISIBLE_LIMIT = 10;
 
 function formatOfficialReference(law) {
   const reference = law?.officialReference;
@@ -17,10 +22,129 @@ function getCardTitle(law) {
   return parts[0] || law?.label || "";
 }
 
-function LawLibraryCard({ law, onOpen, onDelete, formatDate, t }) {
+function getTimestampSortValue(law) {
+  return Number.isFinite(law?.timestamp) ? law.timestamp : 0;
+}
+
+function getDayDifference(now, date) {
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfTarget = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.round((startOfToday.getTime() - startOfTarget.getTime()) / 86400000);
+}
+
+function formatOpenedLabel(ts, locale) {
+  if (!Number.isFinite(ts)) return null;
+
+  const date = new Date(ts);
+  const now = new Date();
+  const diffDays = getDayDifference(now, date);
+  const relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  if (diffDays <= 6) {
+    return relativeTime.format(-diffDays, "day");
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: now.getFullYear() === date.getFullYear() ? undefined : "numeric",
+  }).format(date);
+}
+
+function getRecentGroupLabel(law, locale, t) {
+  const timestamp = getTimestampSortValue(law);
+  if (!timestamp) return t("landing.never");
+
+  const date = new Date(timestamp);
+  const diffDays = getDayDifference(new Date(), date);
+  if (diffDays === 0) {
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(0, "day");
+  }
+  if (diffDays === 1) {
+    return new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-1, "day");
+  }
+  if (diffDays <= 6) {
+    return new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date);
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: new Date().getFullYear() === date.getFullYear() ? undefined : "numeric",
+  }).format(date);
+}
+
+function getGroupKey(law, locale) {
+  const timestamp = getTimestampSortValue(law);
+  if (!timestamp) return "missing";
+
+  const date = new Date(timestamp);
+  const diffDays = getDayDifference(new Date(), date);
+  if (diffDays === 0) return `day:${new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(0, "day")}`;
+  if (diffDays === 1) return `day:${new Intl.RelativeTimeFormat(locale, { numeric: "auto" }).format(-1, "day")}`;
+  if (diffDays <= 6) {
+    return `weekday:${new Intl.DateTimeFormat(locale, { weekday: "long" }).format(date)}`;
+  }
+  return `date:${new Intl.DateTimeFormat(locale, {
+    month: "short",
+    day: "numeric",
+    year: new Date().getFullYear() === date.getFullYear() ? undefined : "numeric",
+  }).format(date)}`;
+}
+
+function groupLaws(laws, locale, t) {
+  const sorted = [...laws].sort((left, right) => {
+    const timeDiff = getTimestampSortValue(right) - getTimestampSortValue(left);
+    if (timeDiff !== 0) return timeDiff;
+    return (right.addedAt || 0) - (left.addedAt || 0);
+  });
+
+  const groups = [];
+  for (const law of sorted) {
+    const groupKey = getGroupKey(law, locale);
+    const group = groups[groups.length - 1];
+    if (group && group.key === groupKey) {
+      group.laws.push(law);
+      continue;
+    }
+
+    groups.push({
+      key: groupKey,
+      label: getRecentGroupLabel(law, locale, t),
+      laws: [law],
+    });
+  }
+
+  return groups;
+}
+
+function limitGroups(groups, limit) {
+  if (!Number.isFinite(limit) || limit <= 0) return [];
+
+  let remaining = limit;
+  const limitedGroups = [];
+
+  for (const group of groups) {
+    if (remaining <= 0) break;
+    const visibleLaws = group.laws.slice(0, remaining);
+    if (visibleLaws.length === 0) continue;
+
+    limitedGroups.push({
+      ...group,
+      laws: visibleLaws,
+    });
+    remaining -= visibleLaws.length;
+  }
+
+  return limitedGroups;
+}
+
+function LawLibraryCard({ law, onOpen, onDelete, locale, t }) {
   const title = getCardTitle(law);
   const officialReference = formatOfficialReference(law);
   const metaLine = [officialReference, law?.celex ? `CELEX ${law.celex}` : null].filter(Boolean).join(" · ");
+  const openedLabel = formatOpenedLabel(law.timestamp, locale);
+  const statusLabel = openedLabel ? t("common.lastOpened", { date: openedLabel }) : t("landing.never");
 
   return (
     <Motion.div
@@ -37,17 +161,17 @@ function LawLibraryCard({ law, onOpen, onDelete, formatDate, t }) {
       }}
       role="button"
     >
-      <div className="flex items-start justify-between gap-2 w-full">
-        <div className="flex-1 min-w-0">
-          <div className="truncate pr-8 text-sm font-semibold text-gray-900 dark:text-gray-100">
+      <div className="flex items-start justify-between gap-3 w-full">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
             {title}
           </div>
-          <div className="mt-1 truncate pr-8 text-[11px] text-gray-500 dark:text-gray-400">
+          <div className="mt-1 truncate text-[11px] text-gray-500 dark:text-gray-400">
             {metaLine}
           </div>
           <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
-            <Clock className="h-3 w-3" />
-            <span>{t("common.lastOpened", { date: formatDate(law.timestamp) })}</span>
+            <Clock className="h-3 w-3 shrink-0" />
+            <span>{statusLabel}</span>
           </div>
         </div>
 
@@ -63,7 +187,34 @@ function LawLibraryCard({ law, onOpen, onDelete, formatDate, t }) {
   );
 }
 
-export function LandingLibrary({ laws, onOpenLaw, onDeleteLaw, formatDate, t }) {
+export function LandingLibrary({ laws, onOpenLaw, onDeleteLaw, locale, t }) {
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
+    return window.matchMedia("(min-width: 640px)").matches;
+  });
+  const [isExpanded, setIsExpanded] = useState(false);
+  const recentGroups = groupLaws(laws, locale, t);
+  const visibleLimit = isDesktop ? DESKTOP_VISIBLE_LIMIT : MOBILE_VISIBLE_LIMIT;
+  const hasOverflow = laws.length > visibleLimit;
+  const visibleGroups = isExpanded ? recentGroups : limitGroups(recentGroups, visibleLimit);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+
+    const mediaQuery = window.matchMedia("(min-width: 640px)");
+    const handleChange = (event) => {
+      setIsDesktop(event.matches);
+    };
+
+    setIsDesktop(mediaQuery.matches);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [visibleLimit, laws.length]);
+
   return (
     <>
       <Motion.div
@@ -88,22 +239,55 @@ export function LandingLibrary({ laws, onOpenLaw, onDeleteLaw, formatDate, t }) 
         transition={{ delay: 0.15 }}
         className="mt-8 w-full"
       >
-        <div className="grid gap-3 sm:grid-cols-2">
-          {laws.length > 0 ? laws.map((law) => (
-            <LawLibraryCard
-              key={law.id}
-              law={law}
-              onOpen={onOpenLaw}
-              onDelete={onDeleteLaw}
-              formatDate={formatDate}
-              t={t}
-            />
+        <div className="relative space-y-5 sm:space-y-7 sm:pl-10">
+          <div
+            aria-hidden="true"
+            className="absolute left-4 top-2 bottom-6 hidden w-px bg-gray-200 dark:bg-gray-800 sm:block"
+          />
+          {visibleGroups.length > 0 ? visibleGroups.map((group) => (
+            <div key={group.key} className="relative space-y-3">
+              <div className="relative min-h-6">
+                <span
+                  aria-hidden="true"
+                  className="absolute -left-[30px] top-1/2 hidden h-3 w-3 -translate-y-1/2 rounded-full border-2 border-white bg-gray-400 ring-4 ring-white dark:border-gray-900 dark:bg-gray-500 dark:ring-gray-950 sm:block"
+                />
+                <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
+                  {group.label}
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {group.laws.map((law) => (
+                  <LawLibraryCard
+                    key={law.id}
+                    law={law}
+                    onOpen={onOpenLaw}
+                    onDelete={onDeleteLaw}
+                    locale={locale}
+                    t={t}
+                  />
+                ))}
+              </div>
+            </div>
           )) : (
-            <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400 sm:col-span-2">
+            <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center text-sm text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400">
               {t("landing.recentEmpty")}
             </div>
           )}
         </div>
+        {hasOverflow ? (
+          <div className="mt-5 flex justify-start">
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full px-4"
+              onClick={() => setIsExpanded((current) => !current)}
+            >
+              {isExpanded
+                ? t("landing.recentShowLess")
+                : t("landing.recentShowAll", { count: laws.length })}
+            </Button>
+          </div>
+        ) : null}
       </Motion.div>
     </>
   );

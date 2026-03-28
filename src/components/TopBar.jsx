@@ -568,14 +568,15 @@ export function SearchBox({
           <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="group flex w-full items-center gap-4 rounded-full border border-gray-200 bg-white px-5 py-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+            className="group flex w-full items-center gap-3 rounded-[1.75rem] border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md sm:gap-4 sm:rounded-full sm:px-5 sm:py-4 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
           >
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition group-hover:bg-gray-200 group-hover:text-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-gray-700 dark:group-hover:text-gray-200">
-              <Search size={20} />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition group-hover:bg-gray-200 group-hover:text-gray-700 sm:h-11 sm:w-11 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-gray-700 dark:group-hover:text-gray-200">
+              <Search size={18} className="sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-base text-gray-500 dark:text-gray-400">
-                {t("landing.searchPlaceholder")}
+              <div className="truncate text-sm text-gray-500 sm:text-base dark:text-gray-400">
+                <span className="sm:hidden">{t("landing.searchPlaceholderMobile")}</span>
+                <span className="hidden sm:inline">{t("landing.searchPlaceholder")}</span>
               </div>
             </div>
             <div className="hidden shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-500 sm:block dark:border-gray-700 dark:text-gray-400">

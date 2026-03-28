@@ -104,6 +104,7 @@ export function Landing({ forcedLocale = null }) {
     setReferenceType,
     setReferenceYear,
   } = useAddLawImport({ locale, navigate, t });
+  const activeLocale = forcedLocale || locale;
 
   const handleDelete = useCallback(async (event, celex) => {
     event.stopPropagation();
@@ -145,16 +146,6 @@ export function Landing({ forcedLocale = null }) {
       navigate(localizePath(`/${targetLawSlug}/${item.type}/${safeId}`, locale));
     }
   }, [locale, localizePath, navigate]);
-
-  const formatDate = (ts) => {
-    if (!ts) return t("landing.never");
-    return new Date(ts).toLocaleString(forcedLocale || locale, {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900 transition-colors duration-500">
@@ -213,7 +204,7 @@ export function Landing({ forcedLocale = null }) {
             laws={allLaws}
             onOpenLaw={handleOpenLaw}
             onDeleteLaw={handleDelete}
-            formatDate={formatDate}
+            locale={activeLocale}
             t={t}
           />
         </div>
