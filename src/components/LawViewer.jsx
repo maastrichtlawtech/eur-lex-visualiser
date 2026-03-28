@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
@@ -32,6 +32,10 @@ import { useRecitalMap } from "../hooks/law-viewer/useRecitalMap.js";
 import { useProcessedLawHtml } from "../hooks/law-viewer/useProcessedLawHtml.js";
 import { useLawViewerDerivedState } from "../hooks/law-viewer/useLawViewerDerivedState.js";
 import { useLawViewerPrint } from "../hooks/law-viewer/useLawViewerPrint.js";
+import {
+  ARTICLE_NAVIGATION_HINT_DISMISSED_KEY,
+  shouldShowArticleNavigationHint,
+} from "../utils/law-viewer/navigationHint.js";
 import { LawViewerLoadingState } from "./law-viewer/LawViewerLoadingState.jsx";
 import { LawViewerErrorState } from "./law-viewer/LawViewerErrorState.jsx";
 import { LawViewerSidebar } from "./law-viewer/LawViewerSidebar.jsx";
@@ -46,6 +50,13 @@ export function LawViewer() {
   const importCelex = searchParams.get("celex");
   const sourceUrl = searchParams.get("sourceUrl");
   const { allLaws, libraryVersion } = useLandingLibrary();
+  const [isArticleNavigationHintDismissed, setIsArticleNavigationHintDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(ARTICLE_NAVIGATION_HINT_DISMISSED_KEY) === "true";
+    } catch {
+      return false;
+    }
+  });
 
   const preferences = useLawViewerPreferences({
     locale,
@@ -105,6 +116,11 @@ export function LawViewer() {
     data: primaryDocument.data,
     selected: selection.selected,
   });
+  const showArticleNavigationHint = shouldShowArticleNavigationHint({
+    selected: selection.selected,
+    articleCount: primaryDocument.data.articles?.length || 0,
+    isDismissed: isArticleNavigationHintDismissed,
+  });
   const secondarySelectedEntry = useMemo(
     () => getSelectedEntry(secondaryDocument.data, selection.selected),
     [secondaryDocument.data, selection.selected]
@@ -157,6 +173,15 @@ export function LawViewer() {
       eurlex: buildEurlexCelexUrl(source.effectiveCelex, preferences.formexLang),
     }).then(() => markLawOpened(source.effectiveCelex));
   }, [derived.hasLoadedContent, preferences.formexLang, primaryDocument.data.title, searchParams, source.currentLaw, source.effectiveCelex]);
+
+  useEffect(() => {
+    if (!isArticleNavigationHintDismissed) return;
+    try {
+      localStorage.setItem(ARTICLE_NAVIGATION_HINT_DISMISSED_KEY, "true");
+    } catch {
+      // ignore localStorage failures
+    }
+  }, [isArticleNavigationHintDismissed]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white transition-colors duration-500 print:bg-white dark:from-gray-950 dark:to-gray-900">
@@ -230,6 +255,25 @@ export function LawViewer() {
                     onTouchEnd={interactions.onTouchEnd}
                     t={t}
                   />
+
+                  {showArticleNavigationHint ? (
+                    <div className="mt-4 hidden items-start justify-between gap-4 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200 md:flex">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex items-center gap-1">
+                          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-sky-200 bg-white/90 px-1.5 text-xs font-semibold text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-100">←</span>
+                          <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-md border border-sky-200 bg-white/90 px-1.5 text-xs font-semibold text-sky-900 dark:border-sky-800 dark:bg-sky-950/60 dark:text-sky-100">→</span>
+                        </div>
+                        <p className="leading-6">{t("lawViewer.articleNavigationHint")}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsArticleNavigationHintDismissed(true)}
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-sky-700 transition hover:bg-sky-100 hover:text-sky-900 dark:text-sky-300 dark:hover:bg-sky-900/40 dark:hover:text-sky-100"
+                      >
+                        {t("common.dismiss")}
+                      </button>
+                    </div>
+                  ) : null}
                 </>
               )}
             </section>

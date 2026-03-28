@@ -207,6 +207,7 @@
     "toggleContents": "Toggle contents",
     "quickNavigation": "Quick Navigation",
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
+    "articleNavigationHint": "You can also use the left and right arrow keys to move between articles while reading.",
     "tableOfContents": "Table of Contents",
     "noArticles": "No articles available.",
     "popupBlocked": "Please allow popups to print",
