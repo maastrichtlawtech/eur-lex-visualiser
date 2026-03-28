@@ -11,10 +11,13 @@ const { enrichSearchRecord, inferTypeFromCelex } = require("./search-ranking");
 const execFileAsync = promisify(execFile);
 const SPARQL_ENDPOINT = "https://publications.europa.eu/webapi/rdf/sparql";
 const CELLAR_BASE = "http://publications.europa.eu/resource";
+const EURLEX_BASE = "https://eur-lex.europa.eu";
 const USER_AGENT = "LegalViz API Law Search Builder/0.1";
 const SEARCH_CACHE_DIR = path.dirname(DEFAULT_SEARCH_CACHE_PATH);
 const DEFAULT_SEARCH_STATE_PATH = path.join(SEARCH_CACHE_DIR, "search-build-state.json");
 const GENERIC_OJ_TITLE = "Official Journal of the European Union";
+const DEFAULT_CHALLENGE_RETRY_BASE_MS = 2_000;
+const DEFAULT_CHALLENGE_RETRY_CAP_MS = 30_000;
 
 function normalizeTitle(value) {
   const title = String(value || "").trim();
@@ -79,6 +82,57 @@ async function fetchText(url, headers = {}) {
   return response.text();
 }
 
+function isChallengeResponse(response) {
+  return response.status === 202
+    && String(response.headers.get("x-amzn-waf-action") || "").toLowerCase() === "challenge";
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getChallengeDelayMs(attempt) {
+  const expDelay = DEFAULT_CHALLENGE_RETRY_BASE_MS * (2 ** Math.max(0, attempt - 1));
+  const capped = Math.min(DEFAULT_CHALLENGE_RETRY_CAP_MS, expDelay);
+  const jitter = Math.floor(Math.random() * 500);
+  return capped + jitter;
+}
+
+async function fetchTextWithChallengeRetry(url, headers = {}) {
+  let attempt = 0;
+
+  while (true) {
+    attempt += 1;
+    const response = await fetch(url, {
+      headers: {
+        Accept: "*/*",
+        "User-Agent": USER_AGENT,
+        ...headers
+      }
+    });
+
+    if (isChallengeResponse(response)) {
+      const delayMs = getChallengeDelayMs(attempt);
+      logProgress(`Challenge for ${url} on attempt ${attempt}; retrying in ${delayMs}ms`);
+      await sleep(delayMs);
+      continue;
+    }
+
+    if (response.status === 404) {
+      const error = new Error(`HTTP 404 for ${url}`);
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status} for ${url}: ${text.slice(0, 400)}`);
+    }
+
+    return response.text();
+  }
+}
+
 async function runSparql(query) {
   const url = `${SPARQL_ENDPOINT}?query=${encodeURIComponent(query)}&format=application%2Fsparql-results%2Bjson`;
   const response = await fetch(url, {
@@ -137,15 +191,61 @@ async function findDownloadUrls(fmx4Uri) {
 }
 
 function stripXmlTags(value) {
-  return String(value || "")
+  return decodeHtmlEntities(String(value || ""))
     .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function decodeHtmlEntities(value) {
+  const namedEntities = {
+    nbsp: " ",
+    rsquo: "'",
+    lsquo: "'",
+    rdquo: "\"",
+    ldquo: "\"",
+    ndash: "-",
+    mdash: "-",
+    hellip: "...",
+  };
+
+  return String(value || "")
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
+    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number.parseInt(code, 10)))
+    .replace(/&([a-z]+);/gi, (match, name) => namedEntities[name.toLowerCase()] ?? match)
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, "\"")
     .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/&amp;/g, "&");
+}
+
+function extractHtmlAttribute(tag, attributeName) {
+  const escapedName = String(attributeName || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const doubleQuoted = new RegExp(`\\b${escapedName}="([^"]*)"`, "i").exec(String(tag || ""));
+  if (doubleQuoted?.[1] != null) return doubleQuoted[1];
+
+  const singleQuoted = new RegExp(`\\b${escapedName}='([^']*)'`, "i").exec(String(tag || ""));
+  return singleQuoted?.[1] || null;
+}
+
+function extractTitleFromEurlexHtml(html) {
+  const metaTags = String(html || "").match(/<meta\b[^>]*>/gi) || [];
+  for (const tag of metaTags) {
+    if (extractHtmlAttribute(tag, "name") !== "WT.z_docTitle") continue;
+    const content = extractHtmlAttribute(tag, "content");
+    const title = normalizeTitle(decodeHtmlEntities(content));
+    if (title) return title;
+  }
+
+  for (const elementId of ["englishTitle", "title", "originalTitle"]) {
+    const match = new RegExp(`<[^>]+id=["']${elementId}["'][^>]*>([\\s\\S]*?)<\\/[^>]+>`, "i").exec(String(html || ""));
+    if (!match) continue;
+    const title = normalizeTitle(stripXmlTags(match[1]));
+    if (title) return title;
+  }
+
+  return null;
 }
 
 function extractTitleFromXml(xml) {
@@ -251,6 +351,33 @@ async function extractOfficialTitle(celex) {
   }
 }
 
+async function extractOfficialTitleFromEurlexHtml(celex) {
+  const html = await fetchTextWithChallengeRetry(`${EURLEX_BASE}/legal-content/EN/TXT/?uri=CELEX:${encodeURIComponent(celex)}`, {
+    "Accept-Language": "en"
+  });
+  return extractTitleFromEurlexHtml(html);
+}
+
+async function extractOfficialTitleWithFallback(celex) {
+  let fmxError = null;
+
+  try {
+    const title = await extractOfficialTitle(celex);
+    if (title) return { title, source: "fmx", fmxError: null };
+    fmxError = new Error(`No title extracted from FMX for ${celex}`);
+  } catch (error) {
+    fmxError = error;
+  }
+
+  const title = await extractOfficialTitleFromEurlexHtml(celex);
+  if (title) {
+    return { title, source: "html", fmxError };
+  }
+
+  if (fmxError) throw fmxError;
+  return { title: null, source: null, fmxError: null };
+}
+
 function toRecord(binding) {
   const celex = binding.celex?.value;
   return {
@@ -307,6 +434,14 @@ function readState(statePath) {
   return JSON.parse(fs.readFileSync(statePath, "utf8"));
 }
 
+function readCachePayload(cachePath) {
+  if (!fs.existsSync(cachePath)) {
+    throw new Error(`Search cache not found at ${cachePath}`);
+  }
+
+  return JSON.parse(fs.readFileSync(cachePath, "utf8"));
+}
+
 function createStatePayload({
   cachePath,
   concurrency,
@@ -353,30 +488,36 @@ async function enrichRecords(records, options = {}) {
     ? ensurePositiveInt(options.startIndex, 0)
     : 0;
   const maxRecords = options.maxRecords ? ensurePositiveInt(options.maxRecords, 0) : 0;
-  const endExclusive = maxRecords
-    ? Math.min(records.length, startIndex + maxRecords)
-    : records.length;
+  const shouldProcess = typeof options.shouldProcess === "function"
+    ? options.shouldProcess
+    : () => true;
+  const eligibleIndices = [];
+
+  for (let index = startIndex; index < records.length; index += 1) {
+    if (!shouldProcess(records[index], index)) continue;
+    eligibleIndices.push(index);
+    if (maxRecords && eligibleIndices.length >= maxRecords) break;
+  }
 
   let processed = 0;
   let enriched = 0;
   let failed = 0;
 
-  for (let batchStart = startIndex; batchStart < endExclusive; batchStart += concurrency) {
-    const batchEnd = Math.min(endExclusive, batchStart + concurrency);
-    const batchIndices = [];
-    for (let index = batchStart; index < batchEnd; index += 1) {
-      batchIndices.push(index);
-    }
-
+  for (let batchStart = 0; batchStart < eligibleIndices.length; batchStart += concurrency) {
+    const batchIndices = eligibleIndices.slice(batchStart, batchStart + concurrency);
+    const batchEnd = batchStart + batchIndices.length;
     const batchResults = await Promise.all(batchIndices.map(async (index) => {
       const current = records[index];
       const next = { ...current };
       try {
-        const title = await extractOfficialTitle(current.celex);
-        if (title) next.title = normalizeTitle(title);
-        next.fmxAvailable = true;
-        next.fmxUnavailable = false;
-        next.enrichError = null;
+        const titleResult = await extractOfficialTitleWithFallback(current.celex);
+        if (titleResult.title) next.title = normalizeTitle(titleResult.title);
+        next.fmxAvailable = titleResult.source === "fmx";
+        next.fmxUnavailable = Boolean(titleResult.fmxError)
+          && String(titleResult.fmxError.message || titleResult.fmxError).includes("No FMX URI found");
+        next.enrichError = titleResult.source === "html"
+          ? (titleResult.fmxError?.message || null)
+          : null;
       } catch (error) {
         next.fmxAvailable = false;
         next.fmxUnavailable = String(error.message || error).includes("No FMX URI found");
@@ -399,27 +540,73 @@ async function enrichRecords(records, options = {}) {
       await options.onBatchComplete({
         batchEnd,
         batchStart,
-        endExclusive,
+        endExclusive: eligibleIndices.length,
         enriched,
         failed,
         processed,
-        total: records.length,
+        total: eligibleIndices.length,
       });
     }
 
-    logProgress(
-      `Enriched ${batchEnd}/${endExclusive} records in this pass (${processed} processed, ${enriched} with FMX, ${failed} failed)`
-    );
+    const logInterval = Math.max(concurrency * 25, 100);
+    if (batchEnd === eligibleIndices.length || batchEnd % logInterval === 0) {
+      logProgress(
+        `Enriched ${batchEnd}/${eligibleIndices.length} eligible records in this pass (${processed} processed, ${enriched} with FMX, ${failed} failed)`
+      );
+    }
   }
 
   return {
     records,
-    nextIndex: endExclusive,
+    nextIndex: eligibleIndices.length ? (eligibleIndices[eligibleIndices.length - 1] + 1) : startIndex,
     processed,
     enriched,
     failed,
-    complete: endExclusive >= records.length,
+    complete: true,
   };
+}
+
+async function reEnrichCurrentCache(options = {}) {
+  const cachePath = options.cachePath || DEFAULT_SEARCH_CACHE_PATH;
+  const concurrency = ensurePositiveInt(options.concurrency, 6);
+  const maxRecords = options.maxRecords ? ensurePositiveInt(options.maxRecords, 0) : 0;
+  const onlyMissingTitles = options.onlyMissingTitles !== false;
+  const primaryActsOnly = options.primaryActsOnly !== false;
+  const payload = readCachePayload(cachePath);
+  const records = Array.isArray(payload.records)
+    ? payload.records.map((record) => enrichSearchRecord(record))
+    : [];
+
+  const eligibleCount = records.filter((record) => (
+    (!primaryActsOnly || record.isPrimaryAct)
+    && (
+    !onlyMissingTitles || !normalizeTitle(record.title)
+    )
+  )).length;
+
+  logProgress(`Loaded ${records.length} records from existing cache at ${cachePath}`);
+  logProgress(
+    `${primaryActsOnly ? "Primary-act" : "All-record"} cache refresh targeting ${eligibleCount} records`
+  );
+
+  const enrichResult = await enrichRecords(records, {
+    concurrency,
+    maxRecords,
+    shouldProcess(record) {
+      if (primaryActsOnly && !record.isPrimaryAct) return false;
+      return onlyMissingTitles ? !normalizeTitle(record.title) : true;
+    }
+  });
+
+  const nextPayload = {
+    ...payload,
+    generatedAt: new Date().toISOString(),
+    records: enrichResult.records
+  };
+  nextPayload.count = nextPayload.records.length;
+
+  await writeCacheAtomically(cachePath, nextPayload);
+  return nextPayload;
 }
 
 async function writeCacheAtomically(cachePath, payload) {
@@ -427,6 +614,10 @@ async function writeCacheAtomically(cachePath, payload) {
 }
 
 async function buildSearchCache(options = {}) {
+  if (options.existingCacheOnly) {
+    return reEnrichCurrentCache(options);
+  }
+
   const fromYear = Number.parseInt(options.fromYear || String(new Date().getUTCFullYear()), 10);
   const toYear = Number.parseInt(options.toYear || "2010", 10);
   const limit = Number.parseInt(options.limit || "200", 10);
@@ -561,5 +752,8 @@ if (require.main === module) {
 module.exports = {
   DEFAULT_SEARCH_CACHE_PATH,
   DEFAULT_SEARCH_STATE_PATH,
-  buildSearchCache
+  buildSearchCache,
+  extractTitleFromEurlexHtml,
+  extractOfficialTitleWithFallback,
+  reEnrichCurrentCache
 };

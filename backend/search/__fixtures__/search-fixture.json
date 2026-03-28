@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-03-26T00:00:00.000Z",
-  "count": 9,
+  "count": 10,
   "records": [
     {
       "celex": "32016R0679",
@@ -64,6 +64,15 @@
       "eli": "http://data.europa.eu/eli/reg/2026/667/oj",
       "fmxAvailable": true,
       "fmxUnavailable": false
+    },
+    {
+      "celex": "32015L2366",
+      "title": "Directive (EU) 2015/2366 of the European Parliament and of the Council of 25 November 2015 on payment services in the internal market, amending Directives 2002/65/EC, 2009/110/EC and 2013/36/EU and Regulation (EU) No 1093/2010, and repealing Directive 2007/64/EC (Text with EEA relevance)",
+      "type": "directive",
+      "date": "2015-11-25",
+      "eli": "http://data.europa.eu/eli/dir/2015/2366/oj",
+      "fmxAvailable": false,
+      "fmxUnavailable": true
     },
     {
       "celex": "32019L0789",
