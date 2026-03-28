@@ -138,6 +138,7 @@ export function SearchBox({
   const [lastLawSearchQuery, setLastLawSearchQuery] = useState("");
 
   const containerRef = useRef(null);
+  const heroInputRef = useRef(null);
   const modalInputRef = useRef(null);
   const resultsRef = useRef(null);
   const lawSearchAbortRef = useRef(null);
@@ -469,6 +470,15 @@ export function SearchBox({
     setQuery(q);
     setSelectedIndex(-1);
     setLawSearchError("");
+
+    if (!isOpen && triggerVariant === "hero") {
+      if (q.trim().length === 0) {
+        setResults([]);
+        return;
+      }
+      setIsOpen(true);
+    }
+
     if (isLawMode && q.trim() !== lastLawSearchQuery) {
       setResults([]);
       return;
@@ -559,30 +569,41 @@ export function SearchBox({
     : isMatchesMode
       ? (isBuildingGlobal || isSearchLoading)
       : false;
-  const canSubmitLawSearch = isLawMode && query.trim().length >= 2 && !isLawSearchLoading;
 
   return (
     <>
       <div className="relative transition-all" ref={containerRef}>
         {triggerVariant === "hero" ? (
-          <button
-            type="button"
-            onClick={() => setIsOpen(true)}
-            className="group flex w-full items-center gap-3 rounded-[1.75rem] border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md sm:gap-4 sm:rounded-full sm:px-5 sm:py-4 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+          <div
+            className="group flex w-full items-center gap-3 rounded-[1.75rem] border border-gray-200 bg-white px-4 py-3 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md focus-within:border-gray-300 focus-within:shadow-md sm:gap-4 sm:rounded-full sm:px-5 sm:py-4 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700 dark:focus-within:border-gray-700"
+            onClick={() => heroInputRef.current?.focus()}
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition group-hover:bg-gray-200 group-hover:text-gray-700 sm:h-11 sm:w-11 dark:bg-gray-800 dark:text-gray-400 dark:group-hover:bg-gray-700 dark:group-hover:text-gray-200">
               <Search size={18} className="sm:h-5 sm:w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm text-gray-500 sm:text-base dark:text-gray-400">
-                <span className="sm:hidden">{t("landing.searchPlaceholderMobile")}</span>
-                <span className="hidden sm:inline">{t("landing.searchPlaceholder")}</span>
-              </div>
+              <input
+                ref={heroInputRef}
+                type="text"
+                value={query}
+                onChange={handleSearch}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isOpen && query.trim().length >= 2) {
+                    e.preventDefault();
+                    setIsOpen(true);
+                  }
+                }}
+                placeholder={t("landing.searchPlaceholder")}
+                autoComplete="off"
+                spellCheck={false}
+                className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500 sm:text-base dark:text-gray-200 dark:placeholder:text-gray-400"
+                aria-label={t("landing.searchPlaceholder")}
+              />
             </div>
             <div className="hidden shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-500 sm:block dark:border-gray-700 dark:text-gray-400">
-                {t("search.shortcut")}
+              {t("search.shortcut")}
             </div>
-          </button>
+          </div>
         ) : (
           <div className="relative lg:w-64">
             <div className="relative hidden w-full lg:block">
@@ -658,17 +679,7 @@ export function SearchBox({
                     )}
                   </div>
                 </div>
-                <div className="hidden shrink-0 items-center gap-2 border-l border-gray-200 pl-3 md:flex dark:border-gray-700">
-                  {isLawMode ? (
-                    <button
-                      type="button"
-                      onClick={() => runLawSearch(query)}
-                      disabled={!canSubmitLawSearch}
-                      className="h-10 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
-                    >
-                      {t("search.submitLawSearch")}
-                    </button>
-                  ) : null}
+                <div className="hidden shrink-0 items-center border-l border-gray-200 pl-3 md:flex dark:border-gray-700">
                   <button
                     onClick={() => setIsOpen(false)}
                     className="h-10 rounded-lg px-4 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
