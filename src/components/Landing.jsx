@@ -206,10 +206,6 @@ export function Landing({ forcedLocale = null }) {
               triggerVariant="hero"
             />
           </div>
-
-          <p className="mx-auto mt-5 max-w-2xl text-sm text-gray-600 sm:text-base dark:text-gray-400">
-            {t("landing.heroDescription")}
-          </p>
         </Motion.div>
 
         <div className="mt-12 w-full max-w-4xl">

@@ -96,8 +96,8 @@
     "loadFromApi": "Load from api.legalviz.eu"
   },
   "landing": {
-    "heroTitle": "Find EU law quickly,",
-    "heroSubtitle": "and read it with ease.",
+    "heroTitle": "Read EU law beautifully,",
+    "heroSubtitle": "and with ease.",
     "heroDescription": "Search by title, reference, or CELEX to open the law you need fast. LegalViz then shows chapters, articles, recitals, and annexes side by side.",
     "option1": "Option 1 · Import by official reference",
     "option2": "Option 2 · Open a law from your library",
