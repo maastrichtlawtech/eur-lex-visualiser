@@ -1,4 +1,4 @@
-function createSearchHandler(searchIndex) {
+function createSearchHandler(legalCacheStore) {
   return function searchHandler(req, res) {
     try {
       const query = String(req.query.q || "").trim();
@@ -6,7 +6,7 @@ function createSearchHandler(searchIndex) {
         return res.status(400).json({ error: 'Query parameter "q" required' });
       }
 
-      const results = searchIndex.searchLaws(query, {
+      const results = legalCacheStore.searchLaws(query, {
         limit: req.query.limit,
         disableRewrites: req.query.noRewrite === "1"
       });
@@ -21,7 +21,7 @@ function createSearchHandler(searchIndex) {
         return res.status(503).json({
           error: "Law search cache is not available",
           code: error.code,
-          details: searchIndex.getStatus()
+          details: legalCacheStore.getStatus()
         });
       }
 

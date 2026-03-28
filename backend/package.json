@@ -11,7 +11,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build:search-cache": "node search/search-build.js",
-    "test": "node --test search/*.test.js shared/*.test.js",
+    "test": "node --test search/*.test.js shared/*.test.js routes/*.test.js bin/*.test.js",
     "test:search": "node --test search/*.test.js"
   },
   "keywords": [

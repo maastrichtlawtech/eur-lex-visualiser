@@ -23,6 +23,7 @@ const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
 
 function bootServices() {
   const { createFmxService } = require('../shared/fmx-service');
+  const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
   const {
     cacheGet,
     cacheSet,
@@ -48,12 +49,15 @@ function bootServices() {
   });
 
   const resolutionCache = new Map();
+  const legalCacheStore = new JsonLegalCacheStore(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
+  legalCacheStore.load();
   const refResolver = createReferenceResolver({
     EURLEX_BASE,
     RESOLUTION_CACHE_MS,
     TIMEOUT_MS,
     cacheGet,
     cacheSet,
+    legalCacheStore,
     resolutionCache,
     toSearchLang,
   });
@@ -263,13 +267,13 @@ COMMANDS.search = {
     const flags = parseFlags(args, ['query']);
     if (!flags.query) die('Search query required.  Usage: eurlex search <query>');
 
-    const { SearchIndex, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
-    const searchIndex = new SearchIndex(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
-    if (!searchIndex.loadFromDisk()) {
-      die(`Search cache not available: ${searchIndex.loadError}\nRun "npm run build:search-cache" in backend/ first.`);
+    const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
+    const legalCacheStore = new JsonLegalCacheStore(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
+    if (!legalCacheStore.load()) {
+      die(`Search cache not available: ${legalCacheStore.loadError}\nRun "npm run build:search-cache" in backend/ first.`);
     }
 
-    const results = searchIndex.searchLaws(flags.query, {
+    const results = legalCacheStore.searchLaws(flags.query, {
       limit: flags.limit,
     });
 
@@ -300,7 +304,7 @@ COMMANDS.resolve = {
       die(`Could not parse reference: ${JSON.stringify(reference)}`);
     }
 
-    const resolution = await svc.resolveReferenceViaCellar(reference, lang);
+    const resolution = await svc.resolveReference(reference, lang);
     jsonOut({
       query: reference.raw || null,
       parsed: reference,

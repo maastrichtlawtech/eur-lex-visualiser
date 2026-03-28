@@ -1,4 +1,7 @@
 const { ClientError } = require('./api-utils');
+const {
+  buildCanonicalEliFromReference,
+} = require('../search/legal-cache-store');
 
 function parseReferenceText(text = '') {
   const normalized = text.replace(/\s+/g, ' ').trim();
@@ -102,16 +105,18 @@ function parseEurlexUrl(inputUrl) {
     const number = segments[eliIndex + 3] || null;
 
     if (actType && /^\d{4}$/.test(year || '') && /^\d{1,4}$/.test(number || '')) {
+      const reference = parseStructuredReference({ actType, year, number });
       return {
         type: 'eli',
-        reference: parseStructuredReference({ actType, year, number }),
+        eli: buildCanonicalEliFromReference(reference),
+        reference,
         url,
       };
     }
   }
 
   const uri = url.searchParams.get('uri') || '';
-  const ojMatch = uri.match(/^OJ:([A-Z])[_:](\d{4})(\d{5})/i);
+  const ojMatch = uri.match(/^OJ:([A-Z])[_:](\d{4})[_:]?(\d{1,5})/i);
   if (ojMatch) {
     return {
       type: 'oj',
@@ -199,6 +204,7 @@ function createReferenceResolver({
   TIMEOUT_MS,
   cacheGet,
   cacheSet,
+  legalCacheStore = null,
   resolutionCache,
   toSearchLang,
 }) {
@@ -295,6 +301,37 @@ LIMIT 5`;
     return payload;
   }
 
+  function resolveReferenceViaCache(reference, lang = 'ENG') {
+    if (!legalCacheStore?.isReady?.()) return null;
+
+    const cached = legalCacheStore.getByOfficialReference(reference);
+    if (!cached) return null;
+
+    return {
+      resolved: {
+        celex: cached.celex,
+        eli: cached.eli || null,
+        source: 'search-cache',
+      },
+      tried: [
+        {
+          source: 'search-cache',
+          celex: cached.celex,
+        },
+      ],
+      fallback: {
+        type: 'eurlex-search',
+        url: buildEurlexSearchFallbackUrl(reference, lang, toSearchLang, EURLEX_BASE),
+      },
+    };
+  }
+
+  async function resolveReference(reference, lang = 'ENG') {
+    const cached = resolveReferenceViaCache(reference, lang);
+    if (cached) return cached;
+    return resolveReferenceViaCellar(reference, lang);
+  }
+
   async function resolveOfficialJournalViaCellar(oj, lang = 'ENG') {
     if (!oj?.ojYear || !oj?.ojNo) {
       throw new ClientError('Official Journal reference requires ojYear and ojNo', 400, 'invalid_oj_reference');
@@ -371,6 +408,55 @@ LIMIT 5`;
     return payload;
   }
 
+  function resolveOfficialJournalViaCache(oj) {
+    if (!legalCacheStore?.isReady?.() || !oj?.ojYear || !oj?.ojNo) return null;
+
+    const actTypes = ['directive', 'regulation', 'decision'];
+    const matches = [];
+
+    for (const actType of actTypes) {
+      const reference = parseStructuredReference({
+        actType,
+        year: oj.ojYear,
+        number: oj.ojNo,
+        ojColl: oj.ojColl,
+        ojYear: oj.ojYear,
+        ojNo: oj.ojNo,
+        raw: `${actType} ${oj.ojYear}/${oj.ojNo}`,
+      });
+      const cached = legalCacheStore.getByOfficialReference(reference);
+      if (cached) {
+        matches.push({
+          actType,
+          reference,
+          resolved: {
+            celex: cached.celex,
+            eli: cached.eli || null,
+            source: 'search-cache',
+          },
+        });
+      }
+    }
+
+    if (matches.length !== 1) return null;
+
+    return {
+      resolved: matches[0].resolved,
+      tried: matches.map((match) => ({
+        actType: match.actType,
+        reference: match.reference,
+        resolved: match.resolved,
+      })),
+      fallback: null,
+    };
+  }
+
+  async function resolveOfficialJournal(oj, lang = 'ENG') {
+    const cached = resolveOfficialJournalViaCache(oj);
+    if (cached) return cached;
+    return resolveOfficialJournalViaCellar(oj, lang);
+  }
+
   async function resolveEurlexUrl(inputUrl, lang = 'ENG') {
     const parsed = parseEurlexUrl(inputUrl);
     const cacheKey = JSON.stringify({ type: 'resolve-url', inputUrl, lang });
@@ -392,10 +478,38 @@ LIMIT 5`;
     }
 
     if (parsed.type === 'eli') {
-      const resolution = await resolveReferenceViaCellar(parsed.reference, lang);
+      let resolution = null;
+
+      if (legalCacheStore?.isReady?.() && parsed.eli) {
+        const cached = legalCacheStore.getByEli(parsed.eli);
+        if (cached) {
+          resolution = {
+            resolved: {
+              celex: cached.celex,
+              eli: cached.eli || parsed.eli,
+              source: 'search-cache',
+            },
+            tried: [
+              {
+                source: 'search-cache',
+                celex: cached.celex,
+              },
+            ],
+            fallback: {
+              type: 'eurlex-search',
+              url: buildEurlexSearchFallbackUrl(parsed.reference, lang, toSearchLang, EURLEX_BASE),
+            },
+          };
+        }
+      }
+
+      if (!resolution) {
+        resolution = await resolveReference(parsed.reference, lang);
+      }
+
       const payload = {
         sourceUrl: parsed.url.toString(),
-        parsed: { type: parsed.type, reference: parsed.reference },
+        parsed: { type: parsed.type, eli: parsed.eli, reference: parsed.reference },
         resolved: resolution.resolved,
         tried: resolution.tried,
         fallback: resolution.fallback,
@@ -405,7 +519,7 @@ LIMIT 5`;
     }
 
     if (parsed.type === 'oj') {
-      const resolution = await resolveOfficialJournalViaCellar(parsed.oj, lang);
+      const resolution = await resolveOfficialJournal(parsed.oj, lang);
       const payload = {
         sourceUrl: parsed.url.toString(),
         parsed: {
@@ -440,7 +554,9 @@ LIMIT 5`;
   }
 
   return {
+    resolveReference,
     resolveEurlexUrl,
+    resolveOfficialJournal,
     resolveOfficialJournalViaCellar,
     resolveReferenceViaCellar,
     runSparqlQuery,

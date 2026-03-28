@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { SearchIndex, DEFAULT_SEARCH_CACHE_PATH } = require('./search/search-index');
+const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('./search/search-index');
 const { registerApiRoutes } = require('./routes/api-routes');
 const { createFmxService } = require('./shared/fmx-service');
 const { createRateLimitMiddleware } = require('./shared/rate-limit');
@@ -36,7 +36,7 @@ const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500; // max c
 
 const resolutionCache = new Map(); // key -> { expiresAt, value }
 const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
-const searchIndex = new SearchIndex(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
+const legalCacheStore = new JsonLegalCacheStore(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
 const rateLimitMiddleware = createRateLimitMiddleware({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX
@@ -51,7 +51,7 @@ if (!fs.existsSync(FMX_DIR)) {
   fs.mkdirSync(FMX_DIR, { recursive: true });
 }
 
-searchIndex.loadFromDisk();
+legalCacheStore.load();
 const { findDownloadUrls, findFmx4Uri, prepareLawPayload, sendLawResponse } = createFmxService({
   CELLAR_BASE,
   FMX_DIR,
@@ -59,12 +59,13 @@ const { findDownloadUrls, findFmx4Uri, prepareLawPayload, sendLawResponse } = cr
   TIMEOUT_MS,
 });
 
-const { resolveEurlexUrl, resolveReferenceViaCellar, runSparqlQuery } = createReferenceResolver({
+const { resolveEurlexUrl, resolveReference, resolveReferenceViaCellar, runSparqlQuery } = createReferenceResolver({
   EURLEX_BASE,
   RESOLUTION_CACHE_MS,
   TIMEOUT_MS,
   cacheGet,
   cacheSet,
+  legalCacheStore,
   resolutionCache,
   toSearchLang,
 });
@@ -89,16 +90,17 @@ registerApiRoutes(app, {
   cacheSet,
   findDownloadUrls,
   findFmx4Uri,
+  legalCacheStore,
   parseReferenceText,
   parseStructuredReference,
   prepareLawPayload,
   rateLimitMiddleware,
   resolutionCache,
   resolveEurlexUrl,
+  resolveReference,
   resolveReferenceViaCellar,
   runSparqlQuery,
   safeErrorResponse,
-  searchIndex,
   sendLawResponse,
   validateCelex,
   validateLang
@@ -109,5 +111,5 @@ app.listen(PORT, () => {
   console.log(`Cache directory: ${FMX_DIR}`);
   console.log(`Rate limit: ${RATE_LIMIT_MAX} req/15min per IP`);
   console.log(`Storage limit: ${STORAGE_LIMIT_MB} MB`);
-  console.log(`Search cache: ${searchIndex.getStatus().ready ? 'loaded' : 'not loaded'} (${searchIndex.cachePath})`);
+  console.log(`Search cache: ${legalCacheStore.getStatus().ready ? 'loaded' : 'not loaded'} (${legalCacheStore.cachePath})`);
 });

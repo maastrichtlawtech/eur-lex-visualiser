@@ -21,11 +21,11 @@ function registerApiRoutes(app, deps) {
     prepareLawPayload,
     rateLimitMiddleware,
     resolutionCache,
+    legalCacheStore,
     resolveEurlexUrl,
-    resolveReferenceViaCellar,
+    resolveReference,
     runSparqlQuery,
     safeErrorResponse,
-    searchIndex,
     sendLawResponse,
     validateCelex,
     validateLang
@@ -61,7 +61,7 @@ function registerApiRoutes(app, deps) {
         });
       }
 
-      const resolution = await resolveReferenceViaCellar(reference, lang);
+      const resolution = await resolveReference(reference, lang);
       if (!resolution.resolved?.celex) {
         return res.status(404).json({
           error: 'Could not resolve the official reference to a CELEX identifier',
@@ -249,7 +249,7 @@ function registerApiRoutes(app, deps) {
     }
   });
 
-  app.get('/api/search', rateLimitMiddleware, createSearchHandler(searchIndex));
+  app.get('/api/search', rateLimitMiddleware, createSearchHandler(legalCacheStore));
 
   app.get('/api/resolve-reference', rateLimitMiddleware, async (req, res) => {
     try {
@@ -278,7 +278,7 @@ function registerApiRoutes(app, deps) {
         });
       }
 
-      const resolution = await resolveReferenceViaCellar(reference, lang);
+      const resolution = await resolveReference(reference, lang);
       const payload = {
         query: reference.raw || null,
         parsed: reference,
@@ -325,7 +325,7 @@ function registerApiRoutes(app, deps) {
         'GET /api/laws/:celex/info': 'Get metadata only',
         'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
         'GET /api/search?q=keyword&limit=10': 'Search cached primary-law metadata',
-        'GET /api/resolve-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an FMX-derived legal reference to CELEX via Cellar SPARQL',
+        'GET /api/resolve-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an FMX-derived legal reference to CELEX via cache-first lookup with Cellar fallback',
         'GET /api/resolve-url?url=https://eur-lex.europa.eu/...&lang=ENG': 'Resolve a full EUR-Lex URL to a canonical CELEX'
       },
       celexExamples: {
