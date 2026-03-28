@@ -1,3 +1,5 @@
+import { Menu, X } from "lucide-react";
+import { NavigationControls } from "../NavigationControls.jsx";
 import { Accordion } from "../Accordion.jsx";
 import { MetadataPanel } from "../MetadataPanel.jsx";
 import { LawViewerQuickNavigation } from "./LawViewerQuickNavigation.jsx";
@@ -21,12 +23,31 @@ export function LawViewerSidebar({
 }) {
   return (
     <aside className={`order-1 w-full md:order-2 md:sticky md:top-20 md:max-h-[calc(100vh-6rem)] md:w-80 md:shrink-0 md:overflow-y-auto transition-all duration-300 ${!isSidebarOpen ? "md:hidden" : ""}`}>
+      <div className="mb-4 flex gap-2 md:hidden">
+        <button
+          type="button"
+          onClick={() => selection.setMobileMenuOpen((current) => !current)}
+          aria-expanded={mobileMenuOpen}
+          aria-label={t("lawViewer.toggleContents")}
+          className="flex flex-shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-2 text-gray-700 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          title={t("lawViewer.toggleContents")}
+        >
+          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div className="min-w-0 flex-1">
+          <NavigationControls
+            selected={selected}
+            lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
+            onPrevNext={onPrevNext}
+            className="h-full w-full"
+          />
+        </div>
+      </div>
+
       <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
         <LawViewerQuickNavigation
           selected={selected}
           lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
-          mobileMenuOpen={mobileMenuOpen}
-          setMobileMenuOpen={selection.setMobileMenuOpen}
           onPrevNext={onPrevNext}
           selectArticleIdx={selection.selectArticleIdx}
           selectRecitalIdx={selection.selectRecitalIdx}

@@ -136,6 +136,10 @@ export function SearchBox({
   const [isLawSearchLoading, setIsLawSearchLoading] = useState(false);
   const [lawSearchError, setLawSearchError] = useState("");
   const [lastLawSearchQuery, setLastLawSearchQuery] = useState("");
+  const [isSmallViewport, setIsSmallViewport] = useState(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(max-width: 639px)").matches;
+  });
 
   const containerRef = useRef(null);
   const heroInputRef = useRef(null);
@@ -380,6 +384,25 @@ export function SearchBox({
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const handleChange = (event) => {
+      setIsSmallViewport(event.matches);
+    };
+
+    setIsSmallViewport(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", handleChange);
+      return () => mediaQuery.removeEventListener("change", handleChange);
+    }
+
+    mediaQuery.addListener(handleChange);
+    return () => mediaQuery.removeListener(handleChange);
+  }, []);
+
+  useEffect(() => {
     if (!isOpen) return;
     focusModalInput();
   }, [focusModalInput, isOpen, searchMode]);
@@ -564,6 +587,9 @@ export function SearchBox({
       : isLawMode
         ? t("search.placeholderLaws")
         : t("search.placeholderMatches");
+  const heroSearchPlaceholder = isSmallViewport
+    ? t("landing.searchPlaceholderMobile")
+    : t("landing.searchPlaceholder");
   const isInputDisabled = isCurrentMode
     ? isBuildingCurrent
     : isMatchesMode
@@ -593,11 +619,11 @@ export function SearchBox({
                     setIsOpen(true);
                   }
                 }}
-                placeholder={t("landing.searchPlaceholder")}
+                placeholder={heroSearchPlaceholder}
                 autoComplete="off"
                 spellCheck={false}
                 className="w-full bg-transparent text-sm text-gray-700 outline-none placeholder:text-gray-500 sm:text-base dark:text-gray-200 dark:placeholder:text-gray-400"
-                aria-label={t("landing.searchPlaceholder")}
+                aria-label={heroSearchPlaceholder}
               />
             </div>
             <div className="hidden shrink-0 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-500 sm:block dark:border-gray-700 dark:text-gray-400">
