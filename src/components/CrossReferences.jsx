@@ -1,4 +1,5 @@
 import React from "react";
+import { Loader2 } from "lucide-react";
 import { buildEurlexOjUrl, buildEurlexSearchUrl } from "../utils/url.js";
 import { useI18n } from "../i18n/useI18n.js";
 
@@ -18,6 +19,7 @@ export function CrossReferences({
   showBackReferences = true,
   currentLang = "EN",
   onOpenExternalReference,
+  isExternalReferencePending,
 }) {
   const { t } = useI18n();
   const referenceKey = entryKey || articleNumber;
@@ -136,6 +138,9 @@ export function CrossReferences({
             </p>
             <div className="flex flex-wrap gap-2">
               {externalRefs.map((ref, i) => {
+                const pending = typeof isExternalReferencePending === "function"
+                  ? isExternalReferencePending(ref)
+                  : false;
                 const href = ref.type === "oj_ref"
                   ? buildEurlexOjUrl({
                     ojColl: ref.ojColl,
@@ -152,11 +157,16 @@ export function CrossReferences({
                     {label}
                   </span>
                 );
-                const cls = "group inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm transition hover:border-blue-400 hover:shadow-sm dark:bg-blue-900/20 dark:border-blue-800 dark:hover:border-blue-500";
+                const cls = `group inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-sm transition dark:bg-blue-900/20 dark:border-blue-800 ${
+                  pending
+                    ? "cursor-progress border-blue-400 shadow-sm dark:border-blue-500"
+                    : "hover:border-blue-400 hover:shadow-sm dark:hover:border-blue-500"
+                }`;
                 return (
                   <button
                     key={`ext-${i}`}
                     type="button"
+                    disabled={pending}
                     onClick={() => {
                       if (onOpenExternalReference) {
                         onOpenExternalReference(ref);
@@ -167,7 +177,13 @@ export function CrossReferences({
                     className={cls}
                     title={ref.raw}
                   >
+                    {pending ? <Loader2 size={14} className="animate-spin text-blue-700 dark:text-blue-300" /> : null}
                     {inner}
+                    {pending ? (
+                      <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">
+                        {t("crossReferences.resolving")}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { buildEurlexOjUrl, buildEurlexSearchUrl } from "../../utils/url.js";
 import { parseOfficialReference } from "../../utils/officialReferences.js";
 import { buildImportedLawCandidate, getCanonicalLawRoute } from "../../utils/lawRouting.js";
+import { saveLawMeta } from "../../utils/library.js";
 import { FormexApiError, resolveOfficialReference } from "../../utils/formexApi.js";
 
 function getCurrentEntryIndex(data, selected) {
@@ -32,6 +33,9 @@ export function useLawViewerInteractions({
   const navigate = useNavigate();
   const touchStartRef = useRef(null);
   const touchEndRef = useRef(null);
+  const externalResolutionRequestRef = useRef(0);
+  const [pendingExternalReferenceKey, setPendingExternalReferenceKey] = useState(null);
+  const [pendingExternalReferenceLabel, setPendingExternalReferenceLabel] = useState("");
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -78,7 +82,34 @@ export function useLawViewerInteractions({
     };
   }, []);
 
+  const getExternalReferenceKey = useCallback((refLike) => {
+    if (!refLike) return null;
+
+    return [
+      refLike.type || "external",
+      refLike.raw || refLike.label || refLike.target || "",
+      refLike.actType || "",
+      refLike.year || "",
+      refLike.number || "",
+      refLike.suffix || "",
+      refLike.ojColl || "",
+      refLike.ojYear || "",
+      refLike.ojNo || "",
+      refLike.articleNumber || "",
+    ].join("|");
+  }, []);
+
+  const isExternalReferencePending = useCallback((refLike) => {
+    const key = getExternalReferenceKey(refLike);
+    return key ? key === pendingExternalReferenceKey : false;
+  }, [getExternalReferenceKey, pendingExternalReferenceKey]);
+
   const handleOpenExternalLaw = useCallback(async (refLike) => {
+    const requestId = externalResolutionRequestRef.current + 1;
+    externalResolutionRequestRef.current = requestId;
+    setPendingExternalReferenceKey(getExternalReferenceKey(refLike));
+    setPendingExternalReferenceLabel(refLike?.raw || refLike?.label || refLike?.target || "");
+
     const reference = resolveReferenceInput(refLike);
     const fallbackUrl = refLike?.type === "oj_ref"
       ? buildEurlexOjUrl({
@@ -91,6 +122,10 @@ export function useLawViewerInteractions({
 
     if (!reference?.actType || !reference?.year || !reference?.number) {
       openFallbackReference(fallbackUrl);
+      if (externalResolutionRequestRef.current === requestId) {
+        setPendingExternalReferenceKey(null);
+        setPendingExternalReferenceLabel("");
+      }
       return;
     }
 
@@ -100,6 +135,11 @@ export function useLawViewerInteractions({
         const targetLaw = buildImportedLawCandidate({
           celex: result.resolved.celex,
           officialReference: reference,
+        });
+        await saveLawMeta({
+          celex: result.resolved.celex,
+          officialReference: reference,
+          label: refLike?.raw || refLike?.label || refLike?.target || `CELEX ${result.resolved.celex}`,
         });
         navigate(getCanonicalLawRoute(
           targetLaw,
@@ -116,8 +156,13 @@ export function useLawViewerInteractions({
         return;
       }
       openFallbackReference(fallbackUrl);
+    } finally {
+      if (externalResolutionRequestRef.current === requestId) {
+        setPendingExternalReferenceKey(null);
+        setPendingExternalReferenceLabel("");
+      }
     }
-  }, [currentContentLang, locale, navigate, openFallbackReference, resolveReferenceInput]);
+  }, [currentContentLang, getExternalReferenceKey, locale, navigate, openFallbackReference, resolveReferenceInput]);
 
   const handleContentClick = useCallback((event) => {
     const link = event.target.closest("a.cross-ref");
@@ -173,6 +218,9 @@ export function useLawViewerInteractions({
     onCrossRefArticle,
     handleOpenExternalLaw,
     handleContentClick,
+    isExternalReferencePending,
+    isResolvingExternalLaw: pendingExternalReferenceKey != null,
+    pendingExternalReferenceLabel,
     onTouchStart,
     onTouchMove,
     onTouchEnd,

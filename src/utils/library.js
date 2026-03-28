@@ -150,6 +150,7 @@ export async function getLibraryLaws() {
   });
 
   return cached
+    .filter((law) => Number.isFinite(law.timestamp) && law.timestamp > 0)
     .sort((a, b) => {
       const timeDiff = (b.timestamp || 0) - (a.timestamp || 0);
       if (timeDiff !== 0) return timeDiff;

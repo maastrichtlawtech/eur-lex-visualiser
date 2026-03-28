@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildEurlexCelexUrl, buildEurlexSearchUrl } from "../../utils/url.js";
-import { findCachedCelexByOfficialReference, markLawOpened, saveLawMeta } from "../../utils/library.js";
+import { findCachedCelexByOfficialReference, saveLawMeta } from "../../utils/library.js";
 import {
   buildImportedLawCandidate,
   findBundledLawBySlug,
@@ -79,7 +79,7 @@ export function useLawViewerSource({
     return () => {
       cancelled = true;
     };
-  }, [currentCelex, slugReference]);
+  }, [currentCelex, loadAttempt, slugReference]);
 
   useEffect(() => {
     if (!sourceUrl || importCelex) return;
@@ -178,7 +178,7 @@ export function useLawViewerSource({
           officialReference: slugReference,
           label: currentLaw?.label || `${slugReference.actType} ${slugReference.year}/${slugReference.number}`,
           eurlex: buildEurlexCelexUrl(nextCelex, formexLang),
-        }).then(() => markLawOpened(nextCelex));
+        });
         setLoading(false);
       })
       .catch((error) => {
@@ -190,7 +190,7 @@ export function useLawViewerSource({
     return () => {
       cancelled = true;
     };
-  }, [currentLaw, effectiveCelex, formexLang, slugReference, t]);
+  }, [currentLaw, effectiveCelex, formexLang, loadAttempt, slugReference, t]);
 
   useEffect(() => {
     if (sourceUrl && !effectiveCelex) return;

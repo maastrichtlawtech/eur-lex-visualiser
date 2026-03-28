@@ -8,7 +8,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    include: ['src/**/*.test.js', 'backend/shared/formex-parser/**/*.test.js'],
+    include: ['src/**/*.test.{js,jsx}', 'backend/shared/formex-parser/**/*.test.js'],
   },
   plugins: [
     react(),

@@ -17,6 +17,7 @@ export function LawViewerSideBySide({
   getProseClass,
   getTextClass,
   fontScale,
+  isResolvingExternalLaw,
   onTouchStart,
   onTouchMove,
   onTouchEnd,
@@ -33,6 +34,7 @@ export function LawViewerSideBySide({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        isResolvingExternalLaw={isResolvingExternalLaw}
         t={t}
       />
     );
@@ -65,6 +67,7 @@ export function LawViewerSideBySide({
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
+          isResolvingExternalLaw={isResolvingExternalLaw}
           t={t}
         />
       </div>
@@ -81,6 +84,7 @@ export function LawViewerSideBySide({
           getProseClass={getProseClass}
           getTextClass={getTextClass}
           fontScale={fontScale}
+          isResolvingExternalLaw={isResolvingExternalLaw}
           t={t}
         />
         <LawContentPane
@@ -95,6 +99,7 @@ export function LawViewerSideBySide({
           getProseClass={getProseClass}
           getTextClass={getTextClass}
           fontScale={fontScale}
+          isResolvingExternalLaw={isResolvingExternalLaw}
           t={t}
           selector={secondaryLanguageSelector}
           emptyMessage={t("lawViewer.selectPrompt")}

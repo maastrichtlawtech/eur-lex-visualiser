@@ -188,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Resolving…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -214,6 +215,8 @@
     "primaryLanguage": "Main language",
     "secondaryLanguage": "Second language",
     "loadingLanguage": "Loading {lang} version...",
+    "resolvingLinkedLaw": "Opening linked law: {label}",
+    "resolvingLinkedLawFallback": "linked law",
     "languageItemUnavailable": "{label} {id} is not available in {lang}.",
     "sideBySideDesktopOnly": "Side-by-side reading is available on larger screens. This device keeps showing the main language only.",
     "textOnly": "Text only"

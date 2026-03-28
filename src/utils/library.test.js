@@ -60,19 +60,22 @@ describe("markLawOpened", () => {
 });
 
 describe("getLibraryLaws", () => {
-  it("returns curated flagship laws when no cached/meta data", async () => {
+  it("returns no recent laws when nothing has been opened", async () => {
     getAllLawMeta.mockResolvedValue([]);
     listCachedCelexes.mockResolvedValue([]);
 
     const laws = await getLibraryLaws();
-    expect(laws.length).toBeGreaterThanOrEqual(4);
-    expect(laws.some((law) => law.slug === "gdpr")).toBe(true);
-    expect(laws.some((law) => law.slug === "dma")).toBe(true);
+    expect(laws).toEqual([]);
   });
 
-  it("includes imported laws from cache", async () => {
+  it("includes opened imported laws from cache", async () => {
     getAllLawMeta.mockResolvedValue([
-      { celex: "32021R0123", label: "Test Regulation", officialReference: { actType: "regulation", year: "2021", number: "123" } },
+      {
+        celex: "32021R0123",
+        label: "Test Regulation",
+        officialReference: { actType: "regulation", year: "2021", number: "123" },
+        lastOpened: 1000,
+      },
     ]);
     listCachedCelexes.mockResolvedValue(["32021R0123"]);
 
@@ -84,13 +87,33 @@ describe("getLibraryLaws", () => {
 
   it("returns one entry per cached celex", async () => {
     getAllLawMeta.mockResolvedValue([
-      { celex: "32016R0679", label: "General Data Protection Regulation" },
+      { celex: "32016R0679", label: "General Data Protection Regulation", lastOpened: 1000 },
     ]);
     listCachedCelexes.mockResolvedValue(["32016R0679"]);
 
     const laws = await getLibraryLaws();
     const gdprEntries = laws.filter((l) => l.celex === "32016R0679");
     expect(gdprEntries).toHaveLength(1);
+  });
+
+  it("excludes laws that have metadata but were never opened", async () => {
+    getAllLawMeta.mockResolvedValue([
+      {
+        celex: "32002L0058",
+        label: "Directive 2002/58/EC",
+        officialReference: { actType: "directive", year: "2002", number: "58" },
+      },
+      {
+        celex: "32016R0679",
+        label: "GDPR",
+        officialReference: { actType: "regulation", year: "2016", number: "679" },
+        lastOpened: 2000,
+      },
+    ]);
+    listCachedCelexes.mockResolvedValue(["32002L0058", "32016R0679"]);
+
+    const laws = await getLibraryLaws();
+    expect(laws.map((law) => law.celex)).toEqual(["32016R0679"]);
   });
 
   it("sorts by lastOpened timestamp descending", async () => {

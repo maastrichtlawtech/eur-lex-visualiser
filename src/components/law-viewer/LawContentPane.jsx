@@ -12,6 +12,7 @@ export function LawContentPane({
   getProseClass,
   getTextClass,
   fontScale,
+  isResolvingExternalLaw = false,
   t,
   selector = null,
   emptyMessage = null,
@@ -123,7 +124,7 @@ export function LawContentPane({
         </div>
       </div>
       <article
-        className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200`}
+        className={`prose prose-slate mx-auto ${getProseClass(fontScale)} ${getTextClass(fontScale)} mt-4 transition-all duration-200 ${isResolvingExternalLaw ? "cursor-progress" : ""}`}
         dangerouslySetInnerHTML={{
           __html: processedHtml || `<div class='text-center text-gray-400 py-10'>${emptyMessage || t("lawViewer.selectPrompt")}</div>`,
         }}

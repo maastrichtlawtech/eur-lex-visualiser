@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Loader2, RefreshCw } from "lucide-react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { buildEurlexCelexUrl } from "../utils/url.js";
@@ -235,6 +235,17 @@ export function LawViewer() {
                     </h2>
                   </div>
 
+                  {interactions.isResolvingExternalLaw ? (
+                    <div className="mb-4 flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-200">
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>
+                        {t("lawViewer.resolvingLinkedLaw", {
+                          label: interactions.pendingExternalReferenceLabel || t("lawViewer.resolvingLinkedLawFallback"),
+                        })}
+                      </span>
+                    </div>
+                  ) : null}
+
                   <LawViewerSideBySide
                     isSideBySide={derived.isSideBySide}
                     secondaryLang={preferences.secondaryLang}
@@ -250,6 +261,7 @@ export function LawViewer() {
                     getProseClass={getProseClass}
                     getTextClass={getTextClass}
                     fontScale={preferences.fontScale}
+                    isResolvingExternalLaw={interactions.isResolvingExternalLaw}
                     onTouchStart={interactions.onTouchStart}
                     onTouchMove={interactions.onTouchMove}
                     onTouchEnd={interactions.onTouchEnd}
@@ -287,6 +299,7 @@ export function LawViewer() {
                   onSelectArticle={interactions.onCrossRefArticle}
                   currentLang={preferences.formexLang}
                   onOpenExternalReference={interactions.handleOpenExternalLaw}
+                  isExternalReferencePending={interactions.isExternalReferencePending}
                 />
                 <RelatedRecitals
                   recitals={recitalMap.get(selection.selected.id) || []}
@@ -306,6 +319,7 @@ export function LawViewer() {
                 showBackReferences={false}
                 currentLang={preferences.formexLang}
                 onOpenExternalReference={interactions.handleOpenExternalLaw}
+                isExternalReferencePending={interactions.isExternalReferencePending}
               />
             ) : null}
 
@@ -338,6 +352,7 @@ export function LawViewer() {
             hasLoadedContent={derived.hasLoadedContent}
             externalLawOverview={derived.externalLawOverview}
             handleOpenExternalLaw={interactions.handleOpenExternalLaw}
+            isExternalReferencePending={interactions.isExternalReferencePending}
             effectiveCelex={source.effectiveCelex}
             formexLang={preferences.formexLang}
             t={t}
