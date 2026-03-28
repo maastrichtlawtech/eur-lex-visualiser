@@ -195,6 +195,7 @@ export function Landing({ forcedLocale = null }) {
             laws={allLaws}
             onOpenLaw={handleOpenLaw}
             locale={activeLocale}
+            formexLang={formexLang}
             t={t}
           />
         </div>

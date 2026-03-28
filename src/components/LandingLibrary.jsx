@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion as Motion } from "framer-motion";
-import { Clock } from "lucide-react";
 import { Button } from "./Button.jsx";
+import { getCachedFormex } from "../utils/formexApi.js";
+import { parseFormexToCombined } from "../utils/parsers.js";
 
 const MOBILE_VISIBLE_LIMIT = 8;
 const DESKTOP_VISIBLE_LIMIT = 10;
@@ -22,6 +23,15 @@ function getCardTitle(law) {
   return parts[0] || law?.label || "";
 }
 
+function getActTypeLabel(law, t) {
+  const actType = String(law?.officialReference?.actType || "").toLowerCase();
+  if (!actType) return null;
+  if (actType === "regulation") return t("landing.regulation");
+  if (actType === "directive") return t("landing.directive");
+  if (actType === "decision") return t("landing.decision");
+  return actType.charAt(0).toUpperCase() + actType.slice(1);
+}
+
 function getTimestampSortValue(law) {
   return Number.isFinite(law?.timestamp) ? law.timestamp : 0;
 }
@@ -30,25 +40,6 @@ function getDayDifference(now, date) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const startOfTarget = new Date(date.getFullYear(), date.getMonth(), date.getDate());
   return Math.round((startOfToday.getTime() - startOfTarget.getTime()) / 86400000);
-}
-
-function formatOpenedLabel(ts, locale) {
-  if (!Number.isFinite(ts)) return null;
-
-  const date = new Date(ts);
-  const now = new Date();
-  const diffDays = getDayDifference(now, date);
-  const relativeTime = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-
-  if (diffDays <= 6) {
-    return relativeTime.format(-diffDays, "day");
-  }
-
-  return new Intl.DateTimeFormat(locale, {
-    month: "short",
-    day: "numeric",
-    year: now.getFullYear() === date.getFullYear() ? undefined : "numeric",
-  }).format(date);
 }
 
 function getRecentGroupLabel(law, locale, t) {
@@ -139,19 +130,27 @@ function limitGroups(groups, limit) {
   return limitedGroups;
 }
 
-function LawLibraryCard({ law, onOpen, locale, t }) {
+function getLawStructureBadges(stats, t) {
+  if (!stats) return [];
+
+  return [
+    stats.articles > 0 ? `${stats.articles} ${t("common.articles")}` : null,
+    stats.recitals > 0 ? `${stats.recitals} ${t("common.recitals")}` : null,
+  ].filter(Boolean);
+}
+
+function LawLibraryCard({ law, onOpen, stats, t }) {
   const title = getCardTitle(law);
   const officialReference = formatOfficialReference(law);
-  const metaLine = [officialReference, law?.celex ? `CELEX ${law.celex}` : null].filter(Boolean).join(" · ");
-  const openedLabel = formatOpenedLabel(law.timestamp, locale);
-  const statusLabel = openedLabel ? t("common.lastOpened", { date: openedLabel }) : t("landing.never");
+  const actTypeLabel = getActTypeLabel(law, t);
+  const structureBadges = getLawStructureBadges(stats, t);
 
   return (
     <Motion.div
       whileHover={{ y: -2, scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       onClick={() => onOpen(law)}
-      className="group relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
+      className="group relative flex flex-col rounded-2xl border border-gray-200 bg-white p-4 text-left shadow-sm transition hover:border-gray-300 hover:shadow-md cursor-pointer dark:bg-gray-900 dark:border-gray-800 dark:hover:border-gray-700 dark:hover:shadow-gray-900/50"
       tabIndex={0}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
@@ -166,12 +165,30 @@ function LawLibraryCard({ law, onOpen, locale, t }) {
           <div className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
             {title}
           </div>
-          <div className="mt-1 truncate text-[11px] text-gray-500 dark:text-gray-400">
-            {metaLine}
-          </div>
-          <div className="mt-2 flex items-center gap-1 text-[10px] text-gray-400">
-            <Clock className="h-3 w-3 shrink-0" />
-            <span>{statusLabel}</span>
+          {officialReference ? (
+            <div className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+              {officialReference}
+            </div>
+          ) : null}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {actTypeLabel ? (
+              <span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                {actTypeLabel}
+              </span>
+            ) : null}
+            {law?.celex ? (
+              <span className="inline-flex rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] text-gray-500 dark:border-gray-700 dark:text-gray-400">
+                CELEX {law.celex}
+              </span>
+            ) : null}
+            {structureBadges.map((badge) => (
+              <span
+                key={badge}
+                className="inline-flex rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium text-gray-500 dark:border-gray-700 dark:text-gray-400"
+              >
+                {badge}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -180,16 +197,23 @@ function LawLibraryCard({ law, onOpen, locale, t }) {
   );
 }
 
-export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
+export function LandingLibrary({ laws, onOpenLaw, locale, t, formexLang = "EN" }) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
     return window.matchMedia("(min-width: 640px)").matches;
   });
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lawStatsByCelex, setLawStatsByCelex] = useState({});
   const recentGroups = groupLaws(laws, locale, t);
   const visibleLimit = isDesktop ? DESKTOP_VISIBLE_LIMIT : MOBILE_VISIBLE_LIMIT;
   const hasOverflow = laws.length > visibleLimit;
   const visibleGroups = isExpanded ? recentGroups : limitGroups(recentGroups, visibleLimit);
+  const visibleCelexes = useMemo(
+    () => Array.from(new Set(
+      visibleGroups.flatMap((group) => group.laws.map((law) => law.celex).filter(Boolean)),
+    )),
+    [visibleGroups],
+  );
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
@@ -207,6 +231,41 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
   useEffect(() => {
     setIsExpanded(false);
   }, [visibleLimit, laws.length]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    if (visibleCelexes.length === 0) {
+      setLawStatsByCelex({});
+      return undefined;
+    }
+
+    void (async () => {
+      const entries = await Promise.all(visibleCelexes.map(async (celex) => {
+        try {
+          const text = await getCachedFormex(celex, formexLang);
+          if (!text) return [celex, null];
+
+          const parsed = parseFormexToCombined(text);
+          return [celex, {
+            articles: parsed.articles?.length || 0,
+            recitals: parsed.recitals?.length || 0,
+            annexes: parsed.annexes?.length || 0,
+          }];
+        } catch (error) {
+          console.error(`Failed to read cached structure counts for ${celex}`, error);
+          return [celex, null];
+        }
+      }));
+
+      if (isCancelled) return;
+      setLawStatsByCelex(Object.fromEntries(entries.filter(([, stats]) => stats)));
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [formexLang, visibleCelexes]);
 
   return (
     <>
@@ -235,14 +294,14 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
         <div className="relative space-y-5 sm:space-y-7 sm:pl-10">
           <div
             aria-hidden="true"
-            className="absolute left-4 top-2 bottom-6 hidden w-px bg-gray-200 dark:bg-gray-800 sm:block"
+            className="absolute bottom-6 left-4 top-2 hidden w-px bg-gray-200 dark:bg-gray-800 sm:block"
           />
           {visibleGroups.length > 0 ? visibleGroups.map((group) => (
             <div key={group.key} className="relative space-y-3">
               <div className="relative min-h-6">
                 <span
                   aria-hidden="true"
-                  className="absolute -left-[30px] top-1/2 hidden h-3 w-3 -translate-y-1/2 rounded-full border-2 border-white bg-gray-400 ring-4 ring-white dark:border-gray-900 dark:bg-gray-500 dark:ring-gray-950 sm:block"
+                  className="absolute -left-6 top-1 hidden h-3 w-3 rounded-full border-2 border-white bg-gray-400 ring-4 ring-white dark:border-gray-900 dark:bg-gray-500 dark:ring-gray-950 sm:block"
                 />
                 <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
                   {group.label}
@@ -254,7 +313,7 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
                     key={law.id}
                     law={law}
                     onOpen={onOpenLaw}
-                    locale={locale}
+                    stats={lawStatsByCelex[law.celex] || null}
                     t={t}
                   />
                 ))}
