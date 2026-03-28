@@ -7,7 +7,7 @@ vi.mock("./formexApi.js", () => ({
   upsertLawMeta: vi.fn().mockResolvedValue({}),
 }));
 
-const { saveLawMeta, markLawOpened, setLawHidden, getLibraryLaws } = await import("./library.js");
+const { saveLawMeta, markLawOpened, getLibraryLaws } = await import("./library.js");
 const { getAllLawMeta, listCachedCelexes, upsertLawMeta } = await import("./formexApi.js");
 
 beforeEach(() => {
@@ -30,7 +30,12 @@ describe("saveLawMeta", () => {
       "32016R0679",
       expect.objectContaining({
         label: "GDPR",
-        hidden: false,
+        eurlex: "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32016R0679",
+        officialReference: {
+          actType: "regulation",
+          year: "2016",
+          number: "679",
+        },
       })
     );
   });
@@ -49,21 +54,8 @@ describe("markLawOpened", () => {
       "32016R0679",
       expect.objectContaining({
         lastOpened: expect.any(Number),
-        hidden: false,
       })
     );
-  });
-});
-
-describe("setLawHidden", () => {
-  it("returns null for empty celex", async () => {
-    expect(await setLawHidden("", true)).toBeNull();
-  });
-
-  it("sets hidden flag", async () => {
-    upsertLawMeta.mockResolvedValue({});
-    await setLawHidden("32016R0679", true);
-    expect(upsertLawMeta).toHaveBeenCalledWith("32016R0679", { hidden: true });
   });
 });
 
@@ -88,17 +80,6 @@ describe("getLibraryLaws", () => {
     const imported = laws.find((l) => l.celex === "32021R0123");
     expect(imported).toBeTruthy();
     expect(imported.kind).toBe("imported");
-  });
-
-  it("hides imported laws with hidden flag", async () => {
-    getAllLawMeta.mockResolvedValue([
-      { celex: "32016R0679", hidden: true },
-    ]);
-    listCachedCelexes.mockResolvedValue(["32016R0679"]);
-
-    const laws = await getLibraryLaws();
-    const gdpr = laws.find((l) => l.celex === "32016R0679");
-    expect(gdpr).toBeFalsy();
   });
 
   it("returns one entry per cached celex", async () => {

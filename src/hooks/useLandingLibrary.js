@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   getLibraryLaws,
   markLawOpened as persistLawOpened,
-  setLawHidden,
 } from "../utils/library.js";
 
 export function useLandingLibrary() {
@@ -41,17 +40,12 @@ export function useLandingLibrary() {
     };
   }, [refreshLibrary]);
 
-  const hideLaw = useCallback(async (celex) => {
-    await setLawHidden(celex, true);
-  }, []);
-
   const markLawOpened = useCallback(async (celex) => {
     await persistLawOpened(celex);
   }, []);
 
   return {
     allLaws,
-    hideLaw,
     libraryVersion,
     markLawOpened,
     refreshLibrary,

@@ -97,7 +97,6 @@ export async function saveLawMeta(entry) {
     officialReference: normalized.officialReference,
     eurlex: normalized.eurlex || buildEurlexCelexUrl(normalized.celex),
     addedAt: normalized.addedAt || Date.now(),
-    hidden: false,
   });
   dispatchLibraryUpdate();
   return saved;
@@ -107,15 +106,7 @@ export async function markLawOpened(celex) {
   if (!celex) return null;
   const saved = await upsertLawMeta(celex, {
     lastOpened: Date.now(),
-    hidden: false,
   });
-  dispatchLibraryUpdate();
-  return saved;
-}
-
-export async function setLawHidden(celex, hidden) {
-  if (!celex) return null;
-  const saved = await upsertLawMeta(celex, { hidden: Boolean(hidden) });
   dispatchLibraryUpdate();
   return saved;
 }
@@ -159,11 +150,6 @@ export async function getLibraryLaws() {
   });
 
   return cached
-    .filter((law) => {
-      const meta = law.celex ? metaByCelex.get(law.celex) : null;
-      if (meta?.hidden) return false;
-      return true;
-    })
     .sort((a, b) => {
       const timeDiff = (b.timestamp || 0) - (a.timestamp || 0);
       if (timeDiff !== 0) return timeDiff;

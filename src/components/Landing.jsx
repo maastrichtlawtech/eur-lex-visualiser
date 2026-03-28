@@ -38,7 +38,7 @@ function inferOfficialReferenceFromCelex(celex) {
 export function Landing({ forcedLocale = null }) {
   const navigate = useNavigate();
   const { locale, setLocale, localizePath, t } = useI18n();
-  const { allLaws, hideLaw, libraryVersion, markLawOpened } = useLandingLibrary();
+  const { allLaws, libraryVersion, markLawOpened } = useLandingLibrary();
   const [formexLang, setFormexLang] = useState(() => {
     try {
       return localStorage.getItem("legalviz-formex-lang") || "EN";
@@ -78,7 +78,6 @@ export function Landing({ forcedLocale = null }) {
     handleSearchOpen,
     hasSearchInitialized,
     isSearchLoading,
-    resetSearchIndex,
     searchableLawCount,
   } = useLandingSearchIndex({
     formexLang,
@@ -105,14 +104,6 @@ export function Landing({ forcedLocale = null }) {
     setReferenceYear,
   } = useAddLawImport({ locale, navigate, t });
   const activeLocale = forcedLocale || locale;
-
-  const handleDelete = useCallback(async (event, celex) => {
-    event.stopPropagation();
-    if (window.confirm(t("landing.deleteConfirm"))) {
-      await hideLaw(celex);
-      resetSearchIndex();
-    }
-  }, [hideLaw, resetSearchIndex, t]);
 
   const handleOpenLaw = useCallback(async (law) => {
     await markLawOpened(law.celex);
@@ -199,11 +190,10 @@ export function Landing({ forcedLocale = null }) {
           </div>
         </Motion.div>
 
-        <div className="mt-12 w-full max-w-4xl">
+        <div className="mt-12 w-full max-w-3xl">
           <LandingLibrary
             laws={allLaws}
             onOpenLaw={handleOpenLaw}
-            onDeleteLaw={handleDelete}
             locale={activeLocale}
             t={t}
           />

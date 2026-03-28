@@ -304,12 +304,10 @@ async function pruneCacheIfNeeded(protectedCelex = null, protectedCelexes = []) 
       const meta = metaByCelex.get(celex) || {};
       return {
         celex,
-        hiddenRank: meta.hidden ? 0 : 1,
         recency: meta.lastOpened || meta.cachedAt || meta.addedAt || 0,
       };
     })
     .sort((a, b) => {
-      if (a.hiddenRank !== b.hiddenRank) return a.hiddenRank - b.hiddenRank;
       return a.recency - b.recency;
     });
 

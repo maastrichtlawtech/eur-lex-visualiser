@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
-import { Clock, Trash } from "lucide-react";
+import { Clock } from "lucide-react";
 import { Button } from "./Button.jsx";
 
 const MOBILE_VISIBLE_LIMIT = 8;
@@ -139,7 +139,7 @@ function limitGroups(groups, limit) {
   return limitedGroups;
 }
 
-function LawLibraryCard({ law, onOpen, onDelete, locale, t }) {
+function LawLibraryCard({ law, onOpen, locale, t }) {
   const title = getCardTitle(law);
   const officialReference = formatOfficialReference(law);
   const metaLine = [officialReference, law?.celex ? `CELEX ${law.celex}` : null].filter(Boolean).join(" · ");
@@ -175,19 +175,12 @@ function LawLibraryCard({ law, onOpen, onDelete, locale, t }) {
           </div>
         </div>
 
-        <button
-          onClick={(event) => onDelete(event, law.celex)}
-          className="absolute top-4 right-4 p-1.5 rounded-full text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all"
-          title={t("common.hideLaw")}
-        >
-          <Trash className="h-4 w-4" />
-        </button>
       </div>
     </Motion.div>
   );
 }
 
-export function LandingLibrary({ laws, onOpenLaw, onDeleteLaw, locale, t }) {
+export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
     return window.matchMedia("(min-width: 640px)").matches;
@@ -261,7 +254,6 @@ export function LandingLibrary({ laws, onOpenLaw, onDeleteLaw, locale, t }) {
                     key={law.id}
                     law={law}
                     onOpen={onOpenLaw}
-                    onDelete={onDeleteLaw}
                     locale={locale}
                     t={t}
                   />
