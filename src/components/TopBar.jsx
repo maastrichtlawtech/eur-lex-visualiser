@@ -617,61 +617,66 @@ export function SearchBox({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header with Auto-focused Input */}
-            <div className="flex-none border-b border-gray-100 px-4 py-3 bg-white flex items-center gap-3 dark:bg-gray-900 dark:border-gray-800">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="md:hidden text-gray-500 hover:text-gray-900 p-1 -ml-1"
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <Search size={20} className="text-gray-400 hidden md:block" />
-              <div className="flex-1 relative">
-                <input
-                  ref={modalInputRef}
-                  type="text"
-                  value={query}
-                  onChange={handleSearch}
-                  onKeyDown={(e) => {
-                    if (isLawMode && e.key === "Enter" && selectedIndex < 0) {
-                      e.preventDefault();
-                      runLawSearch(query);
-                    }
-                  }}
-                  placeholder={inputPlaceholder}
-                  disabled={isInputDisabled}
-                  className="w-full text-lg text-gray-900 placeholder:text-gray-400 outline-none bg-transparent pr-8 disabled:opacity-50 dark:text-white dark:placeholder:text-gray-600"
-                />
-                {isBusy ? (
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                    <Loader2 className="animate-spin text-blue-600" size={20} />
-                  </div>
-                ) : query && (
-                  <button
-                    onClick={() => { setQuery(""); setResults([]); focusModalInput(); }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 p-1"
-                    title={t("search.clear")}
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
-              {isLawMode ? (
+            <div className="flex-none border-b border-gray-100 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+              <div className="flex items-center gap-3">
                 <button
-                  type="button"
-                  onClick={() => runLawSearch(query)}
-                  disabled={!canSubmitLawSearch}
-                  className="rounded-lg bg-gray-900 px-3 py-2 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+                  onClick={() => setIsOpen(false)}
+                  className="p-1 -ml-1 text-gray-500 hover:text-gray-900 md:hidden"
                 >
-                  {t("search.submitLawSearch")}
+                  <ChevronLeft size={24} />
                 </button>
-              ) : null}
-              <div className="h-6 w-px bg-gray-200 mx-1 hidden md:block dark:bg-gray-700"></div>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="hidden md:block text-sm font-medium text-gray-500 hover:text-gray-900 px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors dark:text-gray-400 dark:hover:text-white dark:hover:bg-gray-800"
-              >
-                {t("common.close")}
-              </button>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Search size={18} className="hidden shrink-0 text-gray-400 md:block" />
+                  <div className="relative min-w-0 flex-1">
+                    <input
+                      ref={modalInputRef}
+                      type="text"
+                      value={query}
+                      onChange={handleSearch}
+                      onKeyDown={(e) => {
+                        if (isLawMode && e.key === "Enter" && selectedIndex < 0) {
+                          e.preventDefault();
+                          runLawSearch(query);
+                        }
+                      }}
+                      placeholder={inputPlaceholder}
+                      disabled={isInputDisabled}
+                      className="h-10 w-full bg-transparent pr-8 text-base font-medium text-gray-900 outline-none placeholder:text-gray-400 disabled:opacity-50 md:text-[1.05rem] dark:text-white dark:placeholder:text-gray-600"
+                    />
+                    {isBusy ? (
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                        <Loader2 className="animate-spin text-blue-600" size={20} />
+                      </div>
+                    ) : query && (
+                      <button
+                        onClick={() => { setQuery(""); setResults([]); focusModalInput(); }}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                        title={t("search.clear")}
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="hidden shrink-0 items-center gap-2 border-l border-gray-200 pl-3 md:flex dark:border-gray-700">
+                  {isLawMode ? (
+                    <button
+                      type="button"
+                      onClick={() => runLawSearch(query)}
+                      disabled={!canSubmitLawSearch}
+                      className="h-10 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
+                    >
+                      {t("search.submitLawSearch")}
+                    </button>
+                  ) : null}
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="h-10 rounded-lg px-4 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                  >
+                    {t("common.close")}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {hasGlobalSearch && availableModes.length > 1 && (
