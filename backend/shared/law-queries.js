@@ -174,7 +174,7 @@ LIMIT 200`;
 // Per-case party name cache (single JSON file: { caseCelex: name, ... })
 // ---------------------------------------------------------------------------
 
-const PARTY_NAME_CACHE_FILE = 'case-law-party-names.json';
+const PARTY_NAME_CACHE_FILE = 'case-law-party-names-v2.json';
 
 function loadPartyNameCache(cacheDir) {
   try {
@@ -201,7 +201,7 @@ function savePartyNameCache(cacheDir, cache) {
 
 /**
  * Fetch the first party name from each judgment's EUR-Lex HTML.
- * Uses HTTP Range requests (first 5 KB) so it's lightweight.
+ * Uses HTTP Range requests (first 20 KB) so it's lightweight.
  * Stops early if Cloudflare starts blocking requests.
  */
 async function enrichWithPartyNames(cases, concurrency = 6) {
@@ -244,7 +244,7 @@ async function fetchPartyName(caseCelex) {
 
     try {
       const res = await fetch(url, {
-        headers: { Range: 'bytes=0-5000' },
+        headers: { Range: 'bytes=0-20000' },
         signal: controller.signal,
       });
 
@@ -268,13 +268,6 @@ async function fetchPartyName(caseCelex) {
         .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
         .replace(/[,;]+$/, '').trim();
-
-      // Shorten overly long names (e.g. "Bundesverband der Verbraucherzentralen...")
-      if (name.length > 60) {
-        const dash = name.indexOf(' — ');
-        if (dash > 0 && dash < 60) name = name.substring(0, dash);
-        else name = name.substring(0, 57) + '…';
-      }
 
       return name || null;
     } finally {
