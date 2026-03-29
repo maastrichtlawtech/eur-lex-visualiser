@@ -32,10 +32,6 @@ function CaseCard({ c, currentLang }) {
     ? (showAllArticles ? c.articlesCited : c.articlesCited.slice(0, MAX_VISIBLE_ARTICLES))
     : [];
 
-  // First declaration as summary
-  const summary = hasDecision ? c.declarations[0].text : null;
-  const summaryTruncated = summary && summary.length > 150;
-
   return (
     <li className="rounded-lg border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       {/* Header row — always visible */}
@@ -84,37 +80,49 @@ function CaseCard({ c, currentLang }) {
           </div>
         )}
 
-        {/* Decision summary */}
+        {/* Decision preview / expanded */}
         {hasDecision && (
-          <div className="mt-1.5">
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              className="flex items-center gap-1 text-[10px] font-medium text-teal-700 dark:text-teal-400 hover:text-teal-900 dark:hover:text-teal-300 transition-colors"
-            >
-              {expanded ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-              Decision ({c.declarations.length} {c.declarations.length === 1 ? "point" : "points"})
-            </button>
-            {!expanded && summary && (
-              <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                {summaryTruncated ? summary.slice(0, 150) + "…" : summary}
-              </p>
-            )}
-            {expanded && (
-              <ol className="mt-1 space-y-1.5 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed list-none">
-                {c.declarations.map((d) => (
-                  <li key={d.number}>
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">{d.number}.</span>{" "}
-                    {d.text}
-                  </li>
-                ))}
-              </ol>
+          <div className="mt-2">
+            {!expanded ? (
+              <button
+                type="button"
+                onClick={() => setExpanded(true)}
+                className="w-full text-left"
+              >
+                <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">Decision:</span>
+                <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
+                  {c.declarations.map((d) => `${d.number}. ${d.text}`).join(" ")}
+                </p>
+                <span className="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300">
+                  <ChevronDown size={10} />
+                  Expand decision
+                </span>
+              </button>
+            ) : (
+              <div>
+                <ol className="space-y-1.5 rounded-md bg-gray-50 p-2 text-[11px] text-gray-600 dark:bg-gray-800/50 dark:text-gray-400 leading-relaxed list-none">
+                  {c.declarations.map((d) => (
+                    <li key={d.number}>
+                      <span className="font-semibold text-gray-700 dark:text-gray-300">{d.number}.</span>{" "}
+                      {d.text}
+                    </li>
+                  ))}
+                </ol>
+                <button
+                  type="button"
+                  onClick={() => setExpanded(false)}
+                  className="mt-0.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
+                >
+                  <ChevronUp size={10} />
+                  Collapse
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        {/* Footer: ECLI + Read judgment CTA */}
-        <div className="mt-2 flex items-center justify-between gap-2">
+        {/* Footer: ECLI + EUR-Lex link */}
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-gray-100 pt-2 dark:border-gray-700/50">
           {c.ecli && (
             <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
               {c.ecli}
@@ -124,9 +132,9 @@ function CaseCard({ c, currentLang }) {
             href={eurlexUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+            className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-md bg-teal-50 px-2.5 py-1 text-[11px] font-medium text-teal-700 hover:bg-teal-100 transition-colors dark:bg-teal-900/30 dark:text-teal-300 dark:hover:bg-teal-900/50"
           >
-            Read judgment
+            Read full judgment
             <ExternalLink size={10} />
           </a>
         </div>
