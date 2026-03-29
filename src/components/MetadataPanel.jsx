@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
+import { Loader2, ChevronDown, ExternalLink, Scale } from "lucide-react";
 import { fetchLawMetadata, fetchAmendments, fetchImplementingActs, fetchCaseLaw } from "../utils/formexApi.js";
 import { buildEurlexCelexUrl } from "../utils/url.js";
 import { Accordion } from "./Accordion.jsx";
+import { CaseLawModal } from "./CaseLawModal.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 
 function formatDate(isoDate) {
@@ -103,55 +104,6 @@ function ActList({ acts, currentLang, type = "amendment" }) {
 }
 
 /**
- * Renders a list of CJEU judgments as cards.
- */
-function CaseLawList({ cases, currentLang }) {
-  if (!cases || cases.length === 0) return null;
-
-  return (
-    <ul className="space-y-2">
-      {cases.map((c) => {
-        const eurlexUrl = `https://eur-lex.europa.eu/legal-content/${currentLang || "EN"}/TXT/?uri=CELEX:${c.celex}`;
-        const dateLabel = formatDate(c.date);
-        return (
-          <li key={c.celex}>
-            <a
-              href={eurlexUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex flex-col gap-0.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs transition hover:border-gray-300 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:hover:border-gray-600"
-            >
-              <div className="flex items-center gap-1.5">
-                <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
-                  CJEU
-                </span>
-                {dateLabel && (
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">
-                    {dateLabel}
-                  </span>
-                )}
-                <ExternalLink size={10} className="ml-auto shrink-0 text-gray-300 group-hover:text-gray-400 dark:text-gray-600 dark:group-hover:text-gray-500" />
-              </div>
-              <span className="font-medium text-gray-700 group-hover:text-blue-700 dark:text-gray-300 dark:group-hover:text-blue-400 truncate">
-                {c.caseNumber || c.celex}
-                {c.name && (
-                  <span className="font-normal text-gray-500 dark:text-gray-400"> — {c.name}</span>
-                )}
-              </span>
-              {c.ecli && (
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                  {c.ecli}
-                </span>
-              )}
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-/**
  * Sidebar panel showing law metadata (dates, in-force status) fetched on mount,
  * plus on-demand buttons for amendments and implementing/delegated acts.
  */
@@ -177,6 +129,7 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
   const [caseLawList, setCaseLawList] = useState(null);
   const [caseLawLoading, setCaseLawLoading] = useState(false);
   const [caseLawLoaded, setCaseLawLoaded] = useState(false);
+  const [caseLawModalOpen, setCaseLawModalOpen] = useState(false);
 
   // Auto-fetch metadata when celex changes
   useEffect(() => {
@@ -379,14 +332,29 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
         />
       )}
 
-      {/* CJEU Case Law — load only on user action */}
+      {/* CJEU Case Law — load only on user action, opens in modal */}
       {caseLawLoaded && caseLawList && caseLawList.length > 0 ? (
-        <Accordion
-          title={`${t("metadata.caseLaw")} (${caseLawList.length})`}
-          defaultOpen={true}
-        >
-          <CaseLawList cases={caseLawList} currentLang={currentLang} />
-        </Accordion>
+        <>
+          <div className="rounded-xl border border-gray-200 bg-white dark:bg-gray-800 dark:border-gray-700">
+            <button
+              type="button"
+              onClick={() => setCaseLawModalOpen(true)}
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-xl transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                <Scale size={14} className="text-teal-600 dark:text-teal-400" />
+                {t("metadata.caseLaw")} ({caseLawList.length})
+              </span>
+              <ExternalLink size={14} className="text-gray-400" />
+            </button>
+          </div>
+          <CaseLawModal
+            isOpen={caseLawModalOpen}
+            onClose={() => setCaseLawModalOpen(false)}
+            cases={caseLawList}
+            currentLang={currentLang}
+          />
+        </>
       ) : (
         <LoadButton
           label={t("metadata.caseLaw")}

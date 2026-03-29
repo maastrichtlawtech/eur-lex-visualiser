@@ -7,6 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { JSDOM } = require('jsdom');
 
 async function fetchMetadata(celex, runSparqlQuery) {
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
@@ -114,8 +115,9 @@ LIMIT 100`;
 }
 
 async function fetchCaseLaw(celex, runSparqlQuery, { cacheDir } = {}) {
-  // Load the per-case party name cache (single file for all cases)
+  // Load caches
   const nameCache = cacheDir ? loadPartyNameCache(cacheDir) : {};
+  const detailsCache = cacheDir ? loadCaseDetailsCache(cacheDir) : {};
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
@@ -134,30 +136,50 @@ LIMIT 200`;
   const data = await runSparqlQuery(query);
   const cases = (data.results?.bindings || []).map((b) => {
     const caseCelex = b.caseCelex?.value || null;
-    // Convert CELEX like 62018CJ0311 -> C-311/18
     let caseNumber = caseCelex;
     const m = caseCelex?.match(/^6(\d{4})CJ(\d{4})$/);
     if (m) {
       caseNumber = `C-${parseInt(m[2], 10)}/${m[1].slice(2)}`;
     }
+    const details = detailsCache[caseCelex];
     return {
       celex: caseCelex,
       caseNumber,
       ecli: b.ecli?.value || null,
       date: b.date?.value || null,
-      name: nameCache[caseCelex] || null,
+      name: details?.name || nameCache[caseCelex] || null,
+      declarations: details?.declarations || [],
+      articlesCited: details?.articlesCited || [],
     };
   }).filter((c) => c.celex);
 
-  // Only scrape names for cases not already in the cache
-  const uncached = cases.filter((c) => !c.name);
-  if (uncached.length > 0) {
-    // Non-fatal: if EUR-Lex is down or Cloudflare blocks us, we still return results without names.
+  // Enrich with full details (decisions + articles) for cases not in details cache
+  const uncachedDetails = cases.filter((c) => !detailsCache[c.celex]);
+  if (uncachedDetails.length > 0) {
     try {
-      await enrichWithPartyNames(uncached);
-      // Persist any newly fetched names back to the cache file
+      await enrichWithCaseDetails(uncachedDetails, detailsCache);
+      // Also update name cache from any newly fetched names
       if (cacheDir) {
-        for (const c of uncached) {
+        for (const c of uncachedDetails) {
+          if (detailsCache[c.celex]?.name) {
+            nameCache[c.celex] = detailsCache[c.celex].name;
+          }
+        }
+        saveCaseDetailsCache(cacheDir, detailsCache);
+        savePartyNameCache(cacheDir, nameCache);
+      }
+    } catch (err) {
+      console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
+    }
+  }
+
+  // Fallback: fetch party names for cases that still have no name
+  const unnamed = cases.filter((c) => !c.name);
+  if (unnamed.length > 0) {
+    try {
+      await enrichWithPartyNames(unnamed);
+      if (cacheDir) {
+        for (const c of unnamed) {
           if (c.name) nameCache[c.celex] = c.name;
         }
         savePartyNameCache(cacheDir, nameCache);
@@ -287,6 +309,312 @@ async function fetchPartyName(caseCelex) {
   }
 
   return null; // all retries exhausted
+}
+
+// ---------------------------------------------------------------------------
+// Case details enrichment (decisions + article citations)
+// Ported from experiments/ecj-decisions/extract.mjs
+// ---------------------------------------------------------------------------
+
+const CASE_DETAILS_CACHE_FILE = 'case-law-details-v1.json';
+
+function loadCaseDetailsCache(cacheDir) {
+  try {
+    const filePath = path.join(cacheDir, CASE_DETAILS_CACHE_FILE);
+    if (!fs.existsSync(filePath)) return {};
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function saveCaseDetailsCache(cacheDir, cache) {
+  try {
+    const filePath = path.join(cacheDir, CASE_DETAILS_CACHE_FILE);
+    fs.writeFileSync(filePath, JSON.stringify(cache, null, 2), 'utf8');
+  } catch {
+    // best-effort
+  }
+}
+
+function cleanText(text) {
+  return text.replace(/[\s\n\t]+/g, ' ').trim();
+}
+
+/**
+ * Extract the operative part (ruling) from a CJEU judgment DOM.
+ */
+function extractOperativePart(document) {
+  const body = document.body;
+  if (!body) return { declarations: [] };
+
+  const allParagraphs = body.querySelectorAll('p.coj-normal');
+  let operativeStartIdx = -1;
+
+  for (let i = 0; i < allParagraphs.length; i++) {
+    const text = allParagraphs[i].textContent.trim();
+    if (text.match(/^On\s+those\s+grounds/i) && text.match(/hereby\s+(rules|declares|orders)/i)) {
+      operativeStartIdx = i;
+      break;
+    }
+  }
+
+  if (operativeStartIdx === -1) {
+    return extractOperativePartFromText(body.textContent || '');
+  }
+
+  const declarations = [];
+  let currentNumber = 0;
+  let currentText = '';
+
+  const operativeP = allParagraphs[operativeStartIdx];
+  let node = operativeP.closest('table') || operativeP.closest('tr') || operativeP;
+  node = node.nextElementSibling || node.parentElement?.nextElementSibling;
+
+  while (node) {
+    if (node.querySelector?.('.coj-signaturecase') || node.classList?.contains('coj-signaturecase')) break;
+    if (node.tagName === 'HR' && node.classList?.contains('coj-note')) break;
+
+    const countEl = node.querySelector?.('.coj-count.coj-bold, .coj-count .coj-bold');
+    if (countEl) {
+      const numMatch = countEl.textContent.match(/(\d+)\./);
+      if (numMatch) {
+        if (currentNumber > 0 && currentText.trim()) {
+          declarations.push({ number: currentNumber, text: currentText.trim() });
+        }
+        currentNumber = parseInt(numMatch[1], 10);
+        const textCell = countEl.closest('tr')?.querySelector('td:last-child');
+        currentText = textCell ? cleanText(textCell.textContent) : '';
+        node = node.nextElementSibling;
+        continue;
+      }
+    }
+
+    if (currentNumber > 0) {
+      const normalP = node.querySelector?.('p.coj-normal');
+      if (normalP) {
+        const additionalText = cleanText(normalP.textContent);
+        if (additionalText && !additionalText.match(/^Delivered in open court/i)) {
+          currentText += ' ' + additionalText;
+        }
+      }
+    }
+
+    node = node.nextElementSibling;
+  }
+
+  if (currentNumber > 0 && currentText.trim()) {
+    declarations.push({ number: currentNumber, text: currentText.trim() });
+  }
+
+  if (declarations.length === 0) {
+    return extractOperativePartFromText(body.textContent || '');
+  }
+
+  return { declarations };
+}
+
+function extractOperativePartFromText(fullText) {
+  const operativePatterns = [
+    /On\s+those\s+grounds\s*,?\s*(?:the\s+Court\s*\([^)]*\)\s*hereby\s+(?:rules|declares|orders)\s*:?)/i,
+    /On\s+those\s+grounds\s*,?\s*THE\s+COURT\s*(?:\([^)]*\))?\s*(?:hereby\s+)?(?:rules|declares|orders)\s*:?/i,
+  ];
+
+  let operativeStart = -1;
+  for (const pattern of operativePatterns) {
+    const match = fullText.match(pattern);
+    if (match) {
+      operativeStart = match.index + match[0].length;
+      break;
+    }
+  }
+
+  if (operativeStart === -1) return { declarations: [] };
+
+  let rawOperative = fullText.substring(operativeStart).trim();
+
+  const cutoffs = [/Delivered\s+in\s+open\s+court/i, /Language\s+of\s+the\s+case/i];
+  for (const pattern of cutoffs) {
+    const match = rawOperative.match(pattern);
+    if (match) rawOperative = rawOperative.substring(0, match.index).trim();
+  }
+
+  const declarations = [];
+  const numberedPattern = /(?:^|\s)(\d+)\.\s+/g;
+  const matches = [...rawOperative.matchAll(numberedPattern)];
+
+  if (matches.length > 0) {
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index + matches[i][0].length;
+      const end = i + 1 < matches.length ? matches[i + 1].index : rawOperative.length;
+      const text = cleanText(rawOperative.substring(start, end));
+      if (text) declarations.push({ number: parseInt(matches[i][1], 10), text });
+    }
+  } else {
+    const text = cleanText(rawOperative);
+    if (text) declarations.push({ number: 1, text });
+  }
+
+  return { declarations };
+}
+
+/**
+ * Extract article citations from judgment text.
+ * Returns compact strings like "Art. 6 GDPR", "Art. 47 Charter".
+ */
+function extractArticleCitations(document) {
+  const text = cleanText(document.body?.textContent || '');
+  const citations = [];
+  const seen = new Set();
+
+  const articlePatterns = [
+    /Articles?\s+\d+(?:\(\d+\))*(?:\([a-z]\))?\s+of\s+(?:Regulation|Directive|Decision)\s+\(?(?:EU|EC|EEC|Euratom)?\)?\s*(?:No\s+)?\d{2,4}\/\d+/gi,
+    /Articles?\s+\d+(?:\(\d+\))*(?:\([a-z]\))?\s+of\s+(?:Regulation|Directive|Decision)\s+\d{2,4}\/\d+/gi,
+    /Articles?\s+\d+(?:\(\d+\))*(?:\([a-z]\))?\s+of\s+(?:the\s+)?(?:GDPR|Charter|TFEU|TEU|ECHR)/gi,
+    /Articles\s+[\d,\s]+(?:and\s+\d+)?\s+of\s+(?:Regulation|Directive|Decision)\s+\(?(?:EU|EC|EEC|Euratom)?\)?\s*(?:No\s+)?\d{2,4}\/\d+/gi,
+    /Articles\s+[\d,\s]+(?:and\s+\d+)?\s+of\s+(?:the\s+)?(?:GDPR|Charter|TFEU|TEU|ECHR)/gi,
+    /Article\s+\d+(?:\(\d+\))?\s+(?:TFEU|TEU|ECHR)/gi,
+  ];
+
+  for (const pattern of articlePatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const key = match[0].toLowerCase().replace(/\s+/g, ' ');
+      if (!seen.has(key)) {
+        seen.add(key);
+        citations.push(formatArticlePill(match[0].trim()));
+      }
+    }
+  }
+
+  return citations;
+}
+
+/**
+ * Convert a full citation like "Article 6(1) of Regulation (EU) 2016/679"
+ * into a compact pill label like "Art. 6(1) GDPR".
+ */
+function formatArticlePill(citation) {
+  let label = citation.replace(/^Articles?\s+/i, 'Art. ');
+
+  const shortNames = [
+    { pattern: /\s+of\s+(?:the\s+)?GDPR/i, short: ' GDPR' },
+    { pattern: /\s+of\s+(?:the\s+)?Charter/i, short: ' Charter' },
+    { pattern: /\s+of\s+(?:the\s+)?TFEU/i, short: ' TFEU' },
+    { pattern: /\s+of\s+(?:the\s+)?TEU/i, short: ' TEU' },
+    { pattern: /\s+of\s+(?:the\s+)?ECHR/i, short: ' ECHR' },
+    { pattern: /\s+of\s+(?:Regulation|Directive|Decision)\s+\(?(?:EU|EC|EEC|Euratom)?\)?\s*(?:No\s+)?2016\/679/i, short: ' GDPR' },
+    { pattern: /\s+of\s+(?:Regulation|Directive|Decision)\s+\(?(?:EU|EC|EEC|Euratom)?\)?\s*(?:No\s+)?(\d{2,4}\/\d+)/i, short: null },
+  ];
+
+  for (const { pattern, short } of shortNames) {
+    const m = label.match(pattern);
+    if (m) {
+      if (short) {
+        label = label.substring(0, m.index) + short;
+      } else {
+        label = label.substring(0, m.index) + ' ' + m[1];
+      }
+      break;
+    }
+  }
+
+  return label;
+}
+
+/**
+ * Fetch full HTML for a case and extract decision + article citations.
+ */
+async function fetchCaseDetails(caseCelex) {
+  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+
+      if (isChallengeResponse(res)) {
+        clearTimeout(timeout);
+        const delay = 2000 * (2 ** attempt);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      if (!res.ok) return null;
+
+      const html = await res.text();
+      if (!html || html.length < 200) return null;
+
+      const dom = new JSDOM(html);
+      const doc = dom.window.document;
+
+      const operative = extractOperativePart(doc);
+      const articlesCited = extractArticleCitations(doc);
+
+      // Also extract party name from the full HTML (more reliable than Range request)
+      const boldPattern = /<span class="(?:coj-)?bold">([^<]+)<\/span>/g;
+      const boldMatches = [...html.matchAll(boldPattern)];
+      let name = null;
+      if (boldMatches.length > 0) {
+        const cleanBold = (raw) => raw
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+          .replace(/[,;]+$/, '').trim();
+        const first = cleanBold(boldMatches[0][1]);
+        if (first && boldMatches.length >= 2) {
+          const second = cleanBold(boldMatches[1][1]);
+          name = second ? `${first} v ${second}` : first;
+        } else {
+          name = first || null;
+        }
+      }
+
+      return {
+        name,
+        declarations: operative.declarations,
+        articlesCited,
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Enrich cases with full details (decisions + articles). Lower concurrency
+ * than party-name enrichment since we fetch full pages.
+ */
+async function enrichWithCaseDetails(cases, detailsCache, concurrency = 3) {
+  let consecutiveFails = 0;
+  let blocked = false;
+  let i = 0;
+
+  async function next() {
+    while (i < cases.length && !blocked) {
+      const c = cases[i++];
+      try {
+        const details = await fetchCaseDetails(c.celex);
+        if (details) {
+          detailsCache[c.celex] = details;
+          c.declarations = details.declarations;
+          c.articlesCited = details.articlesCited;
+          if (details.name && !c.name) c.name = details.name;
+        }
+        consecutiveFails = 0;
+      } catch (err) {
+        consecutiveFails++;
+        if (consecutiveFails >= 5) {
+          blocked = true;
+          console.warn(`[case-law] Stopping details enrichment after ${consecutiveFails} consecutive failures: ${err.message}`);
+        }
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, next));
 }
 
 module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
