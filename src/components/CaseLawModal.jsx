@@ -18,12 +18,19 @@ function formatDate(isoDate) {
   }
 }
 
+const MAX_VISIBLE_ARTICLES = 5;
+
 function CaseCard({ c, currentLang }) {
   const [expanded, setExpanded] = useState(false);
+  const [showAllArticles, setShowAllArticles] = useState(false);
   const eurlexUrl = `https://eur-lex.europa.eu/legal-content/${currentLang || "EN"}/TXT/?uri=CELEX:${c.celex}`;
   const dateLabel = formatDate(c.date);
   const hasDecision = c.declarations && c.declarations.length > 0;
   const hasArticles = c.articlesCited && c.articlesCited.length > 0;
+  const hiddenArticleCount = hasArticles ? Math.max(0, c.articlesCited.length - MAX_VISIBLE_ARTICLES) : 0;
+  const visibleArticles = hasArticles
+    ? (showAllArticles ? c.articlesCited : c.articlesCited.slice(0, MAX_VISIBLE_ARTICLES))
+    : [];
 
   // First declaration as summary
   const summary = hasDecision ? c.declarations[0].text : null;
@@ -42,15 +49,6 @@ function CaseCard({ c, currentLang }) {
               {dateLabel}
             </span>
           )}
-          <a
-            href={eurlexUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ml-auto shrink-0 text-gray-300 hover:text-blue-500 dark:text-gray-600 dark:hover:text-blue-400 transition-colors"
-            title="Open on EUR-Lex"
-          >
-            <ExternalLink size={12} />
-          </a>
         </div>
 
         {/* Case number + full party name */}
@@ -63,10 +61,10 @@ function CaseCard({ c, currentLang }) {
           )}
         </div>
 
-        {/* Article pills */}
+        {/* Article pills — collapsed by default */}
         {hasArticles && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {c.articlesCited.map((art, i) => (
+          <div className="mt-1.5 flex flex-wrap items-center gap-1">
+            {visibleArticles.map((art, i) => (
               <span
                 key={i}
                 className="inline-block rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
@@ -74,6 +72,15 @@ function CaseCard({ c, currentLang }) {
                 {art}
               </span>
             ))}
+            {hiddenArticleCount > 0 && !showAllArticles && (
+              <button
+                type="button"
+                onClick={() => setShowAllArticles(true)}
+                className="inline-block rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 transition-colors"
+              >
+                +{hiddenArticleCount} more
+              </button>
+            )}
           </div>
         )}
 
@@ -106,12 +113,23 @@ function CaseCard({ c, currentLang }) {
           </div>
         )}
 
-        {/* ECLI */}
-        {c.ecli && (
-          <div className="mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-            {c.ecli}
-          </div>
-        )}
+        {/* Footer: ECLI + Read judgment CTA */}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          {c.ecli && (
+            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+              {c.ecli}
+            </span>
+          )}
+          <a
+            href={eurlexUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto shrink-0 inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-100 transition-colors dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-900/50"
+          >
+            Read judgment
+            <ExternalLink size={10} />
+          </a>
+        </div>
       </div>
     </li>
   );
