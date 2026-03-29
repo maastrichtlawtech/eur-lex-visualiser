@@ -1,6 +1,6 @@
 const FORMEX_DB_NAME = "formex-cache";
 const MIGRATION_VERSION_KEY = "legalviz-migration-version";
-const CURRENT_MIGRATION_VERSION = "2026-03-formex-only";
+const CURRENT_MIGRATION_VERSION = "2026-03-v2-meta-upgrade";
 const APP_STORAGE_PREFIXES = ["legalviz-", "eurlex_", "nlp_v", "nlp_map_"];
 const APP_STORAGE_KEYS = [
   "vite-ui-theme",
@@ -43,7 +43,13 @@ function deleteIndexedDb(name) {
       const request = window.indexedDB.deleteDatabase(name);
       request.onsuccess = () => resolve();
       request.onerror = () => resolve();
+      // onblocked fires when open connections prevent deletion (common on
+      // Android Firefox).  Resolve so the migration can continue — the next
+      // page load will recreate the DB fresh via the version-upgrade path.
       request.onblocked = () => resolve();
+
+      // Safety timeout: some mobile browsers never fire any callback.
+      setTimeout(resolve, 3000);
     } catch {
       resolve();
     }
