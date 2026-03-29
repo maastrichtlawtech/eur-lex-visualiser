@@ -263,7 +263,7 @@ function registerApiRoutes(app, deps) {
         return res.json(cached);
       }
 
-      const payload = await fetchCaseLaw(celex, runSparqlQuery);
+      const payload = await fetchCaseLaw(celex, runSparqlQuery, { cacheDir: FMX_DIR });
       cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
       res.json(payload);
     } catch (err) {

@@ -5,6 +5,9 @@
  * and result-shaping logic.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 async function fetchMetadata(celex, runSparqlQuery) {
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
@@ -110,7 +113,17 @@ LIMIT 100`;
   return { celex, acts };
 }
 
-async function fetchCaseLaw(celex, runSparqlQuery) {
+async function fetchCaseLaw(celex, runSparqlQuery, { cacheDir } = {}) {
+  // Try file cache first
+  if (cacheDir) {
+    try {
+      const cached = readCaseLawCache(cacheDir, celex);
+      if (cached) return cached;
+    } catch {
+      // cache read failed — continue with fresh fetch
+    }
+  }
+
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
@@ -144,24 +157,81 @@ LIMIT 200`;
   }).filter((c) => c.celex);
 
   // Enrich with party names extracted from EUR-Lex HTML (first ~5 KB only).
-  // Run in parallel with limited concurrency to avoid overwhelming EUR-Lex.
-  await enrichWithPartyNames(cases);
+  // Non-fatal: if EUR-Lex is down or Cloudflare blocks us, we still return results without names.
+  try {
+    await enrichWithPartyNames(cases);
+  } catch (err) {
+    console.warn(`[case-law] Party name enrichment failed for ${celex}: ${err.message}`);
+  }
 
-  return { celex, cases };
+  const payload = { celex, cases };
+
+  // Write to file cache (best-effort)
+  if (cacheDir) {
+    try {
+      writeCaseLawCache(cacheDir, celex, payload);
+    } catch {
+      // cache write failed — not critical
+    }
+  }
+
+  return payload;
 }
+
+// ---------------------------------------------------------------------------
+// File-based case-law cache
+// ---------------------------------------------------------------------------
+
+const CASE_LAW_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function caseLawCachePath(cacheDir, celex) {
+  return path.join(cacheDir, `case-law-${celex}.json`);
+}
+
+function readCaseLawCache(cacheDir, celex) {
+  const filePath = caseLawCachePath(cacheDir, celex);
+  if (!fs.existsSync(filePath)) return null;
+
+  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  if (!raw.fetchedAt || Date.now() - raw.fetchedAt > CASE_LAW_CACHE_MAX_AGE_MS) {
+    return null; // stale
+  }
+  return { celex: raw.celex, cases: raw.cases };
+}
+
+function writeCaseLawCache(cacheDir, celex, payload) {
+  const filePath = caseLawCachePath(cacheDir, celex);
+  const data = { ...payload, fetchedAt: Date.now() };
+  fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
+}
+
+// ---------------------------------------------------------------------------
+// Party name enrichment (with Cloudflare challenge handling)
+// ---------------------------------------------------------------------------
 
 /**
  * Fetch the first party name from each judgment's EUR-Lex HTML.
  * Uses HTTP Range requests (first 5 KB) so it's lightweight.
+ * Stops early if Cloudflare starts blocking requests.
  */
 async function enrichWithPartyNames(cases, concurrency = 6) {
+  let consecutiveFails = 0;
+  let blocked = false;
   let i = 0;
+
   async function next() {
-    while (i < cases.length) {
+    while (i < cases.length && !blocked) {
       const c = cases[i++];
       try {
         c.name = await fetchPartyName(c.celex);
-      } catch {
+        consecutiveFails = 0;
+      } catch (err) {
+        consecutiveFails++;
+        // If we get 5+ consecutive failures, EUR-Lex is probably blocking us — bail out
+        if (consecutiveFails >= 5) {
+          blocked = true;
+          console.warn(`[case-law] Stopping enrichment after ${consecutiveFails} consecutive failures: ${err.message}`);
+        }
         // leave name as null
       }
     }
@@ -169,40 +239,60 @@ async function enrichWithPartyNames(cases, concurrency = 6) {
   await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, next));
 }
 
+function isChallengeResponse(res) {
+  return res.status === 202
+    && String(res.headers.get('x-amzn-waf-action') || '').toLowerCase() === 'challenge';
+}
+
 async function fetchPartyName(caseCelex) {
   const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10_000);
 
-  try {
-    const res = await fetch(url, {
-      headers: { Range: 'bytes=0-5000' },
-      signal: controller.signal,
-    });
-    if (!res.ok && res.status !== 206) return null;
+  // Retry up to 2 times on Cloudflare challenge
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
 
-    const html = await res.text();
-    // First <span class="bold"> or <span class="coj-bold"> after "In Case" is the first party
-    const match = html.match(/<span class="(?:coj-)?bold">([^<]+)<\/span>/);
-    if (!match) return null;
+    try {
+      const res = await fetch(url, {
+        headers: { Range: 'bytes=0-5000' },
+        signal: controller.signal,
+      });
 
-    // Decode HTML entities and clean up trailing punctuation
-    let name = match[1]
-      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
-      .replace(/[,;]+$/, '').trim();
+      if (isChallengeResponse(res)) {
+        clearTimeout(timeout);
+        // Exponential backoff: 2s, 4s
+        const delay = 2000 * (2 ** attempt);
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
 
-    // Shorten overly long names (e.g. "Bundesverband der Verbraucherzentralen...")
-    if (name.length > 60) {
-      const dash = name.indexOf(' — ');
-      if (dash > 0 && dash < 60) name = name.substring(0, dash);
-      else name = name.substring(0, 57) + '…';
+      if (!res.ok && res.status !== 206) return null;
+
+      const html = await res.text();
+      // First <span class="bold"> or <span class="coj-bold"> after "In Case" is the first party
+      const match = html.match(/<span class="(?:coj-)?bold">([^<]+)<\/span>/);
+      if (!match) return null;
+
+      // Decode HTML entities and clean up trailing punctuation
+      let name = match[1]
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+        .replace(/[,;]+$/, '').trim();
+
+      // Shorten overly long names (e.g. "Bundesverband der Verbraucherzentralen...")
+      if (name.length > 60) {
+        const dash = name.indexOf(' — ');
+        if (dash > 0 && dash < 60) name = name.substring(0, dash);
+        else name = name.substring(0, 57) + '…';
+      }
+
+      return name || null;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    return name || null;
-  } finally {
-    clearTimeout(timeout);
   }
+
+  return null; // all retries exhausted
 }
 
 module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
