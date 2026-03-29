@@ -4,6 +4,16 @@ const { execFileSync } = require('child_process');
 
 const { ClientError } = require('./api-utils');
 
+/** True when the system `unzip` binary is available. */
+const HAS_SYSTEM_UNZIP = (() => {
+  try {
+    execFileSync('unzip', ['-v'], { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 function createFmxService({
   CELLAR_BASE,
   FMX_DIR,
@@ -139,10 +149,70 @@ function createFmxService({
     const combinedPath = zipPath.replace(/\.zip$/, '.combined.xml');
     if (fs.existsSync(combinedPath)) return combinedPath;
 
+    if (HAS_SYSTEM_UNZIP) {
+      return combineZipWithUnzip(zipPath, combinedPath);
+    }
+
+    // Fallback: adm-zip (npm package, works when system unzip is unavailable)
+    let AdmZip;
+    try {
+      AdmZip = require('adm-zip');
+    } catch {
+      throw new Error(
+        'ZIP extraction requires either the system "unzip" command or the "adm-zip" npm package. ' +
+        'Install one of them: apt-get install unzip  OR  npm install adm-zip'
+      );
+    }
+    return combineZipWithAdmZip(zipPath, combinedPath, AdmZip);
+  }
+
+  function combineZipWithUnzip(zipPath, combinedPath) {
     const unzipOpts = { maxBuffer: 50 * 1024 * 1024 };
     const listing = execFileSync('unzip', ['-Z1', zipPath], unzipOpts).toString('utf8');
     const entryNames = listing.split('\n').map((l) => l.trim()).filter(Boolean);
 
+    const { docEntryName, isOldFormat } = findManifestEntry(entryNames);
+    const manifest = execFileSync('unzip', ['-p', zipPath, docEntryName], unzipOpts).toString('utf8');
+    const physRefs = resolvePhysicalRefs(manifest, entryNames, docEntryName, isOldFormat);
+
+    const parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<COMBINED.FMX>'];
+    for (const ref of physRefs) {
+      let xml = execFileSync('unzip', ['-p', zipPath, ref], unzipOpts).toString('utf8');
+      xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
+      parts.push(xml);
+    }
+    parts.push('</COMBINED.FMX>');
+
+    fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
+    console.log(`[ZIP] Combined ${physRefs.length} files from ${path.basename(zipPath)} -> ${path.basename(combinedPath)}`);
+    return combinedPath;
+  }
+
+  function combineZipWithAdmZip(zipPath, combinedPath, AdmZip) {
+    const zip = new AdmZip(zipPath);
+    const entries = zip.getEntries();
+    const entryNames = entries.map((entry) => entry.entryName);
+
+    const { docEntryName, isOldFormat } = findManifestEntry(entryNames);
+    const docEntry = entries.find((e) => e.entryName === docEntryName);
+    const manifest = docEntry.getData().toString('utf8');
+    const physRefs = resolvePhysicalRefs(manifest, entryNames, docEntryName, isOldFormat);
+
+    const parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<COMBINED.FMX>'];
+    for (const ref of physRefs) {
+      const entry = zip.getEntry(ref);
+      let xml = entry.getData().toString('utf8');
+      xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
+      parts.push(xml);
+    }
+    parts.push('</COMBINED.FMX>');
+
+    fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
+    console.log(`[ZIP] Combined ${physRefs.length} files from ${path.basename(zipPath)} -> ${path.basename(combinedPath)}`);
+    return combinedPath;
+  }
+
+  function findManifestEntry(entryNames) {
     let docEntryName = entryNames.find((name) => name.endsWith('.doc.fmx.xml'));
     const isOldFormat = !docEntryName;
     if (!docEntryName) {
@@ -151,8 +221,10 @@ function createFmxService({
     if (!docEntryName) {
       throw new Error('No *.doc.fmx.xml manifest found in ZIP');
     }
-    const manifest = execFileSync('unzip', ['-p', zipPath, docEntryName], unzipOpts).toString('utf8');
+    return { docEntryName, isOldFormat };
+  }
 
+  function resolvePhysicalRefs(manifest, entryNames, docEntryName, isOldFormat) {
     const refPattern = /FILE="([^"]+)"/g;
     const physRefs = [];
     let match;
@@ -174,18 +246,7 @@ function createFmxService({
         }
       }
     }
-
-    const parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<COMBINED.FMX>'];
-    for (const ref of physRefs) {
-      let xml = execFileSync('unzip', ['-p', zipPath, ref], unzipOpts).toString('utf8');
-      xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
-      parts.push(xml);
-    }
-    parts.push('</COMBINED.FMX>');
-
-    fs.writeFileSync(combinedPath, parts.join('\n'), 'utf8');
-    console.log(`[ZIP] Combined ${physRefs.length} files from ${path.basename(zipPath)} -> ${path.basename(combinedPath)}`);
-    return combinedPath;
+    return physRefs;
   }
 
   const inFlightDownloads = new Map();
