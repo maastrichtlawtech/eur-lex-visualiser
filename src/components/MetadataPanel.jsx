@@ -52,6 +52,7 @@ export function CaseLawButton({ celex, currentLang = "EN" }) {
           <span className="flex items-center gap-2">
             <Scale size={16} />
             {t("metadata.caseLaw")} ({cases.length})
+            <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
           </span>
         </button>
         <CaseLawModal
@@ -84,6 +85,7 @@ export function CaseLawButton({ celex, currentLang = "EN" }) {
       <span className="flex items-center gap-2">
         {loading ? <Loader2 size={16} className="animate-spin" /> : <Scale size={16} />}
         {t("metadata.caseLaw")}
+        <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
       </span>
     </button>
   );
