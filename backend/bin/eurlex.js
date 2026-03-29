@@ -280,7 +280,7 @@ COMMANDS['case-law'] = {
     if (!svc.validateCelex(flags.celex)) die(`Invalid CELEX: ${flags.celex}`);
 
     const { fetchCaseLaw } = require('../shared/law-queries');
-    const payload = await fetchCaseLaw(flags.celex, svc.runSparqlQuery);
+    const payload = await fetchCaseLaw(flags.celex, svc.runSparqlQuery, { cacheDir: DEFAULT_FMX_DIR });
     jsonOut(payload, flags.o || flags.output);
   },
 };
