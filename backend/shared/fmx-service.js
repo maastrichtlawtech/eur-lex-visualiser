@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const AdmZip = require('adm-zip');
+const { execFileSync } = require('child_process');
 
 const { ClientError } = require('./api-utils');
 
@@ -139,19 +139,19 @@ function createFmxService({
     const combinedPath = zipPath.replace(/\.zip$/, '.combined.xml');
     if (fs.existsSync(combinedPath)) return combinedPath;
 
-    const zip = new AdmZip(zipPath);
-    const entries = zip.getEntries();
-    const entryNames = entries.map((entry) => entry.entryName);
+    const unzipOpts = { maxBuffer: 50 * 1024 * 1024 };
+    const listing = execFileSync('unzip', ['-Z1', zipPath], unzipOpts).toString('utf8');
+    const entryNames = listing.split('\n').map((l) => l.trim()).filter(Boolean);
 
-    let docEntry = entries.find((entry) => entry.entryName.endsWith('.doc.fmx.xml'));
-    const isOldFormat = !docEntry;
-    if (!docEntry) {
-      docEntry = entries.find((entry) => entry.entryName.endsWith('.doc.xml'));
+    let docEntryName = entryNames.find((name) => name.endsWith('.doc.fmx.xml'));
+    const isOldFormat = !docEntryName;
+    if (!docEntryName) {
+      docEntryName = entryNames.find((name) => name.endsWith('.doc.xml'));
     }
-    if (!docEntry) {
+    if (!docEntryName) {
       throw new Error('No *.doc.fmx.xml manifest found in ZIP');
     }
-    const manifest = docEntry.getData().toString('utf8');
+    const manifest = execFileSync('unzip', ['-p', zipPath, docEntryName], unzipOpts).toString('utf8');
 
     const refPattern = /FILE="([^"]+)"/g;
     const physRefs = [];
@@ -161,7 +161,7 @@ function createFmxService({
       const isDataFile = isOldFormat
         ? ref.endsWith('.xml') && !ref.endsWith('.doc.xml')
         : ref.endsWith('.fmx.xml');
-      if (isDataFile && ref !== docEntry.entryName && entryNames.includes(ref)) {
+      if (isDataFile && ref !== docEntryName && entryNames.includes(ref)) {
         physRefs.push(ref);
       }
     }
@@ -169,7 +169,7 @@ function createFmxService({
     if (physRefs.length === 0) {
       const ext = isOldFormat ? '.xml' : '.fmx.xml';
       for (const name of entryNames) {
-        if (name.endsWith(ext) && name !== docEntry.entryName && !name.endsWith('.doc.xml')) {
+        if (name.endsWith(ext) && name !== docEntryName && !name.endsWith('.doc.xml')) {
           physRefs.push(name);
         }
       }
@@ -177,8 +177,7 @@ function createFmxService({
 
     const parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<COMBINED.FMX>'];
     for (const ref of physRefs) {
-      const entry = zip.getEntry(ref);
-      let xml = entry.getData().toString('utf8');
+      let xml = execFileSync('unzip', ['-p', zipPath, ref], unzipOpts).toString('utf8');
       xml = xml.replace(/<\?xml[^?]*\?>/, '').trim();
       parts.push(xml);
     }
