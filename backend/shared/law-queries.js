@@ -116,7 +116,6 @@ LIMIT 100`;
 async function fetchCaseLaw(celex, runSparqlQuery, { cacheDir } = {}) {
   // Load the per-case party name cache (single file for all cases)
   const nameCache = cacheDir ? loadPartyNameCache(cacheDir) : {};
-
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
@@ -135,6 +134,7 @@ LIMIT 200`;
   const data = await runSparqlQuery(query);
   const cases = (data.results?.bindings || []).map((b) => {
     const caseCelex = b.caseCelex?.value || null;
+    // Convert CELEX like 62018CJ0311 -> C-311/18
     let caseNumber = caseCelex;
     const m = caseCelex?.match(/^6(\d{4})CJ(\d{4})$/);
     if (m) {

@@ -138,6 +138,11 @@ function CaseLawList({ cases, currentLang }) {
                   <span className="font-normal text-gray-500 dark:text-gray-400"> — {c.name}</span>
                 )}
               </span>
+              {c.ecli && (
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
+                  {c.ecli}
+                </span>
+              )}
             </a>
           </li>
         );
