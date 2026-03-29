@@ -242,6 +242,8 @@
     "eea": "EEA relevant",
     "yes": "Yes",
     "implementingActs": "Implementing / Delegated Acts",
-    "caseLaw": "CJEU Case Law"
+    "caseLaw": "CJEU Case Law",
+    "caseLawSearchPlaceholder": "Search by party, case number, or article…",
+    "caseLawNoResults": "No cases match your search."
   }
 }
