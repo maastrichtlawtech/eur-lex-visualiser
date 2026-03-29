@@ -182,7 +182,7 @@ LIMIT 200`;
 // File-based case-law cache
 // ---------------------------------------------------------------------------
 
-const CASE_LAW_CACHE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CASE_LAW_CACHE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
 
 function caseLawCachePath(cacheDir, celex) {
   return path.join(cacheDir, `case-law-${celex}.json`);
