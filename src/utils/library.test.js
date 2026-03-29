@@ -60,14 +60,23 @@ describe("markLawOpened", () => {
 });
 
 describe("getLibraryLaws", () => {
-  it("returns curated flagship laws when no cached/meta data", async () => {
+  it("returns empty library when no cached/meta data (bundled laws are routing-only)", async () => {
     getAllLawMeta.mockResolvedValue([]);
     listCachedCelexes.mockResolvedValue([]);
 
     const laws = await getLibraryLaws();
-    expect(laws.length).toBeGreaterThanOrEqual(4);
+    expect(laws).toHaveLength(0);
+  });
+
+  it("includes bundled laws that have been opened (have meta)", async () => {
+    getAllLawMeta.mockResolvedValue([
+      { celex: "32016R0679", label: "General Data Protection Regulation", lastOpened: Date.now() },
+    ]);
+    listCachedCelexes.mockResolvedValue([]);
+
+    const laws = await getLibraryLaws();
     expect(laws.some((law) => law.slug === "gdpr")).toBe(true);
-    expect(laws.some((law) => law.slug === "dma")).toBe(true);
+    expect(laws.some((law) => law.slug === "dma")).toBe(false);
   });
 
   it("includes imported laws from cache", async () => {

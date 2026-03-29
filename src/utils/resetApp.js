@@ -108,6 +108,15 @@ export async function resetWholeApp() {
 
   await clearLocalBrowserData();
 
+  // Mark migration as current so runOneTimeMigrationReset() won't trigger
+  // a redundant second reload on the next page load.
+  try {
+    window.localStorage.setItem("legalviz-formex-lang", "EN");
+    window.localStorage.setItem(MIGRATION_VERSION_KEY, CURRENT_MIGRATION_VERSION);
+  } catch {
+    // ignore
+  }
+
   window.location.href = window.location.origin + window.location.pathname;
   return true;
 }
