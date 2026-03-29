@@ -129,7 +129,6 @@ LIMIT 200`;
   const data = await runSparqlQuery(query);
   const cases = (data.results?.bindings || []).map((b) => {
     const caseCelex = b.caseCelex?.value || null;
-    // Convert CELEX like 62018CJ0311 -> C-311/18
     let caseNumber = caseCelex;
     const m = caseCelex?.match(/^6(\d{4})CJ(\d{4})$/);
     if (m) {
@@ -140,10 +139,70 @@ LIMIT 200`;
       caseNumber,
       ecli: b.ecli?.value || null,
       date: b.date?.value || null,
+      name: null,
     };
   }).filter((c) => c.celex);
 
+  // Enrich with party names extracted from EUR-Lex HTML (first ~5 KB only).
+  // Run in parallel with limited concurrency to avoid overwhelming EUR-Lex.
+  await enrichWithPartyNames(cases);
+
   return { celex, cases };
+}
+
+/**
+ * Fetch the first party name from each judgment's EUR-Lex HTML.
+ * Uses HTTP Range requests (first 5 KB) so it's lightweight.
+ */
+async function enrichWithPartyNames(cases, concurrency = 6) {
+  let i = 0;
+  async function next() {
+    while (i < cases.length) {
+      const c = cases[i++];
+      try {
+        c.name = await fetchPartyName(c.celex);
+      } catch {
+        // leave name as null
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, next));
+}
+
+async function fetchPartyName(caseCelex) {
+  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const res = await fetch(url, {
+      headers: { Range: 'bytes=0-5000' },
+      signal: controller.signal,
+    });
+    if (!res.ok && res.status !== 206) return null;
+
+    const html = await res.text();
+    // First <span class="bold"> or <span class="coj-bold"> after "In Case" is the first party
+    const match = html.match(/<span class="(?:coj-)?bold">([^<]+)<\/span>/);
+    if (!match) return null;
+
+    // Decode HTML entities and clean up trailing punctuation
+    let name = match[1]
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+      .replace(/[,;]+$/, '').trim();
+
+    // Shorten overly long names (e.g. "Bundesverband der Verbraucherzentralen...")
+    if (name.length > 60) {
+      const dash = name.indexOf(' — ');
+      if (dash > 0 && dash < 60) name = name.substring(0, dash);
+      else name = name.substring(0, 57) + '…';
+    }
+
+    return name || null;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };

@@ -134,12 +134,10 @@ function CaseLawList({ cases, currentLang }) {
               </div>
               <span className="font-medium text-gray-700 group-hover:text-blue-700 dark:text-gray-300 dark:group-hover:text-blue-400 truncate">
                 {c.caseNumber || c.celex}
+                {c.name && (
+                  <span className="font-normal text-gray-500 dark:text-gray-400"> — {c.name}</span>
+                )}
               </span>
-              {c.ecli && (
-                <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">
-                  {c.ecli}
-                </span>
-              )}
             </a>
           </li>
         );
