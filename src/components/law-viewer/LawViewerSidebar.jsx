@@ -1,7 +1,7 @@
 import { Menu, X } from "lucide-react";
 import { NavigationControls } from "../NavigationControls.jsx";
 import { Accordion } from "../Accordion.jsx";
-import { MetadataPanel } from "../MetadataPanel.jsx";
+import { MetadataPanel, CaseLawButton } from "../MetadataPanel.jsx";
 import { LawViewerQuickNavigation } from "./LawViewerQuickNavigation.jsx";
 import { LawViewerToc } from "./LawViewerToc.jsx";
 
@@ -45,6 +45,8 @@ export function LawViewerSidebar({
       </div>
 
       <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
+        <CaseLawButton celex={effectiveCelex} currentLang={formexLang} />
+
         <LawViewerQuickNavigation
           selected={selected}
           lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
