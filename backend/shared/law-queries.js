@@ -259,17 +259,28 @@ async function fetchPartyName(caseCelex) {
       if (!res.ok && res.status !== 206) return null;
 
       const html = await res.text();
-      // First <span class="bold"> or <span class="coj-bold"> after "In Case" is the first party
-      const match = html.match(/<span class="(?:coj-)?bold">([^<]+)<\/span>/);
-      if (!match) return null;
+      // Bold spans contain the party names: first party, then "v", then second party
+      const boldPattern = /<span class="(?:coj-)?bold">([^<]+)<\/span>/g;
+      const matches = [...html.matchAll(boldPattern)];
+      if (matches.length === 0) return null;
 
-      // Decode HTML entities and clean up trailing punctuation
-      let name = match[1]
-        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
-        .replace(/[,;]+$/, '').trim();
+      function cleanName(raw) {
+        return raw
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+          .replace(/[,;]+$/, '').trim();
+      }
 
-      return name || null;
+      const first = cleanName(matches[0][1]);
+      if (!first) return null;
+
+      // Include the second party (defendant) if present
+      if (matches.length >= 2) {
+        const second = cleanName(matches[1][1]);
+        if (second) return `${first} v ${second}`;
+      }
+
+      return first;
     } finally {
       clearTimeout(timeout);
     }
