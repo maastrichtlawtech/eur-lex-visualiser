@@ -114,15 +114,8 @@ LIMIT 100`;
 }
 
 async function fetchCaseLaw(celex, runSparqlQuery, { cacheDir } = {}) {
-  // Try file cache first
-  if (cacheDir) {
-    try {
-      const cached = readCaseLawCache(cacheDir, celex);
-      if (cached) return cached;
-    } catch {
-      // cache read failed — continue with fresh fetch
-    }
-  }
+  // Load the per-case party name cache (single file for all cases)
+  const nameCache = cacheDir ? loadPartyNameCache(cacheDir) : {};
 
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
@@ -152,57 +145,54 @@ LIMIT 200`;
       caseNumber,
       ecli: b.ecli?.value || null,
       date: b.date?.value || null,
-      name: null,
+      name: nameCache[caseCelex] || null,
     };
   }).filter((c) => c.celex);
 
-  // Enrich with party names extracted from EUR-Lex HTML (first ~5 KB only).
-  // Non-fatal: if EUR-Lex is down or Cloudflare blocks us, we still return results without names.
-  try {
-    await enrichWithPartyNames(cases);
-  } catch (err) {
-    console.warn(`[case-law] Party name enrichment failed for ${celex}: ${err.message}`);
-  }
-
-  const payload = { celex, cases };
-
-  // Write to file cache (best-effort)
-  if (cacheDir) {
+  // Only scrape names for cases not already in the cache
+  const uncached = cases.filter((c) => !c.name);
+  if (uncached.length > 0) {
+    // Non-fatal: if EUR-Lex is down or Cloudflare blocks us, we still return results without names.
     try {
-      writeCaseLawCache(cacheDir, celex, payload);
-    } catch {
-      // cache write failed — not critical
+      await enrichWithPartyNames(uncached);
+      // Persist any newly fetched names back to the cache file
+      if (cacheDir) {
+        for (const c of uncached) {
+          if (c.name) nameCache[c.celex] = c.name;
+        }
+        savePartyNameCache(cacheDir, nameCache);
+      }
+    } catch (err) {
+      console.warn(`[case-law] Party name enrichment failed for ${celex}: ${err.message}`);
     }
   }
 
-  return payload;
+  return { celex, cases };
 }
 
 // ---------------------------------------------------------------------------
-// File-based case-law cache
+// Per-case party name cache (single JSON file: { caseCelex: name, ... })
 // ---------------------------------------------------------------------------
 
-const CASE_LAW_CACHE_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+const PARTY_NAME_CACHE_FILE = 'case-law-party-names.json';
 
-function caseLawCachePath(cacheDir, celex) {
-  return path.join(cacheDir, `case-law-${celex}.json`);
-}
-
-function readCaseLawCache(cacheDir, celex) {
-  const filePath = caseLawCachePath(cacheDir, celex);
-  if (!fs.existsSync(filePath)) return null;
-
-  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-  if (!raw.fetchedAt || Date.now() - raw.fetchedAt > CASE_LAW_CACHE_MAX_AGE_MS) {
-    return null; // stale
+function loadPartyNameCache(cacheDir) {
+  try {
+    const filePath = path.join(cacheDir, PARTY_NAME_CACHE_FILE);
+    if (!fs.existsSync(filePath)) return {};
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return {};
   }
-  return { celex: raw.celex, cases: raw.cases };
 }
 
-function writeCaseLawCache(cacheDir, celex, payload) {
-  const filePath = caseLawCachePath(cacheDir, celex);
-  const data = { ...payload, fetchedAt: Date.now() };
-  fs.writeFileSync(filePath, JSON.stringify(data), 'utf8');
+function savePartyNameCache(cacheDir, cache) {
+  try {
+    const filePath = path.join(cacheDir, PARTY_NAME_CACHE_FILE);
+    fs.writeFileSync(filePath, JSON.stringify(cache, null, 2), 'utf8');
+  } catch {
+    // best-effort
+  }
 }
 
 // ---------------------------------------------------------------------------
