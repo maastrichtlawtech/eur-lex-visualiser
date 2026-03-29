@@ -174,7 +174,7 @@ LIMIT 200`;
 // Per-case party name cache (single JSON file: { caseCelex: name, ... })
 // ---------------------------------------------------------------------------
 
-const PARTY_NAME_CACHE_FILE = 'case-law-party-names-v2.json';
+const PARTY_NAME_CACHE_FILE = 'case-law-party-names.json';
 
 function loadPartyNameCache(cacheDir) {
   try {
