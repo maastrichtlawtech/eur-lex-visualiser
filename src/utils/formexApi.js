@@ -502,6 +502,17 @@ export async function fetchLawMetadata(celex) {
   return res.json();
 }
 
+export async function fetchCaseLaw(celex) {
+  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/case-law`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    await readApiError(res, `Case law fetch failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
 export async function fetchImplementingActs(celex) {
   const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/implementing`;
   const res = await fetch(url);

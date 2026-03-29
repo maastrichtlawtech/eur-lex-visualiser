@@ -3,7 +3,7 @@ const fs = require("fs");
 const { ClientError } = require("../shared/api-utils");
 const { createSearchHandler } = require("../search/search-route");
 const { parseFmxXml } = require("../shared/fmx-parser-node");
-const { fetchMetadata, fetchAmendments, fetchImplementing } = require("../shared/law-queries");
+const { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw } = require("../shared/law-queries");
 
 function registerApiRoutes(app, deps) {
   const {
@@ -249,6 +249,28 @@ function registerApiRoutes(app, deps) {
     }
   });
 
+  app.get('/api/laws/:celex/case-law', rateLimitMiddleware, async (req, res) => {
+    try {
+      const { celex } = req.params;
+
+      if (!validateCelex(celex)) {
+        return res.status(400).json({ error: 'Invalid CELEX format' });
+      }
+
+      const cacheKey = `case-law:${celex}`;
+      const cached = cacheGet(resolutionCache, cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
+      const payload = await fetchCaseLaw(celex, runSparqlQuery);
+      cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+      res.json(payload);
+    } catch (err) {
+      safeErrorResponse(res, err, 'Failed to fetch case law');
+    }
+  });
+
   app.get('/api/search', rateLimitMiddleware, createSearchHandler(legalCacheStore));
 
   app.get('/api/resolve-reference', rateLimitMiddleware, async (req, res) => {
@@ -324,6 +346,7 @@ function registerApiRoutes(app, deps) {
         'GET /api/laws/:celex/parsed?lang=ENG': 'Get parsed law as structured JSON (articles, recitals, definitions, annexes, cross-references)',
         'GET /api/laws/:celex/info': 'Get metadata only',
         'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
+        'GET /api/laws/:celex/case-law': 'List CJEU judgments that interpret this law',
         'GET /api/search?q=keyword&limit=10': 'Search cached primary-law metadata',
         'GET /api/resolve-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an FMX-derived legal reference to CELEX via cache-first lookup with Cellar fallback',
         'GET /api/resolve-url?url=https://eur-lex.europa.eu/...&lang=ENG': 'Resolve a full EUR-Lex URL to a canonical CELEX'

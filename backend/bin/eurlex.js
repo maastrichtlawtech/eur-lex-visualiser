@@ -258,6 +258,23 @@ COMMANDS.implementing = {
   },
 };
 
+// --- case-law --------------------------------------------------------------
+
+COMMANDS['case-law'] = {
+  summary: 'List CJEU judgments that interpret a law',
+  usage: 'eurlex case-law <celex> [-o output.json]',
+  async run(args) {
+    const flags = parseFlags(args, ['celex']);
+    if (!flags.celex) die('CELEX number required.');
+    const svc = bootServices();
+    if (!svc.validateCelex(flags.celex)) die(`Invalid CELEX: ${flags.celex}`);
+
+    const { fetchCaseLaw } = require('../shared/law-queries');
+    const payload = await fetchCaseLaw(flags.celex, svc.runSparqlQuery);
+    jsonOut(payload, flags.o || flags.output);
+  },
+};
+
 // --- search ----------------------------------------------------------------
 
 COMMANDS.search = {

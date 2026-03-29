@@ -110,4 +110,40 @@ LIMIT 100`;
   return { celex, acts };
 }
 
-module.exports = { fetchMetadata, fetchAmendments, fetchImplementing };
+async function fetchCaseLaw(celex, runSparqlQuery) {
+  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+  const query = `
+PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+SELECT DISTINCT ?caseCelex ?ecli ?date WHERE {
+  ?caseWork cdm:case-law_interpretes_resource_legal ?law .
+  ?law owl:sameAs <${celexUri}> .
+  ?caseWork cdm:resource_legal_id_celex ?caseCelex .
+  FILTER(REGEX(?caseCelex, "^6[0-9]{4}CJ"))
+  OPTIONAL { ?caseWork cdm:case-law_ecli ?ecli }
+  OPTIONAL { ?caseWork cdm:work_date_document ?date }
+}
+ORDER BY ?date
+LIMIT 200`;
+
+  const data = await runSparqlQuery(query);
+  const cases = (data.results?.bindings || []).map((b) => {
+    const caseCelex = b.caseCelex?.value || null;
+    // Convert CELEX like 62018CJ0311 -> C-311/18
+    let caseNumber = caseCelex;
+    const m = caseCelex?.match(/^6(\d{4})CJ(\d{4})$/);
+    if (m) {
+      caseNumber = `C-${parseInt(m[2], 10)}/${m[1].slice(2)}`;
+    }
+    return {
+      celex: caseCelex,
+      caseNumber,
+      ecli: b.ecli?.value || null,
+      date: b.date?.value || null,
+    };
+  }).filter((c) => c.celex);
+
+  return { celex, cases };
+}
+
+module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
