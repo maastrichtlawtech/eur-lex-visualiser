@@ -43,9 +43,10 @@ export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
 
       <div className="space-y-6">
         <div className="flex flex-col gap-4 px-6 md:px-12">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t("relatedRecitals.description")}
-          </p>
+          <p
+            className="text-sm text-gray-500 dark:text-gray-400 [&_a]:text-blue-600 dark:[&_a]:text-blue-400 [&_a]:hover:underline"
+            dangerouslySetInnerHTML={{ __html: t("relatedRecitals.description") }}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 px-6 md:px-12">

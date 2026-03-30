@@ -149,7 +149,7 @@
   },
   "relatedRecitals": {
     "title": "Свързани съображения",
-    "description": "Тези съображения изглеждат свързани с този член въз основа на текстов анализ с проста AI техника (TF-IDF similarity). Подредени са по релевантност.",
+    "description": "Тези съображения изглеждат свързани с този член въз основа на текстов анализ с проста AI техника (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Подредени са по релевантност.",
     "match": "{score}% съвпадение",
     "read": "Прочети →"
   },

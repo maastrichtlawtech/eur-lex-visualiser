@@ -149,7 +149,7 @@
   },
   "relatedRecitals": {
     "title": "Související body odůvodnění",
-    "description": "Tyto body odůvodnění se zdají být s tímto článkem spojeny na základě textové analýzy pomocí jednoduché AI (TF-IDF similarity). Jsou seřazeny podle relevance.",
+    "description": "Tyto body odůvodnění se zdají být s tímto článkem spojeny na základě textové analýzy pomocí jednoduché AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Jsou seřazeny podle relevance.",
     "match": "Shoda {score} %",
     "read": "Číst →"
   },

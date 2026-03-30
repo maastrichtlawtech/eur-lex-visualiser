@@ -149,7 +149,7 @@
   },
   "relatedRecitals": {
     "title": "Related Recitals",
-    "description": "These recitals appear to be related to this article based on text analysis using simple AI (TF-IDF similarity). Sorted by relevance score.",
+    "description": "These recitals appear to be related to this article based on text analysis using simple AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Sorted by relevance score.",
     "match": "{score}% match",
     "read": "Read →"
   },
