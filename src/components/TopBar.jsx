@@ -1002,9 +1002,6 @@ export function TopBar({
             >
               {t("app.name")}
             </button>
-            <span className="text-[10px] text-gray-500 leading-tight mt-0.5">
-              {t("topBar.byline")}
-            </span>
           </div>
         </div>
 
