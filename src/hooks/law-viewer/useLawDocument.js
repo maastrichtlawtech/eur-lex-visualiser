@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchFormex } from "../../utils/formexApi.js";
-import { parseFormexToCombined } from "../../utils/parsers.js";
+import { fetchFormex, fetchParsedLaw, getCachedLawPayload } from "../../utils/formexApi.js";
+import { parseLawPayloadToCombined } from "../../utils/parsers.js";
 import { EMPTY_LAW_DATA } from "../../utils/law-viewer/constants.js";
-import { getLoadErrorDetails } from "../../utils/law-viewer/errors.js";
+import { getLoadErrorDetails, isMissingStructuredLawText } from "../../utils/law-viewer/errors.js";
 
 export function useLawDocument({ celex, lang, t, enabled = true }) {
   const [data, setData] = useState(EMPTY_LAW_DATA);
@@ -25,9 +25,24 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
     setData(EMPTY_LAW_DATA);
 
     try {
-      const text = await fetchFormex(celex, lang);
+      let nextData = null;
+      const cached = await getCachedLawPayload(celex, lang);
+      if (cached) {
+        nextData = parseLawPayloadToCombined(cached);
+      } else {
+        try {
+          const text = await fetchFormex(celex, lang);
+          nextData = parseLawPayloadToCombined(text);
+        } catch (error) {
+          if (!isMissingStructuredLawText(error)) {
+            throw error;
+          }
+          nextData = parseLawPayloadToCombined(await fetchParsedLaw(celex, lang));
+        }
+      }
+
       if (requestRef.current !== requestId) return;
-      setData(parseFormexToCombined(text));
+      setData(nextData);
     } catch (error) {
       if (requestRef.current !== requestId) return;
       setLoadError(getLoadErrorDetails(error, t));

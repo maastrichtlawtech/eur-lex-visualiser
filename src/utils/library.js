@@ -26,6 +26,32 @@ function sameOfficialReference(left, right) {
   );
 }
 
+export function inferOfficialReferenceFromCelex(celex) {
+  const match = String(celex || "").match(/^3(\d{4})([RLD])0*(\d{1,4})(?:\(\d+\))?$/);
+  if (!match) return null;
+
+  const actTypeMap = {
+    R: "regulation",
+    L: "directive",
+    D: "decision",
+  };
+
+  const actType = actTypeMap[match[2]] || null;
+  if (!actType) return null;
+
+  return {
+    actType,
+    year: match[1],
+    number: String(Number.parseInt(match[3], 10)),
+  };
+}
+
+export function doesCelexMatchOfficialReference(celex, reference) {
+  const inferred = inferOfficialReferenceFromCelex(celex);
+  if (!inferred) return false;
+  return sameOfficialReference(inferred, reference);
+}
+
 function dispatchLibraryUpdate() {
   if (typeof window === "undefined") return;
   try {
@@ -54,26 +80,6 @@ function normalizeLawMetaEntry(entry) {
     slug: routeCandidate?.slug || null,
     eurlex: entry.eurlex || null,
     addedAt: entry.addedAt || Date.now(),
-  };
-}
-
-function inferOfficialReferenceFromCelex(celex) {
-  const match = String(celex || "").match(/^3(\d{4})([RLD])(\d{4})$/);
-  if (!match) return null;
-
-  const actTypeMap = {
-    R: "regulation",
-    L: "directive",
-    D: "decision",
-  };
-
-  const actType = actTypeMap[match[2]] || null;
-  if (!actType) return null;
-
-  return {
-    actType,
-    year: match[1],
-    number: String(Number(match[3])),
   };
 }
 
@@ -176,7 +182,8 @@ export async function findStoredLawMetaByOfficialReference(reference) {
     const entryReference = entry.officialReference
       || parseOfficialReference(entry.raw || "")
       || parseOfficialReference(entry.label || "");
-    return sameOfficialReference(entryReference, target);
+    return sameOfficialReference(entryReference, target)
+      && doesCelexMatchOfficialReference(entry.celex, target);
   }) || null;
 }
 

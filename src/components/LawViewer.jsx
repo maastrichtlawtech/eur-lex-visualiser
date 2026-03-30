@@ -32,6 +32,7 @@ import { useRecitalMap } from "../hooks/law-viewer/useRecitalMap.js";
 import { useProcessedLawHtml } from "../hooks/law-viewer/useProcessedLawHtml.js";
 import { useLawViewerDerivedState } from "../hooks/law-viewer/useLawViewerDerivedState.js";
 import { useLawViewerPrint } from "../hooks/law-viewer/useLawViewerPrint.js";
+import { EU_LANGUAGES } from "../utils/formexApi.js";
 import {
   ARTICLE_NAVIGATION_HINT_DISMISSED_KEY,
   shouldShowArticleNavigationHint,
@@ -103,7 +104,7 @@ export function LawViewer() {
     data: primaryDocument.data,
     selected: selection.selected,
     onPrevNext: selection.onPrevNext,
-    currentContentLang: preferences.formexLang,
+    currentContentLang: primaryDocument.data.langCode || preferences.formexLang,
     locale,
   });
 
@@ -155,11 +156,21 @@ export function LawViewer() {
     activeLoadError,
     t,
   });
+  const displayedFormexLang = derived.documentLang || preferences.formexLang;
   const printState = useLawViewerPrint({
     data: primaryDocument.data,
     locale,
     t,
   });
+
+  useEffect(() => {
+    if (!derived.isLegacyHtmlFallback || !preferences.secondaryLang) return;
+    preferences.setSecondaryLanguage(null);
+  }, [
+    derived.isLegacyHtmlFallback,
+    preferences.secondaryLang,
+    preferences.setSecondaryLanguage,
+  ]);
 
   useEffect(() => {
     if (!source.effectiveCelex || !derived.hasLoadedContent) return;
@@ -170,9 +181,20 @@ export function LawViewer() {
       raw: rawReference,
       officialReference,
       label: rawReference || primaryDocument.data.title || source.currentLaw?.label || `CELEX ${source.effectiveCelex}`,
-      eurlex: buildEurlexCelexUrl(source.effectiveCelex, preferences.formexLang),
+      eurlex: buildEurlexCelexUrl(
+        source.effectiveCelex,
+        primaryDocument.data.langCode || preferences.formexLang
+      ),
     }).then(() => markLawOpened(source.effectiveCelex));
-  }, [derived.hasLoadedContent, preferences.formexLang, primaryDocument.data.title, searchParams, source.currentLaw, source.effectiveCelex]);
+  }, [
+    derived.hasLoadedContent,
+    preferences.formexLang,
+    primaryDocument.data.langCode,
+    primaryDocument.data.title,
+    searchParams,
+    source.currentLaw,
+    source.effectiveCelex,
+  ]);
 
   useEffect(() => {
     if (!isArticleNavigationHintDismissed) return;
@@ -204,11 +226,16 @@ export function LawViewer() {
           onIncreaseFont={() => preferences.setFontScale((scale) => Math.min(scale + 1, 5))}
           onDecreaseFont={() => preferences.setFontScale((scale) => Math.max(scale - 1, 1))}
           fontSize={getFontPercent(preferences.fontScale)}
-          formexLang={preferences.formexLang}
+          formexLang={displayedFormexLang}
+          formexLangLocked={derived.isLegacyHtmlFallback}
+          formexLanguageExclusions={derived.isLegacyHtmlFallback
+            ? Object.keys(EU_LANGUAGES).filter((code) => code !== "EN")
+            : []
+          }
           searchableLawCount={searchableLawCount}
           onFormexLangChange={preferences.handleUnifiedLanguageChange}
           hasCelex={derived.hasCelex}
-          onToggleSecondLanguage={derived.hasCelex ? preferences.toggleSecondLanguage : null}
+          onToggleSecondLanguage={derived.hasCelex && !derived.isLegacyHtmlFallback ? preferences.toggleSecondLanguage : null}
           isSideBySide={derived.isSideBySide}
           searchModes={["laws", "matches", "current"]}
           defaultSearchMode="current"
@@ -246,12 +273,21 @@ export function LawViewer() {
                     </div>
                   ) : null}
 
+                  {derived.isLegacyHtmlFallback ? (
+                    <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                      <div className="font-medium">{t("lawViewer.legacyHtmlFallbackTitle")}</div>
+                      <p className="mt-1 leading-6">
+                        {t("lawViewer.legacyHtmlFallbackMessage")}
+                      </p>
+                    </div>
+                  ) : null}
+
                   <LawViewerSideBySide
                     isSideBySide={derived.isSideBySide}
                     secondaryLang={preferences.secondaryLang}
                     setSecondaryLanguage={preferences.setSecondaryLanguage}
                     hasCelex={derived.hasCelex}
-                    formexLang={preferences.formexLang}
+                    formexLang={displayedFormexLang}
                     selected={selection.selected}
                     secondaryLoading={secondaryDocument.loading}
                     secondaryLoadError={secondaryDocument.loadError}
@@ -297,7 +333,7 @@ export function LawViewer() {
                   crossReferences={primaryDocument.data.crossReferences}
                   articles={primaryDocument.data.articles}
                   onSelectArticle={interactions.onCrossRefArticle}
-                  currentLang={preferences.formexLang}
+                  currentLang={displayedFormexLang}
                   onOpenExternalReference={interactions.handleOpenExternalLaw}
                   isExternalReferencePending={interactions.isExternalReferencePending}
                 />
@@ -317,7 +353,7 @@ export function LawViewer() {
                 onSelectArticle={interactions.onCrossRefArticle}
                 itemLabel="annex"
                 showBackReferences={false}
-                currentLang={preferences.formexLang}
+                currentLang={displayedFormexLang}
                 onOpenExternalReference={interactions.handleOpenExternalLaw}
                 isExternalReferencePending={interactions.isExternalReferencePending}
               />
@@ -354,7 +390,7 @@ export function LawViewer() {
             handleOpenExternalLaw={interactions.handleOpenExternalLaw}
             isExternalReferencePending={interactions.isExternalReferencePending}
             effectiveCelex={source.effectiveCelex}
-            formexLang={preferences.formexLang}
+            formexLang={displayedFormexLang}
             t={t}
           />
         </main>

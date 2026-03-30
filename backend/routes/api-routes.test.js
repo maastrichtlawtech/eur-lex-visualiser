@@ -206,6 +206,74 @@ test("GET /api/laws/by-reference returns fmx_not_found after cache-backed resolu
   assert.equal(res.payload.details.resolved.celex, "32015L2366");
 });
 
+test("GET /api/laws/:celex/parsed falls back to EUR-Lex HTML when FMX is unavailable", async () => {
+  const { app } = registerTestRoutes({
+    prepareLawPayload: async () => {
+      throw new ClientError("No FMX files are available", 404, "fmx_not_found");
+    },
+    fetchAndParseHtmlLaw: async (celex, lang) => ({
+      celex,
+      lang,
+      source: "eurlex-html",
+      format: "combined-v1",
+      title: "Directive 2002/58/EC",
+      langCode: "EN",
+      articles: [{ article_number: "1", article_title: "Scope", article_html: "<p>Body</p>", division: { chapter: { number: "", title: "" }, section: null } }],
+      recitals: [{ recital_number: "1", recital_text: "Recital", recital_html: "<p>Recital</p>" }],
+      annexes: [],
+      definitions: [],
+      crossReferences: {},
+    }),
+  });
+  const handler = app.routes.get("/api/laws/:celex/parsed");
+  const res = createResponseRecorder();
+
+  await handler({
+    params: { celex: "32002L0058" },
+    query: { lang: "ENG" },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.source, "eurlex-html");
+  assert.equal(res.payload.format, "combined-v1");
+  assert.equal(res.payload.title, "Directive 2002/58/EC");
+  assert.equal(res.payload.articles.length, 1);
+});
+
+test("GET /api/laws/:celex/parsed skips the FMX probe when requested", async () => {
+  let prepareCalled = false;
+  const { app } = registerTestRoutes({
+    prepareLawPayload: async () => {
+      prepareCalled = true;
+      return { servePath: "unexpected" };
+    },
+    fetchAndParseHtmlLaw: async (celex, lang) => ({
+      celex,
+      lang,
+      source: "eurlex-html",
+      format: "combined-v1",
+      title: "Directive 2013/36/EU",
+      langCode: "EN",
+      articles: [],
+      recitals: [],
+      annexes: [],
+      definitions: [],
+      crossReferences: {},
+    }),
+  });
+  const handler = app.routes.get("/api/laws/:celex/parsed");
+  const res = createResponseRecorder();
+
+  await handler({
+    params: { celex: "32013L0036" },
+    query: { lang: "DEU", skipFmxProbe: "1" },
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.payload.source, "eurlex-html");
+  assert.equal(prepareCalled, false);
+});
+
 test("GET /api/resolve-url returns cache-backed ELI resolution", async () => {
   const store = new JsonLegalCacheStore(fixturePath);
   store.load();

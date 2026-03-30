@@ -5,6 +5,7 @@ const path = require('path');
 const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('./search/search-index');
 const { registerApiRoutes } = require('./routes/api-routes');
 const { createFmxService } = require('./shared/fmx-service');
+const { fetchAndParseEurlexHtmlLaw } = require('./shared/eurlex-html-parser');
 const { createRateLimitMiddleware } = require('./shared/rate-limit');
 const {
   createReferenceResolver,
@@ -90,6 +91,12 @@ registerApiRoutes(app, {
   cacheSet,
   findDownloadUrls,
   findFmx4Uri,
+  fetchAndParseHtmlLaw: (celex, lang) => fetchAndParseEurlexHtmlLaw({
+    celex,
+    lang,
+    eurlexBase: EURLEX_BASE,
+    timeoutMs: TIMEOUT_MS,
+  }),
   legalCacheStore,
   parseReferenceText,
   parseStructuredReference,

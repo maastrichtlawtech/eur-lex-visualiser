@@ -16,6 +16,7 @@ function registerApiRoutes(app, deps) {
     cacheSet,
     findDownloadUrls,
     findFmx4Uri,
+    fetchAndParseHtmlLaw,
     parseReferenceText,
     parseStructuredReference,
     prepareLawPayload,
@@ -128,6 +129,7 @@ function registerApiRoutes(app, deps) {
     try {
       const { celex } = req.params;
       const rawLang = req.query.lang || 'ENG';
+      const skipFmxProbe = req.query.skipFmxProbe === '1';
 
       if (!validateCelex(celex)) {
         return res.status(400).json({ error: 'Invalid CELEX format. Expected: 32016R0679' });
@@ -138,14 +140,36 @@ function registerApiRoutes(app, deps) {
         return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
       }
 
-      const { servePath } = await prepareLawPayload(celex, lang);
-      const xmlText = fs.readFileSync(servePath, 'utf8');
-      const parsed = await parseFmxXml(xmlText);
+      let parsed = null;
+      let source = 'fmx';
+
+      if (!skipFmxProbe) {
+        try {
+          const { servePath } = await prepareLawPayload(celex, lang);
+          const xmlText = fs.readFileSync(servePath, 'utf8');
+          parsed = await parseFmxXml(xmlText);
+        } catch (err) {
+          if (!(err instanceof ClientError) || err.statusCode !== 404 || typeof fetchAndParseHtmlLaw !== 'function') {
+            throw err;
+          }
+          parsed = await fetchAndParseHtmlLaw(celex, lang);
+          source = parsed.source || 'eurlex-html';
+        }
+      } else if (typeof fetchAndParseHtmlLaw === 'function') {
+        parsed = await fetchAndParseHtmlLaw(celex, lang);
+        source = parsed.source || 'eurlex-html';
+      } else {
+        const { servePath } = await prepareLawPayload(celex, lang);
+        const xmlText = fs.readFileSync(servePath, 'utf8');
+        parsed = await parseFmxXml(xmlText);
+      }
 
       res.json({
         celex,
         lang,
         name: CELEX_NAMES[celex] || null,
+        format: 'combined-v1',
+        source,
         ...parsed,
       });
     } catch (err) {

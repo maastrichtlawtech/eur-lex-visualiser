@@ -935,6 +935,8 @@ export function TopBar({
   formexLang,
   searchableLawCount = 0,
   onFormexLangChange,
+  formexLangLocked = false,
+  formexLanguageExclusions = [],
   hasCelex,
   onToggleSecondLanguage,
   isSideBySide = false,
@@ -1027,6 +1029,8 @@ export function TopBar({
             currentLang={formexLang}
             onChangeLang={onFormexLangChange}
             hasCelex={hasCelex}
+            disabled={formexLangLocked}
+            excludeLanguages={formexLanguageExclusions}
           />
 
           <div className="relative flex items-center">
@@ -1169,10 +1173,10 @@ function ToolsMenu({
                 onManualAddLaw();
                 setIsOpen(false);
               }}
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               <FilePlus2 size={18} />
-              <span>{t("landing.manualAddLaw")}</span>
+              <span className="min-w-0 flex-1 text-left">{t("landing.manualAddLaw")}</span>
             </button>
           )}
 
@@ -1183,10 +1187,10 @@ function ToolsMenu({
                 onResetApp();
                 setIsOpen(false);
               }}
-              className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
             >
               <RotateCcw size={18} />
-              <span>{t("resetFooter.button")}</span>
+              <span className="min-w-0 flex-1 text-left">{t("resetFooter.button")}</span>
             </button>
           )}
 

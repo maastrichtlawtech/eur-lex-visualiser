@@ -96,7 +96,6 @@ export async function runOneTimeMigrationReset() {
   await clearLocalBrowserData();
 
   try {
-    window.localStorage.setItem("legalviz-formex-lang", "EN");
     window.localStorage.setItem(MIGRATION_VERSION_KEY, CURRENT_MIGRATION_VERSION);
   } catch {
     // ignore

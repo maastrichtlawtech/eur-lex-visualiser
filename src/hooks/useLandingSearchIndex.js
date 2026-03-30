@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { parseFormexToCombined } from "../utils/parsers.js";
-import { getCachedFormex } from "../utils/formexApi.js";
+import { parseLawPayloadToCombined } from "../utils/parsers.js";
+import { getCachedLawPayload } from "../utils/formexApi.js";
 
 export function useLandingSearchIndex({ formexLang, laws, libraryVersion }) {
   const [allLawsData, setAllLawsData] = useState({ articles: [], recitals: [], annexes: [] });
@@ -35,10 +35,10 @@ export function useLandingSearchIndex({ formexLang, laws, libraryVersion }) {
           try {
             if (!law.celex) return null;
 
-            const text = await getCachedFormex(law.celex, formexLang);
-            if (!text) return null;
+            const payload = await getCachedLawPayload(law.celex, formexLang);
+            if (!payload) return null;
 
-            const parsed = parseFormexToCombined(text);
+            const parsed = parseLawPayloadToCombined(payload);
             const metadata = {
               routeKind: law.kind || "imported",
               law_key: law.key || null,

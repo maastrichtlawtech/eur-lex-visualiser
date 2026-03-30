@@ -17,6 +17,16 @@ describe("getLoadErrorDetails", () => {
     expect(details.title).toBe("lawViewer.notAvailableTitle");
   });
 
+  it("maps EUR-Lex challenge errors to a dedicated temporary-access message", () => {
+    const details = getLoadErrorDetails(
+      new FormexApiError("EUR-Lex challenged access", { status: 503, code: "eurlex_html_challenged" }),
+      t
+    );
+    expect(details.tone).toBe("notice");
+    expect(details.title).toBe("lawViewer.notAvailableTitle");
+    expect(details.message).toBe("lawViewer.notAvailableMessage");
+  });
+
   it("maps generic errors to error tone", () => {
     const details = getLoadErrorDetails(new Error("boom"), t);
     expect(details.tone).toBe("error");

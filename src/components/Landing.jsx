@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { Github } from "lucide-react";
 import { TopBar, SearchBox } from "./TopBar.jsx";
@@ -39,21 +39,7 @@ export function Landing({ forcedLocale = null }) {
   const navigate = useNavigate();
   const { locale, setLocale, localizePath, t } = useI18n();
   const { allLaws, libraryVersion, markLawOpened } = useLandingLibrary();
-  const [formexLang, setFormexLang] = useState(() => {
-    try {
-      return localStorage.getItem("legalviz-formex-lang") || "EN";
-    } catch {
-      return "EN";
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("legalviz-formex-lang", formexLang);
-    } catch {
-      // ignore localStorage failures
-    }
-  }, [formexLang]);
+  const formexLang = lawLangFromUiLocale(locale);
 
   useEffect(() => {
     if (forcedLocale && forcedLocale !== locale) {
@@ -61,15 +47,7 @@ export function Landing({ forcedLocale = null }) {
     }
   }, [forcedLocale, locale, setLocale]);
 
-  useEffect(() => {
-    const expectedLawLang = lawLangFromUiLocale(locale);
-    if (formexLang !== expectedLawLang) {
-      setFormexLang(expectedLawLang);
-    }
-  }, [locale, formexLang]);
-
   const handleUnifiedLanguageChange = useCallback((nextLang) => {
-    setFormexLang(nextLang);
     setLocale(uiLocaleFromLawLang(nextLang));
   }, [setLocale]);
 

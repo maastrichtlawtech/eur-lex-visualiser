@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { extractTitleFromEurlexHtml } = require("./search-build");
+const { buildYearQuery, extractTitleFromEurlexHtml, harvestPrimaryActs, normalizeYearQueryActTypes } = require("./search-build");
 
 test("extractTitleFromEurlexHtml prefers WT.z_docTitle metadata", () => {
   const html = `
@@ -37,4 +37,48 @@ test("extractTitleFromEurlexHtml falls back to the title element in the page bod
     extractTitleFromEurlexHtml(html),
     "Directive (EU) 2015/2366 of the European Parliament and of the Council on payment services in the internal market"
   );
+});
+
+test("buildYearQuery can target only directives and regulations", () => {
+  const query = buildYearQuery({ year: 2001, limit: 200, offset: 0, actTypes: ["regulation", "directive"] });
+  assert.match(query, /\^32001\[RL\]/);
+  assert.match(query, /\/eli\/\(reg\|dir\)\/2001\/\[0-9\]\+\/oj\$/);
+  assert.doesNotMatch(query, /\[RLD\]/);
+  assert.doesNotMatch(query, /dec/);
+});
+
+test("normalizeYearQueryActTypes drops unknown values and deduplicates", () => {
+  assert.deepEqual(
+    normalizeYearQueryActTypes(["directive", "decision", "directive", "weird"]),
+    ["directive", "decision"]
+  );
+});
+
+test("harvestPrimaryActs paginates based on raw SPARQL bindings", async () => {
+  const pages = [
+    {
+      results: {
+        bindings: [
+          { celex: { value: "32001D0006(01)" }, eli: { value: "http://data.europa.eu/eli/dec/2001/566/oj" } },
+          { celex: { value: "32001D0011" }, eli: { value: "http://data.europa.eu/eli/dec/2001/912/oj" } },
+        ],
+      },
+    },
+    {
+      results: {
+        bindings: [
+          { celex: { value: "32001R0045" }, eli: { value: "http://data.europa.eu/eli/reg/2001/45/oj" } },
+        ],
+      },
+    },
+  ];
+  let calls = 0;
+  const records = await harvestPrimaryActs({
+    fromYear: 2001,
+    toYear: 2001,
+    limit: 2,
+    runSparqlImpl: async () => pages[calls++] || { results: { bindings: [] } },
+  });
+  assert.equal(calls, 2);
+  assert.deepEqual(records.map((record) => record.celex), ["32001D0006(01)", "32001D0011", "32001R0045"]);
 });

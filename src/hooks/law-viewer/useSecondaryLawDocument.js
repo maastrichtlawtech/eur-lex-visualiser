@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { fetchFormex } from "../../utils/formexApi.js";
-import { parseFormexToCombined } from "../../utils/parsers.js";
+import { fetchFormex, fetchParsedLaw, getCachedLawPayload } from "../../utils/formexApi.js";
+import { parseLawPayloadToCombined } from "../../utils/parsers.js";
 import { EMPTY_LAW_DATA } from "../../utils/law-viewer/constants.js";
-import { getLoadErrorDetails } from "../../utils/law-viewer/errors.js";
+import { getLoadErrorDetails, isMissingStructuredLawText } from "../../utils/law-viewer/errors.js";
 
 export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
   const [data, setData] = useState(EMPTY_LAW_DATA);
@@ -22,17 +22,35 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
     setLoadError(null);
     setData(EMPTY_LAW_DATA);
 
-    fetchFormex(celex, secondaryLang)
-      .then((text) => {
-        if (!cancelled) setData(parseFormexToCombined(text));
-      })
-      .catch((error) => {
+    (async () => {
+      try {
+        let nextData = null;
+        const cached = await getCachedLawPayload(celex, secondaryLang);
+        if (cached) {
+          nextData = parseLawPayloadToCombined(cached);
+        } else {
+          try {
+            const text = await fetchFormex(celex, secondaryLang);
+            nextData = parseLawPayloadToCombined(text);
+          } catch (error) {
+            if (!isMissingStructuredLawText(error)) {
+              throw error;
+            }
+            nextData = parseLawPayloadToCombined(await fetchParsedLaw(celex, secondaryLang));
+          }
+        }
+
+        if (!cancelled) setData(nextData);
+      } catch (error) {
         if (cancelled) return;
         setLoadError(getLoadErrorDetails(error, t));
         setData(EMPTY_LAW_DATA);
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setLoading(false);
+      }
+    })()
+      .catch(() => {
+        // handled in async IIFE
       });
 
     return () => {

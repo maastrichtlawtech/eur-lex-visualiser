@@ -14,6 +14,7 @@ export function LanguageSelector({
   excludeLanguages = [],
   align = "right",
   showCode = true,
+  disabled = false,
 }) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
@@ -47,8 +48,17 @@ export function LanguageSelector({
           </span>
         ) : null}
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            if (disabled) return;
+            setIsOpen(!isOpen);
+          }}
+          className={`flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-700 transition-colors dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 ${
+            disabled
+              ? "cursor-not-allowed opacity-70"
+              : "hover:border-gray-300 hover:bg-gray-50 dark:hover:border-gray-600 dark:hover:bg-gray-800"
+          }`}
           title={t("languageSelector.formexTitle", { lang: currentLang })}
         >
           <span>{getLanguageFlag(currentLang)}</span>
@@ -56,7 +66,7 @@ export function LanguageSelector({
         </button>
       </div>
 
-      {isOpen && (
+      {isOpen && !disabled ? (
         <div className={`absolute ${menuPositionClass} top-full mt-2 w-64 bg-white rounded-xl shadow-xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10 z-50 animate-in fade-in zoom-in-95 duration-100 overflow-hidden`}>
           <div className="max-h-64 overflow-y-auto p-1">
             {langEntries.map(([code, name]) => (
@@ -81,7 +91,7 @@ export function LanguageSelector({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

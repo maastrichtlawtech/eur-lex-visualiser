@@ -26,6 +26,16 @@ export function getLoadErrorDetails(error, t) {
     };
   }
 
+  if (error instanceof FormexApiError && error.code === "eurlex_html_challenged") {
+    return {
+      title: t("lawViewer.notAvailableTitle"),
+      message: t("lawViewer.notAvailableMessage"),
+      fallbackUrl: error.fallback?.url || error.details?.fallback?.url || null,
+      status: error.status || null,
+      tone: "notice",
+    };
+  }
+
   if (error instanceof FormexApiError) {
     return {
       title: t("lawViewer.lawLoadFailed"),

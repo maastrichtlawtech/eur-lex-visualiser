@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildEurlexCelexUrl, buildEurlexSearchUrl } from "../../utils/url.js";
-import { findCachedCelexByOfficialReference, saveLawMeta } from "../../utils/library.js";
+import { doesCelexMatchOfficialReference, findCachedCelexByOfficialReference, saveLawMeta } from "../../utils/library.js";
 import {
   buildImportedLawCandidate,
   findBundledLawBySlug,
@@ -62,24 +62,8 @@ export function useLawViewerSource({
   useEffect(() => {
     setResolvedCelex(null);
     setLoadError(null);
+    setLoading(false);
   }, [importCelex, key, slug]);
-
-  useEffect(() => {
-    if (currentCelex || !slugReference) return;
-
-    let cancelled = false;
-    findCachedCelexByOfficialReference(slugReference)
-      .then((cachedCelex) => {
-        if (!cancelled && cachedCelex) setResolvedCelex(cachedCelex);
-      })
-      .catch(() => {
-        // ignore local metadata lookup failures
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [currentCelex, loadAttempt, slugReference]);
 
   useEffect(() => {
     if (!sourceUrl || importCelex) return;
@@ -153,7 +137,7 @@ export function useLawViewerSource({
 
     const resolveSlugReference = async () => {
       const cachedCelex = await findCachedCelexByOfficialReference(slugReference);
-      if (cachedCelex) {
+      if (cachedCelex && doesCelexMatchOfficialReference(cachedCelex, slugReference)) {
         return { resolved: { celex: cachedCelex } };
       }
       return resolveOfficialReference(slugReference, formexLang);

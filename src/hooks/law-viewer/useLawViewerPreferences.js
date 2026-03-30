@@ -27,17 +27,13 @@ export function useLawViewerPreferences({
       return true;
     }
   });
-  const [formexLang, setFormexLang] = useState(() => {
-    try {
-      return localStorage.getItem("legalviz-formex-lang") || "EN";
-    } catch {
-      return "EN";
-    }
-  });
+  const [compatibilityLawLang, setCompatibilityLawLang] = useState("EN");
 
-  const effectivePrimaryLang = useMemo(() => (
-    !isImportRoute && !isLegacyLawRoute ? lawLangFromUiLocale(locale) : formexLang
-  ), [formexLang, isImportRoute, isLegacyLawRoute, locale]);
+  const formexLang = useMemo(() => (
+    !isImportRoute && !isLegacyLawRoute ? lawLangFromUiLocale(locale) : compatibilityLawLang
+  ), [compatibilityLawLang, isImportRoute, isLegacyLawRoute, locale]);
+
+  const effectivePrimaryLang = formexLang;
 
   const secondaryLangParam = normalizeExtraLanguage(searchParams.get("lang2"));
   const secondaryLang = secondaryLangParam && secondaryLangParam !== effectivePrimaryLang ? secondaryLangParam : null;
@@ -49,17 +45,6 @@ export function useLawViewerPreferences({
   useEffect(() => {
     localStorage.setItem("legalviz-sidebar", isSidebarOpen);
   }, [isSidebarOpen]);
-
-  useEffect(() => {
-    localStorage.setItem("legalviz-formex-lang", formexLang);
-  }, [formexLang]);
-
-  useEffect(() => {
-    const expectedLawLang = lawLangFromUiLocale(locale);
-    if (!isImportRoute && !isLegacyLawRoute && formexLang !== expectedLawLang) {
-      setFormexLang(expectedLawLang);
-    }
-  }, [formexLang, isImportRoute, isLegacyLawRoute, locale]);
 
   const updateViewerSearchParams = useCallback((mutate) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -85,7 +70,10 @@ export function useLawViewerPreferences({
   }, [effectivePrimaryLang, updateViewerSearchParams]);
 
   const handleUnifiedLanguageChange = useCallback((nextLang) => {
-    setFormexLang(nextLang);
+    const normalized = String(nextLang || "EN").toUpperCase();
+    if (isImportRoute || isLegacyLawRoute) {
+      setCompatibilityLawLang(normalized);
+    }
     setLocale(uiLocaleFromLawLang(nextLang));
 
     if (normalizeExtraLanguage(searchParams.get("lang2")) === nextLang) {
@@ -93,7 +81,7 @@ export function useLawViewerPreferences({
         params.delete("lang2");
       });
     }
-  }, [searchParams, setLocale, updateViewerSearchParams]);
+  }, [isImportRoute, isLegacyLawRoute, searchParams, setLocale, updateViewerSearchParams]);
 
   const toggleSecondLanguage = useCallback(() => {
     if (secondaryLangParam && secondaryLangParam !== formexLang) {
@@ -121,7 +109,6 @@ export function useLawViewerPreferences({
 
   return {
     formexLang,
-    setFormexLang,
     fontScale,
     setFontScale,
     isSidebarOpen,

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useLawViewerSource } from "./useLawViewerSource.js";
 
 const {
+  mockDoesCelexMatchOfficialReference,
   mockFindCachedCelexByOfficialReference,
   mockMarkLawOpened,
   mockSaveLawMeta,
@@ -16,6 +17,7 @@ const {
   mockResolveEurlexUrl,
   mockResolveOfficialReference,
 } = vi.hoisted(() => ({
+  mockDoesCelexMatchOfficialReference: vi.fn(),
   mockFindCachedCelexByOfficialReference: vi.fn(),
   mockMarkLawOpened: vi.fn(),
   mockSaveLawMeta: vi.fn(),
@@ -29,6 +31,7 @@ const {
 }));
 
 vi.mock("../../utils/library.js", () => ({
+  doesCelexMatchOfficialReference: mockDoesCelexMatchOfficialReference,
   findCachedCelexByOfficialReference: mockFindCachedCelexByOfficialReference,
   markLawOpened: mockMarkLawOpened,
   saveLawMeta: mockSaveLawMeta,
@@ -72,6 +75,7 @@ describe("useLawViewerSource", () => {
     latestValue = null;
 
     mockFindCachedCelexByOfficialReference.mockReset().mockResolvedValue(null);
+    mockDoesCelexMatchOfficialReference.mockReset().mockReturnValue(true);
     mockMarkLawOpened.mockReset();
     mockSaveLawMeta.mockReset().mockResolvedValue(null);
     mockBuildImportedLawCandidate.mockReset().mockImplementation(({ officialReference, slug, celex }) => ({
@@ -153,5 +157,50 @@ describe("useLawViewerSource", () => {
       celex: "32002L0058",
     }));
     expect(mockMarkLawOpened).not.toHaveBeenCalled();
+  });
+
+  it("ignores a stale cached CELEX for a slug reference and falls back to backend resolution", async () => {
+    mockFindCachedCelexByOfficialReference.mockResolvedValue("32013R0575");
+    mockDoesCelexMatchOfficialReference.mockImplementation((celex) => celex === "32015L2366");
+    mockResolveOfficialReference.mockResolvedValue({
+      resolved: { celex: "32015L2366" },
+      fallback: null,
+    });
+
+    const props = {
+      slug: "directive-2015-2366",
+      key: undefined,
+      kind: null,
+      id: null,
+      importCelex: null,
+      sourceUrl: null,
+      locale: "en",
+      routeLocale: "en",
+      pathname: "/directive-2015-2366",
+      locationSearch: "",
+      navigate: vi.fn(),
+      formexLang: "EN",
+      t: (key) => key,
+      localizePath: (value) => value,
+    };
+
+    mockParseOfficialReferenceSlug.mockReturnValue({
+      actType: "directive",
+      year: "2015",
+      number: "2366",
+    });
+    mockGetCanonicalLawRoute.mockReturnValue("/directive-2015-2366");
+
+    await act(async () => {
+      root.render(<Probe {...props} />);
+      await flushEffects();
+    });
+
+    expect(mockFindCachedCelexByOfficialReference).toHaveBeenCalled();
+    expect(mockResolveOfficialReference).toHaveBeenCalledTimes(1);
+    expect(latestValue.effectiveCelex).toBe("32015L2366");
+    expect(mockSaveLawMeta).toHaveBeenCalledWith(expect.objectContaining({
+      celex: "32015L2366",
+    }));
   });
 });

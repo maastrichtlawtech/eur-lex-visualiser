@@ -7,7 +7,13 @@ vi.mock("./formexApi.js", () => ({
   upsertLawMeta: vi.fn().mockResolvedValue({}),
 }));
 
-const { saveLawMeta, markLawOpened, getLibraryLaws } = await import("./library.js");
+const {
+  doesCelexMatchOfficialReference,
+  findStoredLawMetaByOfficialReference,
+  saveLawMeta,
+  markLawOpened,
+  getLibraryLaws,
+} = await import("./library.js");
 const { getAllLawMeta, listCachedCelexes, upsertLawMeta } = await import("./formexApi.js");
 
 beforeEach(() => {
@@ -138,5 +144,42 @@ describe("getLibraryLaws", () => {
     const aiIdx = laws.findIndex((l) => l.celex === "32024R1689");
     const gdprIdx = laws.findIndex((l) => l.celex === "32016R0679");
     expect(aiIdx).toBeLessThan(gdprIdx);
+  });
+});
+
+describe("official reference validation", () => {
+  it("matches primary-act CELEX values against official references", () => {
+    expect(doesCelexMatchOfficialReference("32015L2366", {
+      actType: "directive",
+      year: "2015",
+      number: "2366",
+    })).toBe(true);
+
+    expect(doesCelexMatchOfficialReference("32013R0575", {
+      actType: "directive",
+      year: "2015",
+      number: "2366",
+    })).toBe(false);
+  });
+
+  it("ignores stale cached metadata entries whose CELEX does not match the requested reference", async () => {
+    getAllLawMeta.mockResolvedValue([
+      {
+        celex: "32013R0575",
+        officialReference: { actType: "directive", year: "2015", number: "2366" },
+      },
+      {
+        celex: "32015L2366",
+        officialReference: { actType: "directive", year: "2015", number: "2366" },
+      },
+    ]);
+
+    const match = await findStoredLawMetaByOfficialReference({
+      actType: "directive",
+      year: "2015",
+      number: "2366",
+    });
+
+    expect(match?.celex).toBe("32015L2366");
   });
 });

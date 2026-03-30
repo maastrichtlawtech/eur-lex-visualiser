@@ -27,6 +27,8 @@ const STORE_NAME = "laws";
 const META_STORE_NAME = "lawMeta";
 const MAX_CACHED_CELEX_LAWS = 100;
 const PROTECTED_BUNDLED_CELEXES = [];
+const IN_FLIGHT_LAW_REQUESTS = new Map();
+const KNOWN_MISSING_FMX = new Set();
 
 export class FormexApiError extends Error {
   constructor(message, { status = 500, code = null, details = null, fallback = null } = {}) {
@@ -67,6 +69,41 @@ function openDb() {
 
 function makeCacheKey(celex, lang = "EN") {
   return `${celex}_${toApiLang(lang)}`;
+}
+
+function getInFlightRequest(key, factory) {
+  if (IN_FLIGHT_LAW_REQUESTS.has(key)) {
+    return IN_FLIGHT_LAW_REQUESTS.get(key);
+  }
+
+  const promise = (async () => factory())().finally(() => {
+    IN_FLIGHT_LAW_REQUESTS.delete(key);
+  });
+  IN_FLIGHT_LAW_REQUESTS.set(key, promise);
+  return promise;
+}
+
+function markMissingFmx(celex, lang = "EN") {
+  KNOWN_MISSING_FMX.add(makeCacheKey(celex, lang));
+}
+
+function hasKnownMissingFmx(celex, lang = "EN") {
+  return KNOWN_MISSING_FMX.has(makeCacheKey(celex, lang));
+}
+
+function isCombinedLawEnvelope(value) {
+  return !!value
+    && typeof value === "object"
+    && value.format === "combined-v1"
+    && typeof value.payload === "object"
+    && value.payload != null;
+}
+
+function createCombinedLawEnvelope(payload) {
+  return {
+    format: "combined-v1",
+    payload,
+  };
 }
 
 async function cacheGet(key) {
@@ -407,54 +444,75 @@ function buildReferenceQuery(reference, lang = "EN") {
 export async function fetchFormex(celex, lang = "EN") {
   const apiLang = toApiLang(lang);
   const cacheKey = makeCacheKey(celex, lang);
+  return getInFlightRequest(`formex:${cacheKey}`, async () => {
+    // 1. Try cache first
+    const cached = await cacheGet(cacheKey);
+    if (typeof cached === "string") {
+      console.log(`[FormexAPI] Cache hit: ${cacheKey}`);
+      return cached;
+    }
 
-  // 1. Try cache first
-  const cached = await cacheGet(cacheKey);
-  if (cached) {
-    console.log(`[FormexAPI] Cache hit: ${cacheKey}`);
-    return cached;
-  }
+    // 2. Fetch from API
+    console.log(`[FormexAPI] Fetching: ${celex} (${apiLang})`);
+    const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}?lang=${apiLang}`;
+    const res = await fetch(url);
 
-  // 2. Fetch from API
-  console.log(`[FormexAPI] Fetching: ${celex} (${apiLang})`);
-  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}?lang=${apiLang}`;
-  const res = await fetch(url);
+    if (!res.ok) {
+      try {
+        await readApiError(res, `Formex API error ${res.status}`);
+      } catch (error) {
+        if (error instanceof FormexApiError && (
+          error.status === 404
+          || error.code === "fmx_not_found"
+          || error.code === "law_not_found"
+        )) {
+          markMissingFmx(celex, lang);
+        }
+        throw error;
+      }
+    }
 
-  if (!res.ok) {
-    await readApiError(res, `Formex API error ${res.status}`);
-  }
+    const contentType = res.headers.get("content-type") || "";
 
-  const contentType = res.headers.get("content-type") || "";
+    let xmlText;
+    if (contentType.includes("application/json")) {
+      // API may wrap XML in a JSON envelope
+      const json = await res.json();
+      xmlText = json.xml || json.content || json.data || JSON.stringify(json);
+    } else {
+      xmlText = await res.text();
+    }
 
-  let xmlText;
-  if (contentType.includes("application/json")) {
-    // API may wrap XML in a JSON envelope
-    const json = await res.json();
-    xmlText = json.xml || json.content || json.data || JSON.stringify(json);
-  } else {
-    xmlText = await res.text();
-  }
+    // 3. Cache it
+    await cacheSet(cacheKey, xmlText);
+    await upsertLawMeta(celex, { cachedAt: Date.now() });
+    await pruneCacheIfNeeded(celex, PROTECTED_BUNDLED_CELEXES);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("legalviz-formex-cache-updated", {
+        detail: { celex, lang: lang.toUpperCase() },
+      }));
+    }
 
-  // 3. Cache it
-  await cacheSet(cacheKey, xmlText);
-  await upsertLawMeta(celex, { cachedAt: Date.now() });
-  await pruneCacheIfNeeded(celex, PROTECTED_BUNDLED_CELEXES);
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("legalviz-formex-cache-updated", {
-      detail: { celex, lang: lang.toUpperCase() },
-    }));
-  }
-
-  return xmlText;
+    return xmlText;
+  });
 }
 
 export async function getCachedFormex(celex, lang = "EN") {
   if (!celex) return null;
-  return cacheGet(makeCacheKey(celex, lang));
+  const cached = await cacheGet(makeCacheKey(celex, lang));
+  return typeof cached === "string" ? cached : null;
 }
 
 export async function hasCachedFormex(celex, lang = "EN") {
   return (await getCachedFormex(celex, lang)) != null;
+}
+
+export async function getCachedLawPayload(celex, lang = "EN") {
+  if (!celex) return null;
+  const cached = await cacheGet(makeCacheKey(celex, lang));
+  if (typeof cached === "string") return cached;
+  if (isCombinedLawEnvelope(cached)) return cached;
+  return null;
 }
 
 export async function resolveOfficialReference(reference, lang = "EN") {
@@ -559,4 +617,39 @@ export async function fetchFormexByReference(reference, lang = "EN") {
   }
 
   return res.text();
+}
+
+export async function fetchParsedLaw(celex, lang = "EN") {
+  const apiLang = toApiLang(lang);
+  const cacheKey = makeCacheKey(celex, lang);
+  return getInFlightRequest(`parsed:${cacheKey}`, async () => {
+    const cached = await cacheGet(cacheKey);
+    if (isCombinedLawEnvelope(cached)) {
+      console.log(`[FormexAPI] Cache hit: ${cacheKey}`);
+      return cached.payload;
+    }
+
+    const params = new URLSearchParams({ lang: apiLang });
+    if (hasKnownMissingFmx(celex, lang)) {
+      params.set("skipFmxProbe", "1");
+    }
+    const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/parsed?${params.toString()}`;
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      await readApiError(res, `Parsed law fetch failed (${res.status})`);
+    }
+
+    const payload = await res.json();
+    await cacheSet(cacheKey, createCombinedLawEnvelope(payload));
+    await upsertLawMeta(celex, { cachedAt: Date.now() });
+    await pruneCacheIfNeeded(celex, PROTECTED_BUNDLED_CELEXES);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("legalviz-formex-cache-updated", {
+        detail: { celex, lang: lang.toUpperCase() },
+      }));
+    }
+
+    return payload;
+  });
 }

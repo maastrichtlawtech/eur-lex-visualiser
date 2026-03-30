@@ -232,7 +232,7 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
         <div className="relative space-y-5 sm:space-y-7 sm:pl-10">
           <div
             aria-hidden="true"
-            className="absolute bottom-6 left-4 top-2 hidden w-px bg-gray-200 dark:bg-gray-800 sm:block"
+            className="absolute bottom-0 left-[1.375rem] top-2 hidden w-px bg-gray-200 dark:bg-gray-800 sm:block"
           />
           {visibleGroups.length > 0 ? visibleGroups.map((group) => (
             <div key={group.key} className="relative space-y-3">

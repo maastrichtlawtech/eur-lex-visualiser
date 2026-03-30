@@ -15,11 +15,13 @@ export function useLawViewerDerivedState({
   t,
 }) {
   const activeLoading = source.loading || primaryDocument.loading;
+  const documentLang = primaryDocument.data.langCode || preferences.formexLang;
+  const isLegacyHtmlFallback = primaryDocument.data.source === "eurlex-html";
   const hasLoadedContent = primaryDocument.data.articles.length > 0
     || primaryDocument.data.recitals.length > 0
     || primaryDocument.data.annexes.length > 0;
   const hasCelex = !!source.effectiveCelex;
-  const isSideBySide = !!preferences.secondaryLang && !!source.effectiveCelex;
+  const isSideBySide = !isLegacyHtmlFallback && !!preferences.secondaryLang && !!source.effectiveCelex;
 
   const seoData = useMemo(() => buildSeoData({
     dataTitle: primaryDocument.data.title,
@@ -39,9 +41,9 @@ export function useLawViewerDerivedState({
 
   const eurlexUrl = useMemo(() => {
     if (sourceUrl) return sourceUrl;
-    if (source.effectiveCelex) return buildEurlexCelexUrl(source.effectiveCelex, preferences.formexLang);
+    if (source.effectiveCelex) return buildEurlexCelexUrl(source.effectiveCelex, documentLang);
     return source.currentLaw?.eurlex || null;
-  }, [preferences.formexLang, source.currentLaw, source.effectiveCelex, sourceUrl]);
+  }, [documentLang, source.currentLaw, source.effectiveCelex, sourceUrl]);
 
   const externalFallbackUrl = useMemo(() => {
     if (activeLoadError?.fallbackUrl) return activeLoadError.fallbackUrl;
@@ -54,16 +56,18 @@ export function useLawViewerDerivedState({
       || key
       || null;
 
-    return referenceLabel ? buildEurlexSearchUrl(referenceLabel, preferences.formexLang) : null;
-  }, [activeLoadError, eurlexUrl, key, preferences.formexLang, searchParams, slug, source.currentLaw, source.slugReference]);
+    return referenceLabel ? buildEurlexSearchUrl(referenceLabel, documentLang) : null;
+  }, [activeLoadError, documentLang, eurlexUrl, key, searchParams, slug, source.currentLaw, source.slugReference]);
 
   const externalLawOverview = useMemo(
-    () => buildExternalLawOverview(primaryDocument.data.crossReferences, preferences.formexLang),
-    [primaryDocument.data.crossReferences, preferences.formexLang]
+    () => buildExternalLawOverview(primaryDocument.data.crossReferences, documentLang),
+    [documentLang, primaryDocument.data.crossReferences]
   );
 
   return {
     activeLoading,
+    documentLang,
+    isLegacyHtmlFallback,
     hasLoadedContent,
     hasCelex,
     isSideBySide,

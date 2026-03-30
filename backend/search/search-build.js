@@ -33,8 +33,25 @@ function logProgress(message) {
   console.log(`[search-build] ${message}`);
 }
 
-function buildYearQuery({ year, limit, offset }) {
+const YEAR_QUERY_ACT_TYPE_MAP = {
+  regulation: { celexMarker: "R", eliToken: "reg" },
+  directive: { celexMarker: "L", eliToken: "dir" },
+  decision: { celexMarker: "D", eliToken: "dec" },
+};
+
+function normalizeYearQueryActTypes(actTypes) {
+  const values = Array.isArray(actTypes) ? actTypes : ["regulation", "directive", "decision"];
+  const normalized = values
+    .map((value) => String(value || "").trim().toLowerCase())
+    .filter((value) => YEAR_QUERY_ACT_TYPE_MAP[value]);
+  return [...new Set(normalized)];
+}
+
+function buildYearQuery({ year, limit, offset, actTypes }) {
   const safeYear = Number.parseInt(year, 10);
+  const selectedActTypes = normalizeYearQueryActTypes(actTypes);
+  const celexMarkers = selectedActTypes.map((type) => YEAR_QUERY_ACT_TYPE_MAP[type].celexMarker).join("");
+  const eliTokens = selectedActTypes.map((type) => YEAR_QUERY_ACT_TYPE_MAP[type].eliToken).join("|");
   return `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 SELECT DISTINCT ?celex ?title ?date ?eli
@@ -49,9 +66,9 @@ WHERE {
   }
   OPTIONAL { ?cellar cdm:work_date_document ?date . }
 
-  FILTER(REGEX(STR(?celex), "^3${safeYear}[RLD]"))
+  FILTER(REGEX(STR(?celex), "^3${safeYear}[${celexMarkers}]"))
   FILTER(!CONTAINS(?celex, "R("))
-  FILTER(REGEX(STR(?eli), "/eli/(reg|dir|dec)/${safeYear}/[0-9]+/oj$"))
+  FILTER(REGEX(STR(?eli), "/eli/(${eliTokens})/${safeYear}/[0-9]+/oj$"))
 }
 ORDER BY ?celex
 LIMIT ${limit}
@@ -392,20 +409,21 @@ function toRecord(binding) {
   };
 }
 
-async function harvestPrimaryActs({ fromYear, toYear, limit }) {
+async function harvestPrimaryActs({ fromYear, toYear, limit, runSparqlImpl = runSparql }) {
   const records = new Map();
   for (let year = fromYear; year >= toYear; year -= 1) {
     let offset = 0;
     let yearCount = 0;
     while (true) {
       logProgress(`Harvesting year ${year}, offset ${offset}`);
-      const data = await runSparql(buildYearQuery({ year, limit, offset }));
-      const incoming = (data.results?.bindings || []).map(toRecord);
+      const data = await runSparqlImpl(buildYearQuery({ year, limit, offset }));
+      const bindings = data.results?.bindings || [];
+      const incoming = bindings.map(toRecord);
       for (const record of incoming) {
         records.set(record.celex, record);
       }
       yearCount += incoming.length;
-      if (incoming.length < limit) break;
+      if (bindings.length < limit) break;
       offset += limit;
     }
     logProgress(`Harvested ${yearCount} records for ${year}`);
@@ -753,7 +771,14 @@ module.exports = {
   DEFAULT_SEARCH_CACHE_PATH,
   DEFAULT_SEARCH_STATE_PATH,
   buildSearchCache,
+  harvestPrimaryActs,
+  buildYearQuery,
+  ensurePositiveInt,
   extractTitleFromEurlexHtml,
   extractOfficialTitleWithFallback,
-  reEnrichCurrentCache
+  findFmx4Uri,
+  logProgress,
+  normalizeYearQueryActTypes,
+  reEnrichCurrentCache,
+  runSparql
 };
