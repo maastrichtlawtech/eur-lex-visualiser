@@ -1002,6 +1002,14 @@ export function TopBar({
             >
               {t("app.name")}
             </button>
+            <a
+              href="https://www.maastrichtuniversity.nl/law-tech-lab"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-gray-500 leading-tight mt-0.5 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            >
+              Law &amp; Tech Lab, Maastricht University
+            </a>
           </div>
         </div>
 
