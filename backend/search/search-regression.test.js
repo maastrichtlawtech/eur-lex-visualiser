@@ -13,6 +13,8 @@ const CASES = [
   ["digital services act", "32022R2065"],
   ["data act", "32023R2854"],
   ["data governance act", "32022R0868"],
+  ["ecommerce", "32000L0031"],
+  ["eprivacy", "32002L0058"],
   ["payment services directive", "32015L2366"]
 ];
 

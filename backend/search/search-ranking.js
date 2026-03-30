@@ -1,7 +1,28 @@
 const GENERIC_OJ_TITLE = "Official Journal of the European Union";
 
 const KNOWN_ALIASES = {
+  "32000L0031": [
+    "ecommerce",
+    "e commerce",
+    "e commerce directive",
+    "ecommerce directive",
+    "electronic commerce directive",
+    "directive 2000/31",
+  ],
+  "32016L0680": [
+    "law enforcement directive",
+    "led",
+    "police directive",
+    "directive 2016/680",
+  ],
   "32016R0679": ["gdpr", "general data protection regulation"],
+  "32002L0058": [
+    "eprivacy",
+    "eprivacy directive",
+    "directive on privacy and electronic communications",
+    "privacy and electronic communications directive",
+    "directive 2002/58",
+  ],
   "32018L1972": ["european electronic communications code", "eecc"],
   "32022R0868": ["data governance act"],
   "32022R1925": ["digital markets act"],
@@ -18,6 +39,14 @@ const QUERY_REWRITES = new Map([
   ["nis 2", "directive 2022/2555"],
   ["p2b", "regulation 2019/1150"],
   ["eidas", "regulation 2014/910"],
+  ["ecommerce", "directive 2000/31"],
+  ["e commerce", "directive 2000/31"],
+  ["e commerce directive", "directive 2000/31"],
+  ["ecommerce directive", "directive 2000/31"],
+  ["eprivacy", "directive 2002/58"],
+  ["law enforcement directive", "directive 2016/680"],
+  ["led", "directive 2016/680"],
+  ["police directive", "directive 2016/680"],
   ["digital governance act", "data governance act"],
   ["open data directive", "directive 2019/1024"],
   ["platform to business regulation", "regulation 2019/1150"],

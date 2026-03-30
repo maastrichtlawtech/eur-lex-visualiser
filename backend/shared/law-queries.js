@@ -114,7 +114,18 @@ LIMIT 100`;
   return { celex, acts };
 }
 
-async function fetchCaseLaw(celex, runSparqlQuery, { cacheDir } = {}) {
+const CASE_LAW_ENRICH_BUDGET_MS = 1_500;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchCaseLaw(celex, runSparqlQuery, {
+  cacheDir,
+  detailsFetcher = fetchCaseDetails,
+  enrichBudgetMs = CASE_LAW_ENRICH_BUDGET_MS,
+  enrichConcurrency = 3,
+} = {}) {
   const cache = cacheDir ? loadCaseLawCache(cacheDir) : {};
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
@@ -154,11 +165,19 @@ LIMIT 200`;
   // Enrich uncached cases with full details (name + decisions + articles)
   const uncached = cases.filter((c) => !cache[c.celex]);
   if (uncached.length > 0) {
-    try {
-      await enrichWithCaseDetails(uncached, cache);
-      if (cacheDir) saveCaseLawCache(cacheDir, cache);
-    } catch (err) {
-      console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
+    const enrichPromise = enrichWithCaseDetails(uncached, cache, {
+      concurrency: enrichConcurrency,
+      detailsFetcher,
+    })
+      .then(() => {
+        if (cacheDir) saveCaseLawCache(cacheDir, cache);
+      })
+      .catch((err) => {
+        console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
+      });
+
+    if (enrichBudgetMs > 0) {
+      await Promise.race([enrichPromise, wait(enrichBudgetMs)]);
     }
   }
 
@@ -446,7 +465,10 @@ async function fetchCaseDetails(caseCelex) {
  * Enrich cases with full details (decisions + articles). Lower concurrency
  * than party-name enrichment since we fetch full pages.
  */
-async function enrichWithCaseDetails(cases, detailsCache, concurrency = 3) {
+async function enrichWithCaseDetails(cases, detailsCache, {
+  concurrency = 3,
+  detailsFetcher = fetchCaseDetails,
+} = {}) {
   let consecutiveFails = 0;
   let blocked = false;
   let i = 0;
@@ -455,7 +477,7 @@ async function enrichWithCaseDetails(cases, detailsCache, concurrency = 3) {
     while (i < cases.length && !blocked) {
       const c = cases[i++];
       try {
-        const details = await fetchCaseDetails(c.celex);
+        const details = await detailsFetcher(c.celex);
         if (details) {
           detailsCache[c.celex] = details;
           c.declarations = details.declarations;

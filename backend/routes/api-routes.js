@@ -5,6 +5,8 @@ const { createSearchHandler } = require("../search/search-route");
 const { parseFmxXml } = require("../shared/fmx-parser-node");
 const { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw } = require("../shared/law-queries");
 
+const CASE_LAW_ROUTE_CACHE_MS = 5 * 60 * 1000;
+
 function registerApiRoutes(app, deps) {
   const {
     CELEX_NAMES,
@@ -288,7 +290,7 @@ function registerApiRoutes(app, deps) {
       }
 
       const payload = await fetchCaseLaw(celex, runSparqlQuery, { cacheDir: FMX_DIR });
-      cacheSet(resolutionCache, cacheKey, payload, RESOLUTION_CACHE_MS);
+      cacheSet(resolutionCache, cacheKey, payload, Math.min(RESOLUTION_CACHE_MS, CASE_LAW_ROUTE_CACHE_MS));
       res.json(payload);
     } catch (err) {
       safeErrorResponse(res, err, 'Failed to fetch case law');

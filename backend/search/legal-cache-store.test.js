@@ -14,7 +14,7 @@ test("legal cache store loads fixture successfully", () => {
   const store = new JsonLegalCacheStore(fixturePath);
   assert.equal(store.load(), true);
   assert.equal(store.getStatus().ready, true);
-  assert.equal(store.getStatus().count, 10);
+  assert.equal(store.getStatus().count, 12);
 });
 
 test("legal cache store reports missing file", () => {
@@ -58,6 +58,24 @@ test("legal cache store resolves exact official reference", () => {
     number: "02366",
   });
   assert.equal(match?.celex, "32015L2366");
+});
+
+test("legal cache store supplements the ePrivacy Directive when missing from cache", () => {
+  const store = new JsonLegalCacheStore(fixturePath);
+  store.load();
+
+  const match = store.getByCelex("32002L0058");
+  assert.equal(match?.celex, "32002L0058");
+  assert.match(match?.title || "", /privacy in the electronic communications sector/i);
+});
+
+test("legal cache store supplements the eCommerce Directive when missing from cache", () => {
+  const store = new JsonLegalCacheStore(fixturePath);
+  store.load();
+
+  const match = store.getByCelex("32000L0031");
+  assert.equal(match?.celex, "32000L0031");
+  assert.match(match?.title || "", /electronic commerce/i);
 });
 
 test("legal cache store returns null for ambiguous official reference key", () => {

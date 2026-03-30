@@ -6,6 +6,42 @@ const { enrichSearchRecord, scoreLaw } = require("./search-ranking");
 const DEFAULT_SEARCH_CACHE_PATH = process.env.SEARCH_CACHE_PATH ||
   path.join(__dirname, "data", "search-cache.json");
 
+const SUPPLEMENTAL_RECORDS = [
+  {
+    celex: "32000L0031",
+    title: "Directive 2000/31/EC of the European Parliament and of the Council of 8 June 2000 on certain legal aspects of information society services, in particular electronic commerce, in the Internal Market (Directive on electronic commerce)",
+    type: "directive",
+    date: "2000-06-08",
+    eli: "http://data.europa.eu/eli/dir/2000/31/oj",
+    fmxAvailable: false,
+    fmxUnavailable: false,
+  },
+  {
+    celex: "32002L0058",
+    title: "Directive 2002/58/EC of the European Parliament and of the Council of 12 July 2002 concerning the processing of personal data and the protection of privacy in the electronic communications sector (Directive on privacy and electronic communications)",
+    type: "directive",
+    date: "2002-07-12",
+    eli: "http://data.europa.eu/eli/dir/2002/58/oj",
+    fmxAvailable: false,
+    fmxUnavailable: false,
+  },
+];
+
+function mergeSupplementalRecords(records) {
+  const merged = Array.isArray(records) ? [...records] : [];
+  const seen = new Set(merged.map((record) => normalizeCelexLookupKey(record?.celex)).filter(Boolean));
+
+  for (const record of SUPPLEMENTAL_RECORDS) {
+    const celexKey = normalizeCelexLookupKey(record.celex);
+    if (celexKey && !seen.has(celexKey)) {
+      merged.push(record);
+      seen.add(celexKey);
+    }
+  }
+
+  return merged;
+}
+
 function normalizeCelexLookupKey(celex) {
   const normalized = String(celex || "").trim().toUpperCase();
   return normalized || null;
@@ -85,7 +121,7 @@ class JsonLegalCacheStore {
       const raw = fs.readFileSync(this.cachePath, "utf8");
       const parsed = JSON.parse(raw);
       const records = Array.isArray(parsed.records)
-        ? parsed.records
+        ? mergeSupplementalRecords(parsed.records)
           .map((record) => enrichSearchRecord(record))
           .filter((record) => record.isPrimaryAct)
         : [];

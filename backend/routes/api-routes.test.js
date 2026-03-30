@@ -274,6 +274,35 @@ test("GET /api/laws/:celex/parsed skips the FMX probe when requested", async () 
   assert.equal(prepareCalled, false);
 });
 
+test("GET /api/laws/:celex/case-law uses a short cache ttl", async () => {
+  const resolutionCache = new Map();
+  const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "case-law-route-"));
+  const { app } = registerTestRoutes({
+    FMX_DIR: cacheDir,
+    RESOLUTION_CACHE_MS: 86_400_000,
+    resolutionCache,
+    runSparqlQuery: async () => ({ results: { bindings: [] } }),
+  });
+  const handler = app.routes.get("/api/laws/:celex/case-law");
+  const res = createResponseRecorder();
+  const startedAt = Date.now();
+
+  await handler({
+    params: { celex: "31995L0046" },
+    query: {},
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.payload, { celex: "31995L0046", cases: [] });
+
+  const entry = resolutionCache.get("case-law:31995L0046");
+  assert.ok(entry, "Expected case-law response to be cached");
+
+  const ttlMs = entry.expiresAt - startedAt;
+  assert.ok(ttlMs <= 5 * 60 * 1000 + 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
+  assert.ok(ttlMs >= 5 * 60 * 1000 - 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
+});
+
 test("GET /api/resolve-url returns cache-backed ELI resolution", async () => {
   const store = new JsonLegalCacheStore(fixturePath);
   store.load();
