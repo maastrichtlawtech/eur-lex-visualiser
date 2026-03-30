@@ -116,8 +116,16 @@ export async function getLibraryLaws() {
   const metaByCelex = new Map(metaEntries.filter((entry) => entry?.celex).map((entry) => [entry.celex, entry]));
   const cachedCelexes = await listCachedCelexes();
   const bundledLaws = getBundledLaws();
+  // Only include bundled laws that have actually been opened (have a meta
+  // entry) or have cached Formex content.  Bundled laws without either are
+  // kept for routing only and should not appear in the library.
+  const cachedCelexSet = new Set(cachedCelexes);
+  const activeBundledCelexes = bundledLaws
+    .map((law) => law.celex)
+    .filter((celex) => celex && (metaByCelex.has(celex) || cachedCelexSet.has(celex)));
+
   const knownCelexes = Array.from(new Set([
-    ...bundledLaws.map((law) => law.celex).filter(Boolean),
+    ...activeBundledCelexes,
     ...metaByCelex.keys(),
     ...cachedCelexes,
   ]));

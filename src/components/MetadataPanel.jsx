@@ -1,9 +1,95 @@
 import React, { useState, useCallback, useEffect } from "react";
-import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
-import { fetchLawMetadata, fetchAmendments, fetchImplementingActs } from "../utils/formexApi.js";
+import { Loader2, ChevronDown, ExternalLink, Scale } from "lucide-react";
+import { fetchLawMetadata, fetchAmendments, fetchImplementingActs, fetchCaseLaw } from "../utils/formexApi.js";
 import { buildEurlexCelexUrl } from "../utils/url.js";
 import { Accordion } from "./Accordion.jsx";
+import { CaseLawModal } from "./CaseLawModal.jsx";
 import { useI18n } from "../i18n/useI18n.js";
+
+/**
+ * Prominent case law button + modal. Designed to be placed at the top of the sidebar.
+ */
+export function CaseLawButton({ celex, currentLang = "EN" }) {
+  const { t } = useI18n();
+  const [cases, setCases] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  // Reset when law changes
+  useEffect(() => {
+    setCases(null);
+    setLoaded(false);
+  }, [celex]);
+
+  const load = useCallback(async () => {
+    if (!celex || loaded) return;
+    setLoading(true);
+    try {
+      const result = await fetchCaseLaw(celex);
+      const list = result.cases || [];
+      setCases(list);
+      if (list.length > 0) setModalOpen(true);
+    } catch {
+      setCases([]);
+    } finally {
+      setLoading(false);
+      setLoaded(true);
+    }
+  }, [celex, loaded]);
+
+  if (!celex) return null;
+
+  // After loading: show open-modal button, or "none found"
+  if (loaded && cases && cases.length > 0) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="flex w-full items-center justify-between rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm font-medium text-teal-900 transition hover:border-teal-300 hover:bg-teal-100 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100 dark:hover:border-teal-700 dark:hover:bg-teal-950/70"
+        >
+          <span className="flex items-center gap-2">
+            <Scale size={16} />
+            {t("metadata.caseLaw")} ({cases.length})
+            <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
+          </span>
+        </button>
+        <CaseLawModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          cases={cases}
+          currentLang={currentLang}
+        />
+      </>
+    );
+  }
+
+  if (loaded && (!cases || cases.length === 0)) {
+    return (
+      <div className="flex w-full items-center gap-2 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-400 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500">
+        <Scale size={16} />
+        {t("metadata.caseLaw")} — none found
+      </div>
+    );
+  }
+
+  // Not yet loaded: show load button
+  return (
+    <button
+      type="button"
+      onClick={load}
+      disabled={loading}
+      className="flex w-full items-center justify-between rounded-xl border border-teal-200 bg-teal-50 px-3 py-2.5 text-sm font-medium text-teal-900 transition hover:border-teal-300 hover:bg-teal-100 disabled:opacity-60 dark:border-teal-800 dark:bg-teal-950/40 dark:text-teal-100 dark:hover:border-teal-700 dark:hover:bg-teal-950/70"
+    >
+      <span className="flex items-center gap-2">
+        {loading ? <Loader2 size={16} className="animate-spin" /> : <Scale size={16} />}
+        {t("metadata.caseLaw")}
+        <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
+      </span>
+    </button>
+  );
+}
 
 function formatDate(isoDate) {
   if (!isoDate) return null;
@@ -135,7 +221,6 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
     setAmendLoaded(false);
     setImplActs(null);
     setImplLoaded(false);
-
     let cancelled = false;
     setMetaLoading(true);
     fetchLawMetadata(celex)
@@ -308,6 +393,7 @@ export function MetadataPanel({ celex, currentLang = "EN" }) {
           onClick={loadImplementing}
         />
       )}
+
     </div>
   );
 }

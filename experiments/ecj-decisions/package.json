@@ -1,0 +1,10 @@
+{
+  "name": "ecj-decisions-extractor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "MVP: Extract decisions and cited articles from ECJ judgments",
+  "dependencies": {
+    "jsdom": "^29.0.1"
+  }
+}

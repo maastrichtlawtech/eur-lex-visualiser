@@ -141,7 +141,11 @@ export function useLawViewerSource({
   }, [canonicalRoute, currentLawSlug, effectiveCelex, isImportRoute, isLegacyLawRoute, locationSearch, navigate]);
 
   useEffect(() => {
-    if (effectiveCelex || !slugReference) return;
+    if (!slugReference) return;
+    if (effectiveCelex) {
+      setLoading(false);
+      return;
+    }
 
     let cancelled = false;
     setLoading(true);

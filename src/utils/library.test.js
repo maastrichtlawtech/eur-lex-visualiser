@@ -68,6 +68,17 @@ describe("getLibraryLaws", () => {
     expect(laws).toEqual([]);
   });
 
+  it("includes bundled laws that have been opened (have meta)", async () => {
+    getAllLawMeta.mockResolvedValue([
+      { celex: "32016R0679", label: "General Data Protection Regulation", lastOpened: Date.now() },
+    ]);
+    listCachedCelexes.mockResolvedValue([]);
+
+    const laws = await getLibraryLaws();
+    expect(laws.some((law) => law.slug === "gdpr")).toBe(true);
+    expect(laws.some((law) => law.slug === "dma")).toBe(false);
+  });
+
   it("includes opened imported laws from cache", async () => {
     getAllLawMeta.mockResolvedValue([
       {

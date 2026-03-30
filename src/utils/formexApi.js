@@ -45,18 +45,23 @@ export class FormexApiError extends Error {
 
 function openDb() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, CACHE_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
-      }
-      if (!db.objectStoreNames.contains(META_STORE_NAME)) {
-        db.createObjectStore(META_STORE_NAME, { keyPath: "celex" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    try {
+      const req = indexedDB.open(DB_NAME, CACHE_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME);
+        }
+        if (!db.objectStoreNames.contains(META_STORE_NAME)) {
+          db.createObjectStore(META_STORE_NAME, { keyPath: "celex" });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => reject(new Error("IndexedDB open blocked"));
+    } catch (err) {
+      reject(err);
+    }
   });
 }
 
@@ -497,6 +502,17 @@ export async function fetchLawMetadata(celex) {
 
   if (!res.ok) {
     await readApiError(res, `Metadata fetch failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+export async function fetchCaseLaw(celex) {
+  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/case-law`;
+  const res = await fetch(url);
+
+  if (!res.ok) {
+    await readApiError(res, `Case law fetch failed (${res.status})`);
   }
 
   return res.json();

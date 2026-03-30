@@ -22,7 +22,6 @@ const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500;
 const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
 
 function bootServices() {
-  const { createFmxService } = require('../shared/fmx-service');
   const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
   const {
     cacheGet,
@@ -41,13 +40,6 @@ function bootServices() {
     fs.mkdirSync(DEFAULT_FMX_DIR, { recursive: true });
   }
 
-  const fmxService = createFmxService({
-    CELLAR_BASE,
-    FMX_DIR: DEFAULT_FMX_DIR,
-    STORAGE_LIMIT_MB,
-    TIMEOUT_MS,
-  });
-
   const resolutionCache = new Map();
   const legalCacheStore = new JsonLegalCacheStore(process.env.SEARCH_CACHE_PATH || DEFAULT_SEARCH_CACHE_PATH);
   legalCacheStore.load();
@@ -62,8 +54,26 @@ function bootServices() {
     toSearchLang,
   });
 
+  // Lazy-load FMX service (requires adm-zip) — only needed by fetch/get commands
+  let _fmxService;
+  function getFmxService() {
+    if (!_fmxService) {
+      const { createFmxService } = require('../shared/fmx-service');
+      _fmxService = createFmxService({
+        CELLAR_BASE,
+        FMX_DIR: DEFAULT_FMX_DIR,
+        STORAGE_LIMIT_MB,
+        TIMEOUT_MS,
+      });
+    }
+    return _fmxService;
+  }
+
   return {
-    ...fmxService,
+    get prepareLawPayload() { return getFmxService().prepareLawPayload; },
+    get findFmx4Uri() { return getFmxService().findFmx4Uri; },
+    get findDownloadUrls() { return getFmxService().findDownloadUrls; },
+    get sendLawResponse() { return getFmxService().sendLawResponse; },
     ...refResolver,
     parseReferenceText,
     parseStructuredReference,
@@ -254,6 +264,23 @@ COMMANDS.implementing = {
 
     const { fetchImplementing } = require('../shared/law-queries');
     const payload = await fetchImplementing(flags.celex, svc.runSparqlQuery);
+    jsonOut(payload, flags.o || flags.output);
+  },
+};
+
+// --- case-law --------------------------------------------------------------
+
+COMMANDS['case-law'] = {
+  summary: 'List CJEU judgments that interpret a law',
+  usage: 'eurlex case-law <celex> [-o output.json]',
+  async run(args) {
+    const flags = parseFlags(args, ['celex']);
+    if (!flags.celex) die('CELEX number required.');
+    const svc = bootServices();
+    if (!svc.validateCelex(flags.celex)) die(`Invalid CELEX: ${flags.celex}`);
+
+    const { fetchCaseLaw } = require('../shared/law-queries');
+    const payload = await fetchCaseLaw(flags.celex, svc.runSparqlQuery, { cacheDir: DEFAULT_FMX_DIR });
     jsonOut(payload, flags.o || flags.output);
   },
 };
