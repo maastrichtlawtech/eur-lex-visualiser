@@ -100,7 +100,7 @@ function CaseCard({ c, currentLang }) {
               </button>
             ) : (
               <div>
-                <ol className="space-y-1.5 rounded-md bg-gray-50 p-2 text-[11px] text-gray-600 dark:bg-gray-800/50 dark:text-gray-400 leading-relaxed list-none">
+                <ol className="space-y-1.5 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed list-none">
                   {c.declarations.map((d) => (
                     <li key={d.number}>
                       <span className="font-semibold text-gray-700 dark:text-gray-300">{d.number}.</span>{" "}
