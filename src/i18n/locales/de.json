@@ -24,40 +24,40 @@
     "noSelection": "Keine Auswahl"
   },
   "seo": {
-    "defaultDescription": "Interactive visualisation of EU laws. Navigate articles, recitals, and annexes with ease.",
-    "defaultKeywords": "EU law, GDPR, AI Act, DMA, DSA, Data Act, visualisation, legal tech, interactive law",
-    "landingDescription": "Read and navigate EU laws efficiently with interactive visualisations. View articles and related recitals side by side."
+    "defaultDescription": "Interaktive Visualisierung von EU-Gesetzen. Navigieren Sie mühelos durch Artikel, Präambeln und Anhänge.",
+    "defaultKeywords": "EU-Recht, GDPR, KI-Verordnung, DMA, DSA, Datengesetz, Visualisierung, Legal Tech, interaktives Recht",
+    "landingDescription": "Lesen und navigieren Sie EU-Gesetze effizient mit interaktiven Visualisierungen. Zeigen Sie Artikel und zugehörige Präambeln nebeneinander an."
   },
   "error": {
-    "somethingWentWrong": "Something went wrong",
-    "routingError": "LegalViz hit a routing error while opening this page.",
-    "unexpectedProblem": "LegalViz ran into an unexpected problem while loading this page."
+    "somethingWentWrong": "Etwas ist schief gelaufen",
+    "routingError": "LegalViz ist auf einen Routingfehler gestoßen, während diese Seite geöffnet wurde.",
+    "unexpectedProblem": "LegalViz ist auf ein unerwartetes Problem beim Laden dieser Seite gestoßen."
   },
   "theme": {
-    "switchToLight": "Switch to light mode",
-    "switchToDark": "Switch to dark mode",
-    "toggle": "Toggle theme"
+    "switchToLight": "Zu Hellmodus wechseln",
+    "switchToDark": "Zu Dunkelmodus wechseln",
+    "toggle": "Design wechseln"
   },
   "uiLanguage": {
     "label": "Sprache der Oberfläche",
     "helper": "Sprache der Benutzeroberfläche ändern"
   },
   "search": {
-    "trigger": "Search (Cmd+K)...",
-    "placeholder": "Search...",
-    "initializing": "Initializing search...",
-    "clear": "Clear search",
-    "searchingCached": "Searching {count} last opened {lawWord} in {language}. Open a law in this language to make it searchable.",
-    "noCached": "No last opened laws are searchable in {language} yet. Open a law in this language to add it to search.",
-    "typeCached": "Type to search across {count} last opened {lawWord} in {language}.",
-    "typeToStart": "Type to start searching...",
-    "noResultsCached": "No results found for \"{query}\" in {count} last opened {lawWord} in {language}.",
-    "noResults": "No results found for \"{query}\"",
-    "selectToNavigate": "Select to navigate",
-    "escToClose": "ESC to close",
-    "bestMatch": "Best Match",
-    "law": "law",
-    "laws": "laws",
+    "trigger": "Suchen (Cmd+K)...",
+    "placeholder": "Suchen...",
+    "initializing": "Suche wird initialisiert...",
+    "clear": "Suche löschen",
+    "searchingCached": "Suche in {count} zuletzt geöffneten {lawWord} in {language}. Öffnen Sie ein Gesetz in dieser Sprache, um es durchsuchbar zu machen.",
+    "noCached": "Zuletzt geöffnete Gesetze sind in {language} noch nicht durchsuchbar. Öffnen Sie ein Gesetz in dieser Sprache, um es zur Suche hinzuzufügen.",
+    "typeCached": "Geben Sie ein, um über {count} zuletzt geöffnete {lawWord} in {language} zu suchen.",
+    "typeToStart": "Geben Sie ein, um die Suche zu starten...",
+    "noResultsCached": "Keine Ergebnisse für \"{query}\" in {count} zuletzt geöffneten {lawWord} in {language} gefunden.",
+    "noResults": "Keine Ergebnisse für \"{query}\" gefunden",
+    "selectToNavigate": "Wählen Sie zum Navigieren",
+    "escToClose": "ESC zum Schließen",
+    "bestMatch": "Beste Übereinstimmung",
+    "law": "Gesetz",
+    "laws": "Gesetze",
     "apiUnavailable": "Die Gesetzessuche ist vorübergehend nicht verfügbar.",
     "currentLawFallback": "dieses Gesetz",
     "lawResultType": "Gesetz",
@@ -80,7 +80,7 @@
     "typeLaws": "Suchen Sie primäre EU-Rechtsakte nach Titel, Referenz oder CELEX. Sekundärrechtsakte sind noch nicht enthalten."
   },
   "topBar": {
-    "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
+    "byline": "Von Konrad Kollnig, Law & Tech Lab Maastricht",
     "moreTools": "Weitere Werkzeuge",
     "hideSidebar": "Seitenleiste ausblenden",
     "showSidebar": "Seitenleiste anzeigen",
@@ -108,21 +108,21 @@
     "number": "Nummer",
     "importLaw": "Gesetz importieren",
     "importing": "Importiere...",
-    "importHelper": "Choose the act type, year, and number. If automatic import fails, LegalViz opens the corresponding EUR-Lex search page.",
+    "importHelper": "Wählen Sie den Gesetztypus, das Jahr und die Nummer. Wenn der automatische Import fehlschlägt, öffnet LegalViz die entsprechende EUR-Lex-Suchseite.",
     "example": "Beispiel für die DSGVO: Wählen Sie Verordnung, geben Sie 2016 als Jahr und 679 als Nummer ein.",
     "invalidReference": "Geben Sie ein vierstelliges Jahr und eine numerische Gesetzesnummer ein.",
     "automaticImportFallback": "Die automatische Suche ist fehlgeschlagen, daher wurde EUR-Lex in einem neuen Tab geöffnet.",
     "importUnavailable": "Dieses Gesetz konnte derzeit nicht geöffnet werden.",
     "never": "Nie",
-    "visualiseStepsTitle": "Visualise other EU laws in 4 simple steps",
-    "dismissInstructions": "Dismiss these instructions permanently",
-    "extensionDescription": "Want to visualise a different EU law? Install our browser extension to open any recent EU law from EUR-Lex in this visualiser.",
-    "installExtension": "Install the extension:",
-    "howItWorks": "How it works:",
-    "step1": "Install the extension for your browser (see links above).",
-    "step2": "Visit a EU law page on EUR-Lex.",
-    "step3": "Open the law in the English language using the language selector on EUR-Lex.",
-    "step4": "Click the extension icon to open that law in LegalViz directly.",
+    "visualiseStepsTitle": "Visualisieren Sie andere EU-Gesetze in 4 einfachen Schritten",
+    "dismissInstructions": "Diese Anweisungen permanent ablehnen",
+    "extensionDescription": "Möchten Sie ein anderes EU-Gesetz visualisieren? Installieren Sie unsere Browsererweiterung, um ein beliebiges aktuelles EU-Gesetz von EUR-Lex in diesem Visualizer zu öffnen.",
+    "installExtension": "Installieren Sie die Erweiterung:",
+    "howItWorks": "So funktioniert es:",
+    "step1": "Installieren Sie die Erweiterung für Ihren Browser (siehe Links oben).",
+    "step2": "Besuchen Sie eine EU-Gesetzsseite auf EUR-Lex.",
+    "step3": "Öffnen Sie das Gesetz in englischer Sprache mit dem Sprachselektor auf EUR-Lex.",
+    "step4": "Klicken Sie auf das Erweiterungssymbol, um das Gesetz direkt in LegalViz zu öffnen.",
     "sourceCode": "Quellcode und Support auf GitHub",
     "builtBy": "Entwickelt von Konrad Kollnig am Law & Tech Lab der Maastricht University.",
     "addLawDialogEyebrow": "Gesetz hinzufügen",
@@ -160,57 +160,57 @@
   "resetFooter": {
     "title": "Funktioniert etwas nicht?",
     "button": "Klicken Sie hier, um die App zurückzusetzen",
-    "note": "This clears LegalViz local settings and cached data in this browser."
+    "note": "Dies löscht die lokalen Einstellungen von LegalViz und die zwischengespeicherten Daten in diesem Browser."
   },
   "printModal": {
     "title": "Druckoptionen",
-    "description": "Customize what you want to include in your print-ready view or PDF.",
-    "itemsAvailable": "{count} items available",
+    "description": "Passen Sie an, was Sie in Ihre druckfertige Ansicht oder PDF einbeziehen möchten.",
+    "itemsAvailable": "{count} Elemente verfügbar",
     "layout": "Layout",
-    "includeRelatedRecitals": "Include related recitals inline",
-    "includeRelatedRecitalsHelp": "Automatically inserts relevant recitals next to articles based on AI analysis. Useful for understanding context.",
-    "generateView": "Generate View"
+    "includeRelatedRecitals": "Zugehörige Präambeln inline einfügen",
+    "includeRelatedRecitalsHelp": "Fügt automatisch relevante Präambeln neben Artikeln basierend auf KI-Analyse ein. Nützlich zum Verstehen des Kontexts.",
+    "generateView": "Ansicht generieren"
   },
   "navigation": {
-    "previous": "Previous {label}",
-    "next": "Next {label}"
+    "previous": "Vorheriges {label}",
+    "next": "Nächstes {label}"
   },
   "numberSelector": {
-    "invalidRange": "Invalid range"
+    "invalidRange": "Ungültiger Bereich"
   },
   "relatedRecitals": {
-    "title": "Related Recitals",
-    "description": "These recitals appear to be related to this article based on text analysis using simple AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Sorted by relevance score.",
-    "match": "{score}% match",
-    "read": "Read →"
+    "title": "Zugehörige Präambeln",
+    "description": "Diese Präambeln scheinen mit diesem Artikel verbunden zu sein, basierend auf Textanalyse unter Verwendung einfacher KI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF-Ähnlichkeit</a> (Nanda et al.)). Sortiert nach Relevanzbewertung.",
+    "match": "{score}% Übereinstimmung",
+    "read": "Lesen →"
   },
   "crossReferences": {
-    "title": "Cross-References",
-    "references": "This {itemLabel} references:",
-    "referencedBy": "Referenced by:",
-    "external": "References to other legislation:",
+    "title": "Kreuzverweise",
+    "references": "Dieses {itemLabel} verweist auf:",
+    "referencedBy": "Zitiert durch:",
+    "external": "Verweise auf andere Rechtsvorschriften:",
     "resolving": "Wird aufgelöst…"
   },
   "lawViewer": {
-    "notAvailableTitle": "This law is not available here yet",
-    "notAvailableMessage": "We couldn't find the structured text version we use to display this law in LegalViz. The law itself may still be available on EUR-Lex.",
-    "lawLoadFailed": "Law could not be loaded",
-    "lawLoadServiceFailed": "The law could not be loaded from the Formex service.",
-    "referenceResolveFailed": "This law reference could not be resolved automatically.",
-    "importResolveFailed": "This EUR-Lex page could not be resolved to an importable CELEX document.",
+    "notAvailableTitle": "Dieses Gesetz ist hier noch nicht verfügbar",
+    "notAvailableMessage": "Wir konnten die strukturierte Textversion nicht finden, die wir verwenden, um dieses Gesetz in LegalViz anzuzeigen. Das Gesetz selbst ist möglicherweise noch auf EUR-Lex verfügbar.",
+    "lawLoadFailed": "Gesetz konnte nicht geladen werden",
+    "lawLoadServiceFailed": "Das Gesetz konnte nicht vom Formex-Service geladen werden.",
+    "referenceResolveFailed": "Diese Gesetzesreferenz konnte nicht automatisch aufgelöst werden.",
+    "importResolveFailed": "Diese EUR-Lex-Seite konnte nicht in ein importierbares CELEX-Dokument aufgelöst werden.",
     "loadingLaw": "Gesetz wird geladen",
     "legacyExtensionTitle": "Erweiterungs-Update erforderlich",
-    "legacyExtensionMessage": "LegalViz now imports laws through a new Formex-based flow. This older extension entrypoint is no longer supported, so please update your browser extension and try again.",
+    "legacyExtensionMessage": "LegalViz importiert Gesetze jetzt über einen neuen Formex-basierten Ablauf. Dieser ältere Erweiterungseinstiegspunkt wird nicht mehr unterstützt. Bitte aktualisieren Sie Ihre Browsererweiterung und versuchen Sie es erneut.",
     "retryImport": "Import erneut versuchen",
-    "selectPrompt": "Select an article, recital, or annex from the menu to begin reading.",
-    "structuredVersionUnavailable": "The structured LegalViz version of this law is not available right now.",
-    "lawContentUnavailable": "The law content is unavailable right now.",
+    "selectPrompt": "Wählen Sie einen Artikel, eine Präambel oder einen Anhang aus dem Menü, um mit dem Lesen zu beginnen.",
+    "structuredVersionUnavailable": "Die strukturierte LegalViz-Version dieses Gesetzes ist derzeit nicht verfügbar.",
+    "lawContentUnavailable": "Der Gesetzestext ist derzeit nicht verfügbar.",
     "toggleContents": "Inhaltsverzeichnis umschalten",
     "quickNavigation": "Schnellnavigation",
-    "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
+    "quickNavigationHelp": "Springen Sie direkt zu einer bestimmten Artikel-, Präambel- oder Anhangnummer.",
     "tableOfContents": "Inhaltsverzeichnis",
     "noArticles": "Keine Artikel verfügbar.",
-    "popupBlocked": "Please allow popups to print",
+    "popupBlocked": "Bitte erlauben Sie Pop-ups zum Drucken",
     "articleNavigationHint": "Sie können auch die Pfeiltasten links und rechts verwenden, um beim Lesen zwischen Artikeln zu wechseln.",
     "languageItemUnavailable": "{label} {id} ist auf {lang} nicht verfügbar.",
     "legacyHtmlFallbackMessage": "Dieses Gesetz wird aus einem älteren EUR-Lex-HTML-Format angezeigt, nicht aus strukturierten Formex-Daten. Das Layout kann grob sein, und LegalViz hat die Dokumentsprache zur Zuverlässigkeit auf Englisch zurückgesetzt.",
@@ -225,7 +225,7 @@
   },
   "printView": {
     "documentTitle": "EU-Rechtsdokument",
-    "generatedOn": "Generated on {date}",
+    "generatedOn": "Generiert am {date}",
     "printedFrom": "Gedruckt von LegalViz.EU"
   },
   "amendmentHistory": {

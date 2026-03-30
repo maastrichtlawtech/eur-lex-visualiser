@@ -24,40 +24,40 @@
     "noSelection": "Ei valintaa"
   },
   "seo": {
-    "defaultDescription": "Interactive visualisation of EU laws. Navigate articles, recitals, and annexes with ease.",
-    "defaultKeywords": "EU law, GDPR, AI Act, DMA, DSA, Data Act, visualisation, legal tech, interactive law",
-    "landingDescription": "Read and navigate EU laws efficiently with interactive visualisations. View articles and related recitals side by side."
+    "defaultDescription": "EU-lakien interaktiivinen visualisointi. Siirry artikkeleihin, johdantoihin ja liitteisiin helposti.",
+    "defaultKeywords": "EU-laki, GDPR, AI-asetus, DMA, DSA, tietoasetus, visualisointi, lakiteknologia, interaktiivinen laki",
+    "landingDescription": "Lue ja navigoi EU-lakeja tehokkaasti interaktiivisten visualisointien avulla. Tarkastele artikkeleita ja niihin liittyviä johdantoja rinnakkain."
   },
   "error": {
-    "somethingWentWrong": "Something went wrong",
-    "routingError": "LegalViz hit a routing error while opening this page.",
-    "unexpectedProblem": "LegalViz ran into an unexpected problem while loading this page."
+    "somethingWentWrong": "Jotain meni pieleen",
+    "routingError": "LegalViz-sovelluksessa tapahtui reititysvirhe avattaessa tätä sivua.",
+    "unexpectedProblem": "LegalViz-sovelluksessa tapahtui odottamaton ongelma ladattaessa tätä sivua."
   },
   "theme": {
-    "switchToLight": "Switch to light mode",
-    "switchToDark": "Switch to dark mode",
-    "toggle": "Toggle theme"
+    "switchToLight": "Vaihda vaalean tilan tilaan",
+    "switchToDark": "Vaihda tumman tilan tilaan",
+    "toggle": "Vaihtele teemaa"
   },
   "uiLanguage": {
     "label": "Käyttöliittymän kieli",
     "helper": "Vaihda sovelluksen käyttöliittymän kieltä"
   },
   "search": {
-    "trigger": "Search (Cmd+K)...",
-    "placeholder": "Search...",
-    "initializing": "Initializing search...",
-    "clear": "Clear search",
-    "searchingCached": "Searching {count} last opened {lawWord} in {language}. Open a law in this language to make it searchable.",
-    "noCached": "No last opened laws are searchable in {language} yet. Open a law in this language to add it to search.",
-    "typeCached": "Type to search across {count} last opened {lawWord} in {language}.",
-    "typeToStart": "Type to start searching...",
-    "noResultsCached": "No results found for \"{query}\" in {count} last opened {lawWord} in {language}.",
-    "noResults": "No results found for \"{query}\"",
-    "selectToNavigate": "Select to navigate",
-    "escToClose": "ESC to close",
-    "bestMatch": "Best Match",
-    "law": "law",
-    "laws": "laws",
+    "trigger": "Haku (Cmd+K)...",
+    "placeholder": "Haku...",
+    "initializing": "Haun alustaminen...",
+    "clear": "Tyhjennä haku",
+    "searchingCached": "Etsitään {count} viimeksi avattua {lawWord} kielestä {language}. Avaa laki tässä kielessä tehdäksesi sen etsittäväksi.",
+    "noCached": "Mitään viimeksi avattua lakia ei ole vielä etsittävissä kielestä {language}. Avaa laki tässä kielessä lisätäksesi sen hakuun.",
+    "typeCached": "Kirjoita etsiäksesi {count} viimeksi avattua {lawWord} kielestä {language}.",
+    "typeToStart": "Aloita haku kirjoittamalla...",
+    "noResultsCached": "Mitään tuloksia ei löytynyt haulle \"{query}\" kielestä {language} {count} viimeksi avatusta {lawWord}.",
+    "noResults": "Mitään tuloksia ei löytynyt haulle \"{query}\"",
+    "selectToNavigate": "Valitse siirtyäksesi",
+    "escToClose": "ESC sulkeaksesi",
+    "bestMatch": "Paras osuma",
+    "law": "laki",
+    "laws": "lait",
     "apiUnavailable": "Lakien haku on tilapäisesti poissa käytöstä.",
     "currentLawFallback": "tämä laki",
     "lawResultType": "Laki",
@@ -80,27 +80,27 @@
     "typeLaws": "Hae EU:n ensisijaisia säädöksiä otsikon, viitteen tai CELEX-tunnuksen mukaan. Toissijaisia säädöksiä ei ole vielä mukana."
   },
   "topBar": {
-    "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
+    "byline": "Konrad Kollnigin tekijä, Maastrichtin Law & Tech Lab",
     "moreTools": "Lisää työkaluja",
     "hideSidebar": "Piilota sivupalkki",
     "showSidebar": "Näytä sivupalkki",
     "printPdf": "Tulosta / PDF",
-    "viewOnEurlex": "Näytä EUR-Lexissä",
+    "viewOnEurlex": "Näytä EUR-Lex:ssa",
     "closeSideBySide": "Sulje rinnakkaisnäkymä",
     "openSideBySide": "Avaa rinnakkaisnäkymä"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
-    "useFormex": "Use Formex API",
-    "loadFromApi": "Load from api.legalviz.eu"
+    "useFormex": "Käytä Formex API:a",
+    "loadFromApi": "Lataa api.legalviz.eu:sta"
   },
   "landing": {
     "heroTitle": "Lue EU-oikeutta kauniisti,",
     "heroSubtitle": "ja helposti.",
     "heroDescription": "Lisää säädös kirjastoosi tai avaa uudelleen jo käyttämäsi säädös. Sen jälkeen LegalViz näyttää luvut, artiklat, johdanto-osan kappaleet ja liitteet rinnakkain.",
-    "option1": "Option 1 · Import by official reference",
-    "option2": "Option 2 · Open a law from your library",
-    "option3": "Option 3 · Visualise other EU laws",
+    "option1": "Vaihtoehto 1 · Tuo virallisen viitteen mukaan",
+    "option2": "Vaihtoehto 2 · Avaa laki kirjastostasi",
+    "option3": "Vaihtoehto 3 · Visualisoi muita EU-lakeja",
     "directive": "Direktiivi",
     "regulation": "Asetus",
     "decision": "Päätös",
@@ -108,21 +108,21 @@
     "number": "Numero",
     "importLaw": "Tuo säädös",
     "importing": "Tuodaan...",
-    "importHelper": "Choose the act type, year, and number. If automatic import fails, LegalViz opens the corresponding EUR-Lex search page.",
+    "importHelper": "Valitse säädöstyyppi, vuosi ja numero. Jos automaattinen tuonti epäonnistuu, LegalViz avaa vastaavan EUR-Lex-hakusivun.",
     "example": "Esimerkki GDPR:stä: valitse asetus, syötä vuodeksi 2016 ja numeroksi 679.",
     "invalidReference": "Anna 4-numeroinen vuosi ja numeerinen säädösnumero.",
     "automaticImportFallback": "Automaattinen haku epäonnistui, joten EUR-Lex avattiin uuteen välilehteen.",
     "importUnavailable": "Tätä säädöstä ei voitu avata juuri nyt.",
     "never": "Ei koskaan",
-    "visualiseStepsTitle": "Visualise other EU laws in 4 simple steps",
-    "dismissInstructions": "Dismiss these instructions permanently",
-    "extensionDescription": "Want to visualise a different EU law? Install our browser extension to open any recent EU law from EUR-Lex in this visualiser.",
-    "installExtension": "Install the extension:",
-    "howItWorks": "How it works:",
-    "step1": "Install the extension for your browser (see links above).",
-    "step2": "Visit a EU law page on EUR-Lex.",
-    "step3": "Open the law in the English language using the language selector on EUR-Lex.",
-    "step4": "Click the extension icon to open that law in LegalViz directly.",
+    "visualiseStepsTitle": "Visualisoi muita EU-lakeja 4 yksinkertaisessa vaiheessa",
+    "dismissInstructions": "Hylkää nämä ohjeet pysyvästi",
+    "extensionDescription": "Haluatko visualisoida eri EU-lakia? Asenna selainlaajennus avataksesi minkä tahansa viimeaikaisen EU-lain EUR-Lex:stä tässä visualisaattorissa.",
+    "installExtension": "Asenna laajennus:",
+    "howItWorks": "Kuinka se toimii:",
+    "step1": "Asenna selaimelleen laajennus (katso yllä olevia linkkejä).",
+    "step2": "Vieraile EU-lain sivulla EUR-Lex:ssä.",
+    "step3": "Avaa laki englanniksi käyttämällä EUR-Lex:n kielivalitsinta.",
+    "step4": "Napsauta laajennus-kuvaketta avataksesi lain suoraan LegalViz:ssa.",
     "sourceCode": "Lähdekoodi ja tuki GitHubissa",
     "builtBy": "Rakentanut Konrad Kollnig Maastricht Universityn Law & Tech Labissa.",
     "addLawDialogEyebrow": "Lisää säädös",
@@ -160,57 +160,57 @@
   "resetFooter": {
     "title": "Eikö jokin toimi?",
     "button": "Nollaa sovellus napsauttamalla tästä",
-    "note": "This clears LegalViz local settings and cached data in this browser."
+    "note": "Tämä tyhjentää LegalViz:n paikalliset asetukset ja välimuistissa olevat tiedot tässä selaimessa."
   },
   "printModal": {
     "title": "Tulostusasetukset",
-    "description": "Customize what you want to include in your print-ready view or PDF.",
-    "itemsAvailable": "{count} items available",
-    "layout": "Layout",
-    "includeRelatedRecitals": "Include related recitals inline",
-    "includeRelatedRecitalsHelp": "Automatically inserts relevant recitals next to articles based on AI analysis. Useful for understanding context.",
-    "generateView": "Generate View"
+    "description": "Mukauta mitä haluat sisällyttää tulostettavaan näkymääsi tai PDF-tiedostoon.",
+    "itemsAvailable": "{count} kohdetta saatavilla",
+    "layout": "Asettelu",
+    "includeRelatedRecitals": "Sisällytä asiaan liittyvät johdannot sisäisten välillä",
+    "includeRelatedRecitalsHelp": "Lisää automaattisesti asiaan liittyvät johdannot artikkeleiden viereen tekoäly-analyysin perusteella. Hyödyllinen kontekstin ymmärtämiseen.",
+    "generateView": "Luo näkymä"
   },
   "navigation": {
-    "previous": "Previous {label}",
-    "next": "Next {label}"
+    "previous": "Edellinen {label}",
+    "next": "Seuraava {label}"
   },
   "numberSelector": {
-    "invalidRange": "Invalid range"
+    "invalidRange": "Virheellinen alue"
   },
   "relatedRecitals": {
-    "title": "Related Recitals",
-    "description": "These recitals appear to be related to this article based on text analysis using simple AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Sorted by relevance score.",
-    "match": "{score}% match",
-    "read": "Read →"
+    "title": "Asiaan liittyvät johdannot",
+    "description": "Nämä johdannot näyttävät liittyvän tähän artiklaan tekstin analyysiin perustuvalla yksinkertaisella tekoälyllä (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF samankaltaisuus</a> (Nanda et al.)). Lajiteltu merkityksen perusteella.",
+    "match": "{score}% osuma",
+    "read": "Lue →"
   },
   "crossReferences": {
-    "title": "Cross-References",
-    "references": "This {itemLabel} references:",
-    "referencedBy": "Referenced by:",
-    "external": "References to other legislation:",
+    "title": "Ristiviitteet",
+    "references": "Tämä {itemLabel} viittaa:",
+    "referencedBy": "Johon viitataan:",
+    "external": "Viittaukset muuhun lainsäädäntöön:",
     "resolving": "Ratkaistaan…"
   },
   "lawViewer": {
-    "notAvailableTitle": "This law is not available here yet",
-    "notAvailableMessage": "We couldn't find the structured text version we use to display this law in LegalViz. The law itself may still be available on EUR-Lex.",
-    "lawLoadFailed": "Law could not be loaded",
-    "lawLoadServiceFailed": "The law could not be loaded from the Formex service.",
-    "referenceResolveFailed": "This law reference could not be resolved automatically.",
-    "importResolveFailed": "This EUR-Lex page could not be resolved to an importable CELEX document.",
+    "notAvailableTitle": "Tämä laki ei ole vielä saatavilla täällä",
+    "notAvailableMessage": "Emme löytäneet strukturoitua tekstiversiota, jota käytämme tämän lain näyttämiseen LegalViz:ssä. Laki voi silti olla saatavilla EUR-Lex:ssä.",
+    "lawLoadFailed": "Lakia ei voitu ladata",
+    "lawLoadServiceFailed": "Lakia ei voitu ladata Formex-palvelusta.",
+    "referenceResolveFailed": "Tätä lain viittausta ei voitu ratkaista automaattisesti.",
+    "importResolveFailed": "Tätä EUR-Lex-sivua ei voitu ratkaista tuotavaksi CELEX-dokumentiksi.",
     "loadingLaw": "Ladataan säädöstä",
-    "legacyExtensionTitle": "Extension update needed",
-    "legacyExtensionMessage": "LegalViz now imports laws through a new Formex-based flow. This older extension entrypoint is no longer supported, so please update your browser extension and try again.",
-    "retryImport": "Retry import",
-    "selectPrompt": "Select an article, recital, or annex from the menu to begin reading.",
-    "structuredVersionUnavailable": "The structured LegalViz version of this law is not available right now.",
-    "lawContentUnavailable": "The law content is unavailable right now.",
-    "toggleContents": "Toggle contents",
+    "legacyExtensionTitle": "Laajennuksen päivitys vaaditaan",
+    "legacyExtensionMessage": "LegalViz tuo nyt lakeja uuden Formex-pohjaisen kulun kautta. Tätä vanhempaa laajennuksen sisääntulopistettä ei enää tueta, päivitä selaimenlaajennuksesi ja yritä uudelleen.",
+    "retryImport": "Yritä tuontia uudelleen",
+    "selectPrompt": "Valitse artikkelit, johdannot tai liitteet valikosta lukemisen aloittamiseksi.",
+    "structuredVersionUnavailable": "Tämän lain strukturoitu LegalViz-versio ei ole tällä hetkellä saatavilla.",
+    "lawContentUnavailable": "Lain sisältö ei ole tällä hetkellä saatavilla.",
+    "toggleContents": "Vaihda sisältöä",
     "quickNavigation": "Pikanavigointi",
-    "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
+    "quickNavigationHelp": "Hyppää suoraan tiettyyn artikkelin, johdannon tai liitteen numeroon.",
     "tableOfContents": "Sisällysluettelo",
-    "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print",
+    "noArticles": "Artikkeleja ei ole saatavilla.",
+    "popupBlocked": "Salli ponnahdusikkunat tulostaaksesi",
     "articleNavigationHint": "Voit myös käyttää vasenta ja oikeaa nuolinäppäintä siirtyäksesi artikkelien välillä.",
     "languageItemUnavailable": "{label} {id} ei ole saatavilla kielellä {lang}.",
     "legacyHtmlFallbackMessage": "Tämä laki näytetään vanhemmasta EUR-Lex HTML-muodosta. Asettelu voi olla karkea ja LegalViz on vaihtanut kielen takaisin englanniksi luotettavuuden vuoksi.",
@@ -225,7 +225,7 @@
   },
   "printView": {
     "documentTitle": "EU-oikeusasiakirja",
-    "generatedOn": "Generated on {date}",
+    "generatedOn": "Luotu {date}",
     "printedFrom": "Tulostettu LegalViz.EU:sta"
   },
   "amendmentHistory": {

@@ -24,40 +24,40 @@
     "noSelection": "Καμία επιλογή"
   },
   "seo": {
-    "defaultDescription": "Interactive visualisation of EU laws. Navigate articles, recitals, and annexes with ease.",
-    "defaultKeywords": "EU law, GDPR, AI Act, DMA, DSA, Data Act, visualisation, legal tech, interactive law",
-    "landingDescription": "Read and navigate EU laws efficiently with interactive visualisations. View articles and related recitals side by side."
+    "defaultDescription": "Διαδραστική απεικόνιση νομοθεσίας της ΕΕ. Περιηγηθείτε σε άρθρα, ψηφίσματα και παραρτήματα με ευκολία.",
+    "defaultKeywords": "νομοθεσία της ΕΕ, GDPR, AI Act, DMA, DSA, Data Act, απεικόνιση, правная τεχνολογία, διαδραστικός νόμος",
+    "landingDescription": "Διαβάστε και περιηγηθείτε στη νομοθεσία της ΕΕ αποτελεσματικά με διαδραστικές απεικονίσεις. Δείτε τα άρθρα και τα σχετικά ψηφίσματα δίπλα-δίπλα."
   },
   "error": {
-    "somethingWentWrong": "Something went wrong",
-    "routingError": "LegalViz hit a routing error while opening this page.",
-    "unexpectedProblem": "LegalViz ran into an unexpected problem while loading this page."
+    "somethingWentWrong": "Κάτι πήγε στραβά",
+    "routingError": "Το LegalViz αντιμετώπισε σφάλμα δρομολόγησης κατά το άνοιγμα αυτής της σελίδας.",
+    "unexpectedProblem": "Το LegalViz αντιμετώπισε ένα απρόσμενο πρόβλημα κατά τη φόρτωση αυτής της σελίδας."
   },
   "theme": {
-    "switchToLight": "Switch to light mode",
-    "switchToDark": "Switch to dark mode",
-    "toggle": "Toggle theme"
+    "switchToLight": "Εναλλαγή σε ανοιχτή λειτουργία",
+    "switchToDark": "Εναλλαγή σε σκοτεινή λειτουργία",
+    "toggle": "Εναλλαγή θέματος"
   },
   "uiLanguage": {
     "label": "Γλώσσα διεπαφής",
     "helper": "Αλλάξτε τη γλώσσα της διεπαφής"
   },
   "search": {
-    "trigger": "Search (Cmd+K)...",
-    "placeholder": "Search...",
-    "initializing": "Initializing search...",
-    "clear": "Clear search",
-    "searchingCached": "Searching {count} last opened {lawWord} in {language}. Open a law in this language to make it searchable.",
-    "noCached": "No last opened laws are searchable in {language} yet. Open a law in this language to add it to search.",
-    "typeCached": "Type to search across {count} last opened {lawWord} in {language}.",
-    "typeToStart": "Type to start searching...",
-    "noResultsCached": "No results found for \"{query}\" in {count} last opened {lawWord} in {language}.",
-    "noResults": "No results found for \"{query}\"",
-    "selectToNavigate": "Select to navigate",
-    "escToClose": "ESC to close",
-    "bestMatch": "Best Match",
-    "law": "law",
-    "laws": "laws",
+    "trigger": "Αναζήτηση (Cmd+K)...",
+    "placeholder": "Αναζήτηση...",
+    "initializing": "Αρχικοποίηση αναζήτησης...",
+    "clear": "Εκκαθάριση αναζήτησης",
+    "searchingCached": "Αναζήτηση {count} τελευταία ανοιγμένα {lawWord} στο {language}. Ανοίξτε ένα νόμο σε αυτή τη γλώσσα για να τον κάνετε αναζητήσιμο.",
+    "noCached": "Δεν υπάρχουν τελευταία ανοιγμένοι νόμοι που μπορούν να αναζητηθούν στο {language} ακόμα. Ανοίξτε ένα νόμο σε αυτή τη γλώσσα για να τον προσθέσετε στην αναζήτηση.",
+    "typeCached": "Πληκτρολογήστε για αναζήτηση σε {count} τελευταία ανοιγμένα {lawWord} στο {language}.",
+    "typeToStart": "Πληκτρολογήστε για να ξεκινήσετε την αναζήτηση...",
+    "noResultsCached": "Δεν βρέθηκαν αποτελέσματα για \"{query}\" στο {count} τελευταία ανοιγμένα {lawWord} στο {language}.",
+    "noResults": "Δεν βρέθηκαν αποτελέσματα για \"{query}\"",
+    "selectToNavigate": "Επιλέξτε για πλοήγηση",
+    "escToClose": "ESC για κλείσιμο",
+    "bestMatch": "Καλύτερη αντιστοιχία",
+    "law": "νόμος",
+    "laws": "νόμοι",
     "apiUnavailable": "Η αναζήτηση νόμων είναι προσωρινά μη διαθέσιμη.",
     "currentLawFallback": "αυτόν τον νόμο",
     "lawResultType": "Νόμος",
@@ -80,7 +80,7 @@
     "typeLaws": "Αναζητήστε πρωτογενείς πράξεις ΕΕ κατά τίτλο, αναφορά ή CELEX. Οι δευτερογενείς πράξεις δεν περιλαμβάνονται ακόμα."
   },
   "topBar": {
-    "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
+    "byline": "Από τον Konrad Kollnig, Law & Tech Lab Maastricht",
     "moreTools": "Περισσότερα εργαλεία",
     "hideSidebar": "Απόκρυψη πλαϊνής στήλης",
     "showSidebar": "Εμφάνιση πλαϊνής στήλης",
@@ -90,9 +90,9 @@
     "openSideBySide": "Άνοιγμα δίπλα-δίπλα"
   },
   "languageSelector": {
-    "formexTitle": "Formex API ({lang})",
-    "useFormex": "Use Formex API",
-    "loadFromApi": "Load from api.legalviz.eu"
+    "formexTitle": "API Formex ({lang})",
+    "useFormex": "Χρήση Formex API",
+    "loadFromApi": "Φόρτωση από api.legalviz.eu"
   },
   "landing": {
     "heroTitle": "Διαβάστε το δίκαιο της ΕΕ όμορφα,",
@@ -108,21 +108,21 @@
     "number": "Αριθμός",
     "importLaw": "Εισαγωγή πράξης",
     "importing": "Γίνεται εισαγωγή...",
-    "importHelper": "Choose the act type, year, and number. If automatic import fails, LegalViz opens the corresponding EUR-Lex search page.",
+    "importHelper": "Επιλέξτε τον τύπο του νόμου, το έτος και τον αριθμό. Εάν η αυτόματη εισαγωγή αποτύχει, το LegalViz ανοίγει την αντίστοιχη σελίδα αναζήτησης EUR-Lex.",
     "example": "Παράδειγμα για το GDPR: επιλέξτε Κανονισμός, εισαγάγετε 2016 ως έτος και 679 ως αριθμό.",
     "invalidReference": "Εισαγάγετε τετραψήφιο έτος και αριθμητικό αριθμό πράξης.",
     "automaticImportFallback": "Η αυτόματη αναζήτηση απέτυχε, οπότε το EUR-Lex άνοιξε σε νέα καρτέλα.",
     "importUnavailable": "Αυτή η πράξη δεν μπορεί να ανοίξει αυτή τη στιγμή.",
     "never": "Ποτέ",
-    "visualiseStepsTitle": "Visualise other EU laws in 4 simple steps",
-    "dismissInstructions": "Dismiss these instructions permanently",
-    "extensionDescription": "Want to visualise a different EU law? Install our browser extension to open any recent EU law from EUR-Lex in this visualiser.",
-    "installExtension": "Install the extension:",
-    "howItWorks": "How it works:",
-    "step1": "Install the extension for your browser (see links above).",
-    "step2": "Visit a EU law page on EUR-Lex.",
-    "step3": "Open the law in the English language using the language selector on EUR-Lex.",
-    "step4": "Click the extension icon to open that law in LegalViz directly.",
+    "visualiseStepsTitle": "Απεικονίστε άλλους νόμους της ΕΕ σε 4 απλά βήματα",
+    "dismissInstructions": "Απόρριψη αυτών των οδηγιών μόνιμα",
+    "extensionDescription": "Θέλετε να απεικονίσετε διαφορετική νομοθεσία της ΕΕ; Εγκαταστήστε την επέκταση του ιστολογισμού μας για να ανοίξετε οποιαδήποτε πρόσφατη νομοθεσία της ΕΕ από το EUR-Lex σε αυτόν τον απεικονιστή.",
+    "installExtension": "Εγκαταστήστε την επέκταση:",
+    "howItWorks": "Πώς λειτουργεί:",
+    "step1": "Εγκαταστήστε την επέκταση για τον ιστολογισμό σας (δείτε τους παραπάνω συνδέσμους).",
+    "step2": "Επισκεφθείτε μια σελίδα νομοθεσίας της ΕΕ στο EUR-Lex.",
+    "step3": "Ανοίξτε το νόμο στην αγγλική γλώσσα χρησιμοποιώντας τον επιλογέα γλώσσας στο EUR-Lex.",
+    "step4": "Κάντε κλικ στο εικονίδιο της επέκτασης για να ανοίξετε το νόμο απευθείας στο LegalViz.",
     "sourceCode": "Πηγαίος κώδικας και υποστήριξη στο GitHub",
     "builtBy": "Αναπτύχθηκε από τον Konrad Kollnig στο Law & Tech Lab του Maastricht University.",
     "addLawDialogEyebrow": "Προσθήκη πράξης",
@@ -160,57 +160,57 @@
   "resetFooter": {
     "title": "Κάτι δεν λειτουργεί;",
     "button": "Πατήστε εδώ για επαναφορά της εφαρμογής",
-    "note": "This clears LegalViz local settings and cached data in this browser."
+    "note": "Αυτό διαγράφει τις τοπικές ρυθμίσεις LegalViz και τα δεδομένα προσωρινής μνήμης σε αυτόν τον ιστολογισμό."
   },
   "printModal": {
     "title": "Επιλογές εκτύπωσης",
-    "description": "Customize what you want to include in your print-ready view or PDF.",
-    "itemsAvailable": "{count} items available",
-    "layout": "Layout",
-    "includeRelatedRecitals": "Include related recitals inline",
-    "includeRelatedRecitalsHelp": "Automatically inserts relevant recitals next to articles based on AI analysis. Useful for understanding context.",
-    "generateView": "Generate View"
+    "description": "Προσαρμόστε τι θέλετε να συμπεριληφθεί στην προβολή αποτύπωσης ή PDF σας.",
+    "itemsAvailable": "{count} στοιχεία διαθέσιμα",
+    "layout": "Διάταξη",
+    "includeRelatedRecitals": "Συμπερίληψη σχετικών ψηφισμάτων ενσωματωμένα",
+    "includeRelatedRecitalsHelp": "Εισάγει αυτόματα τα σχετικά ψηφίσματα δίπλα στα άρθρα με βάση την ανάλυση AI. Χρήσιμο για την κατανόηση του περιεχομένου.",
+    "generateView": "Δημιουργία Προβολής"
   },
   "navigation": {
-    "previous": "Previous {label}",
-    "next": "Next {label}"
+    "previous": "Προηγούμενο {label}",
+    "next": "Επόμενο {label}"
   },
   "numberSelector": {
-    "invalidRange": "Invalid range"
+    "invalidRange": "Μη έγκυρο εύρος"
   },
   "relatedRecitals": {
-    "title": "Related Recitals",
-    "description": "These recitals appear to be related to this article based on text analysis using simple AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">TF-IDF similarity</a> (Nanda et al.)). Sorted by relevance score.",
-    "match": "{score}% match",
-    "read": "Read →"
+    "title": "Σχετικά Ψηφίσματα",
+    "description": "Αυτά τα ψηφίσματα φαίνεται να σχετίζονται με αυτό το άρθρο με βάση την ανάλυση κειμένου χρησιμοποιώντας απλή AI (<a href=\"https://ebooks.iospress.nl/volumearticle/56169\" target=\"_blank\" rel=\"noopener noreferrer\">ομοιότητα TF-IDF</a> (Nanda et al.)). Ταξινομημένα κατά βαθμό συνάφειας.",
+    "match": "{score}% αντιστοιχία",
+    "read": "Ανάγνωση →"
   },
   "crossReferences": {
-    "title": "Cross-References",
-    "references": "This {itemLabel} references:",
-    "referencedBy": "Referenced by:",
-    "external": "References to other legislation:",
+    "title": "Διασταυρούμενες Αναφορές",
+    "references": "Αυτό το {itemLabel} αναφέρει:",
+    "referencedBy": "Αναφέρεται από:",
+    "external": "Αναφορές σε άλλη νομοθεσία:",
     "resolving": "Επίλυση…"
   },
   "lawViewer": {
-    "notAvailableTitle": "This law is not available here yet",
-    "notAvailableMessage": "We couldn't find the structured text version we use to display this law in LegalViz. The law itself may still be available on EUR-Lex.",
-    "lawLoadFailed": "Law could not be loaded",
-    "lawLoadServiceFailed": "The law could not be loaded from the Formex service.",
-    "referenceResolveFailed": "This law reference could not be resolved automatically.",
-    "importResolveFailed": "This EUR-Lex page could not be resolved to an importable CELEX document.",
+    "notAvailableTitle": "Αυτός ο νόμος δεν είναι διαθέσιμος εδώ ακόμα",
+    "notAvailableMessage": "Δεν βρήκαμε τη δομημένη έκδοση κειμένου που χρησιμοποιούμε για να απεικονίσουμε αυτόν τον νόμο στο LegalViz. Ο νόμος μπορεί ακόμα να είναι διαθέσιμος στο EUR-Lex.",
+    "lawLoadFailed": "Ο νόμος δεν ήταν δυνατό να φορτωθεί",
+    "lawLoadServiceFailed": "Ο νόμος δεν ήταν δυνατό να φορτωθεί από την υπηρεσία Formex.",
+    "referenceResolveFailed": "Αυτή η αναφορά νόμου δεν ήταν δυνατό να επιλυθεί αυτόματα.",
+    "importResolveFailed": "Αυτή η σελίδα EUR-Lex δεν μπορούσε να επιλυθεί σε ένα εισάγωγο έγγραφο CELEX.",
     "loadingLaw": "Φόρτωση πράξης",
-    "legacyExtensionTitle": "Extension update needed",
-    "legacyExtensionMessage": "LegalViz now imports laws through a new Formex-based flow. This older extension entrypoint is no longer supported, so please update your browser extension and try again.",
-    "retryImport": "Retry import",
-    "selectPrompt": "Select an article, recital, or annex from the menu to begin reading.",
-    "structuredVersionUnavailable": "The structured LegalViz version of this law is not available right now.",
-    "lawContentUnavailable": "The law content is unavailable right now.",
-    "toggleContents": "Toggle contents",
+    "legacyExtensionTitle": "Απαιτείται ενημέρωση επέκτασης",
+    "legacyExtensionMessage": "Το LegalViz τώρα εισάγει νόμους μέσω μιας νέας ροής βασισμένης σε Formex. Αυτό το παλαιότερο σημείο εισόδου της επέκτασης δεν υποστηρίζεται πλέον, επomment ενημερώστε την επέκταση του ιστολογισμού σας και προσπαθήστε ξανά.",
+    "retryImport": "Επανάληψη εισαγωγής",
+    "selectPrompt": "Επιλέξτε ένα άρθρο, ψήφισμα ή παράρτημα από το μενού για να ξεκινήσετε την ανάγνωση.",
+    "structuredVersionUnavailable": "Η δομημένη έκδοση LegalViz αυτού του νόμου δεν είναι διαθέσιμη αυτή τη στιγμή.",
+    "lawContentUnavailable": "Το περιεχόμενο του νόμου δεν είναι διαθέσιμο αυτή τη στιγμή.",
+    "toggleContents": "Εναλλαγή περιεχομένων",
     "quickNavigation": "Γρήγορη πλοήγηση",
-    "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
+    "quickNavigationHelp": "Μεταβείτε απευθείας σε ένα συγκεκριμένο άρθρο, ψήφισμα ή αριθμό παραρτήματος.",
     "tableOfContents": "Πίνακας περιεχομένων",
-    "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print",
+    "noArticles": "Δεν υπάρχουν άρθρα διαθέσιμα.",
+    "popupBlocked": "Επιτρέψτε τα αναδυόμενα παράθυρα για εκτύπωση",
     "articleNavigationHint": "Μπορείτε επίσης να χρησιμοποιήσετε τα πλήκτρα βέλους αριστερά και δεξιά για πλοήγηση μεταξύ άρθρων κατά την ανάγνωση.",
     "languageItemUnavailable": "Το {label} {id} δεν είναι διαθέσιμο στα {lang}.",
     "legacyHtmlFallbackMessage": "Αυτός ο νόμος εμφανίζεται από παλαιότερη μορφή HTML του EUR-Lex αντί για δομημένα δεδομένα Formex. Η διάταξη μπορεί να είναι ατελής και το LegalViz έχει επαναφέρει τη γλώσσα του εγγράφου στα αγγλικά για αξιοπιστία.",
@@ -225,7 +225,7 @@
   },
   "printView": {
     "documentTitle": "Έγγραφο δικαίου της ΕΕ",
-    "generatedOn": "Generated on {date}",
+    "generatedOn": "Δημιουργήθηκε στις {date}",
     "printedFrom": "Εκτυπώθηκε από το LegalViz.EU"
   },
   "amendmentHistory": {
