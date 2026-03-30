@@ -372,6 +372,7 @@ async function extractOfficialTitleFromEurlexHtml(celex) {
   const html = await fetchTextWithChallengeRetry(`${EURLEX_BASE}/legal-content/EN/TXT/?uri=CELEX:${encodeURIComponent(celex)}`, {
     "Accept-Language": "en"
   });
+
   return extractTitleFromEurlexHtml(html);
 }
 

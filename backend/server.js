@@ -5,7 +5,8 @@ const path = require('path');
 const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('./search/search-index');
 const { registerApiRoutes } = require('./routes/api-routes');
 const { createFmxService } = require('./shared/fmx-service');
-const { fetchAndParseEurlexHtmlLaw } = require('./shared/eurlex-html-parser');
+const { fetchEurlexHtmlLaw, parseEurlexHtmlToCombined } = require('./shared/eurlex-html-parser');
+const { createHtmlCacheService } = require('./shared/html-cache-service');
 const { createRateLimitMiddleware } = require('./shared/rate-limit');
 const {
   createReferenceResolver,
@@ -24,8 +25,8 @@ const {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// FMX files directory - adjust if needed
-const FMX_DIR = process.env.FMX_DIR || path.join(__dirname, 'fmx-downloads');
+// Shared cache directory for both FMX (*.xml, *.zip) and parsed HTML (*.parsed.json.gz)
+const CACHE_DIR = process.env.CACHE_DIR || process.env.FMX_DIR || path.join(__dirname, 'law-cache');
 const CELLAR_BASE = 'https://publications.europa.eu/resource';
 const EURLEX_BASE = 'https://eur-lex.europa.eu';
 const TIMEOUT_MS = 30_000;
@@ -33,7 +34,10 @@ const TIMEOUT_MS = 30_000;
 // === Rate Limiting ===
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100; // requests per window
-const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500; // max cache size
+
+// === Storage limits (each type evicts independently within the shared dir) ===
+const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500; // FMX files
+const HTML_CACHE_LIMIT_MB = parseInt(process.env.HTML_CACHE_LIMIT_MB) || 200; // parsed HTML
 
 const resolutionCache = new Map(); // key -> { expiresAt, value }
 const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
@@ -47,17 +51,22 @@ const rateLimitMiddleware = createRateLimitMiddleware({
 app.use(cors());
 app.use(express.json());
 
-// Ensure download directory exists
-if (!fs.existsSync(FMX_DIR)) {
-  fs.mkdirSync(FMX_DIR, { recursive: true });
+// Ensure cache directory exists
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
 legalCacheStore.load();
 const { findDownloadUrls, findFmx4Uri, prepareLawPayload, sendLawResponse } = createFmxService({
   CELLAR_BASE,
-  FMX_DIR,
+  FMX_DIR: CACHE_DIR,
   STORAGE_LIMIT_MB,
   TIMEOUT_MS,
+});
+
+const htmlCache = createHtmlCacheService({
+  CACHE_DIR,
+  STORAGE_LIMIT_MB: HTML_CACHE_LIMIT_MB,
 });
 
 const { resolveEurlexUrl, resolveReference, resolveReferenceViaCellar, runSparqlQuery } = createReferenceResolver({
@@ -81,22 +90,92 @@ const CELEX_NAMES = {
   '32023R2854': 'DA'
 };
 
+function hasParsedLawContent(parsed) {
+  return Boolean(
+    parsed
+    && (
+      parsed.articles?.length
+      || parsed.recitals?.length
+      || parsed.annexes?.length
+      || parsed.definitions?.length
+    )
+  );
+}
+
+/**
+ * On-demand HTML law fetcher with disk caching.
+ *
+ * Caches raw HTML so parser improvements apply without re-fetching.
+ * Parses on each request (JSDOM is fast; the network/Playwright fetch is the bottleneck).
+ *
+ * 1. Check disk cache for raw HTML
+ * 2. If miss, fetch from EUR-Lex (plain fetch first, Playwright on WAF challenge)
+ * 3. Store raw HTML to disk cache
+ * 4. Parse and return
+ */
+async function fetchAndParseHtmlLawCached(celex, lang) {
+  let rawHtml = await htmlCache.get(celex, lang);
+  let fromCache = Boolean(rawHtml);
+
+  async function fetchFreshHtml() {
+    const fetched = await fetchEurlexHtmlLaw({
+      celex,
+      lang,
+      eurlexBase: EURLEX_BASE,
+      timeoutMs: TIMEOUT_MS,
+      usePlaywrightOnChallenge: true,
+      closeBrowserAfterFetch: true,
+    });
+    return fetched.rawHtml;
+  }
+
+  if (!rawHtml) {
+    rawHtml = await fetchFreshHtml();
+    fromCache = false;
+  }
+
+  let parsed;
+  try {
+    parsed = await parseEurlexHtmlToCombined(rawHtml, lang);
+  } catch (err) {
+    if (fromCache && err?.code === 'law_not_found') {
+      htmlCache.remove(celex, lang);
+      rawHtml = await fetchFreshHtml();
+      fromCache = false;
+      parsed = await parseEurlexHtmlToCombined(rawHtml, lang);
+    } else {
+      throw err;
+    }
+  }
+
+  if (!fromCache && hasParsedLawContent(parsed)) {
+    htmlCache.put(celex, lang, rawHtml).catch((err) => {
+      console.error(`[HtmlCache] Failed to cache ${celex}_${lang}:`, err.message);
+    });
+  } else if (!fromCache) {
+    console.warn(`[HtmlCache] Skipping cache for ${celex}_${lang}: parsed HTML did not yield law content`);
+  }
+
+  return {
+    celex,
+    lang,
+    source: 'eurlex-html',
+    format: 'combined-v1',
+    ...parsed,
+  };
+}
+
 registerApiRoutes(app, {
   CELEX_NAMES,
   EURLEX_BASE,
-  FMX_DIR,
+  FMX_DIR: CACHE_DIR,
   RATE_LIMIT_MAX,
   RESOLUTION_CACHE_MS,
   cacheGet,
   cacheSet,
   findDownloadUrls,
   findFmx4Uri,
-  fetchAndParseHtmlLaw: (celex, lang) => fetchAndParseEurlexHtmlLaw({
-    celex,
-    lang,
-    eurlexBase: EURLEX_BASE,
-    timeoutMs: TIMEOUT_MS,
-  }),
+  fetchAndParseHtmlLaw: fetchAndParseHtmlLawCached,
   legalCacheStore,
   parseReferenceText,
   parseStructuredReference,
@@ -115,8 +194,7 @@ registerApiRoutes(app, {
 
 app.listen(PORT, () => {
   console.log(`EUR-Lex FMX API running on port ${PORT}`);
-  console.log(`Cache directory: ${FMX_DIR}`);
+  console.log(`Cache directory: ${CACHE_DIR} (FMX: ${STORAGE_LIMIT_MB} MB, HTML: ${HTML_CACHE_LIMIT_MB} MB)`);
   console.log(`Rate limit: ${RATE_LIMIT_MAX} req/15min per IP`);
-  console.log(`Storage limit: ${STORAGE_LIMIT_MB} MB`);
   console.log(`Search cache: ${legalCacheStore.getStatus().ready ? 'loaded' : 'not loaded'} (${legalCacheStore.cachePath})`);
 });

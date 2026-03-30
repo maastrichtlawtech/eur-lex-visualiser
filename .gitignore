@@ -18,6 +18,9 @@ lerna-debug.log*
 node_modules
 .venv
 dist
+backend/law-cache/
+backend/fmx-downloads/
+backend/html-fallback-downloads/
 dist-ssr
 *.local
 

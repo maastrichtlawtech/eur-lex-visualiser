@@ -11,8 +11,6 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "build:search-cache": "node search/search-build.js",
-    "download:html-fallbacks": "node search/download-html-fallbacks.js",
-    "download:html-fallbacks:loop": "node search/download-html-fallbacks-loop.js",
     "test": "node --test search/*.test.js shared/*.test.js routes/*.test.js bin/*.test.js",
     "test:search": "node --test search/*.test.js"
   },

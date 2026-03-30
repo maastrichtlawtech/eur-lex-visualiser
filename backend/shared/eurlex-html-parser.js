@@ -33,9 +33,11 @@ const LANG_3_TO_2 = {
 let helperPromise = null;
 const requireFromHere = createRequire(__filename);
 const DEFAULT_PLAYWRIGHT_RETRIES = 3;
+const DEFAULT_BROWSER_IDLE_MS = 30_000; // close browser after 30s idle to save RAM
 let sharedPlaywrightBrowser = null;
 let sharedPlaywrightBrowserKey = null;
 let sharedPlaywrightPage = null;
+let browserIdleTimer = null;
 
 function normalizeText(text) {
   return String(text || "")
@@ -719,15 +721,23 @@ async function parseEurlexHtmlToCombined(htmlText, lang = "ENG") {
     }
   }
 
+  let paragraphs = [];
+
   const fragmentMatch = String(htmlText || "").match(/<TXT_TE>([\s\S]*?)<\/TXT_TE>/i);
-  if (!fragmentMatch) {
-    throw new ClientError("EUR-Lex HTML body is missing structured text", 404, "law_not_found");
+  if (fragmentMatch) {
+    const fragment = JSDOM.fragment(fragmentMatch[1]);
+    paragraphs = Array.from(fragment.querySelectorAll("p"))
+      .map((paragraph) => normalizeText(paragraph.textContent))
+      .filter(Boolean);
   }
 
-  const fragment = JSDOM.fragment(fragmentMatch[1]);
-  const paragraphs = Array.from(fragment.querySelectorAll("p"))
-    .map((paragraph) => normalizeText(paragraph.textContent))
-    .filter(Boolean);
+  // Fallback: some legacy pages have an empty <TXT_TE/> or none at all —
+  // collect all <p> text from the full document body instead.
+  if (paragraphs.length === 0) {
+    paragraphs = Array.from(document.body.querySelectorAll("p"))
+      .map((paragraph) => normalizeText(paragraph.textContent))
+      .filter(Boolean);
+  }
 
   if (paragraphs.length === 0) {
     throw new ClientError("EUR-Lex HTML body is empty", 404, "law_not_found");
@@ -805,7 +815,18 @@ function isRetriablePlaywrightError(error) {
     || /Target closed/i.test(message);
 }
 
+function resetBrowserIdleTimer() {
+  if (browserIdleTimer) clearTimeout(browserIdleTimer);
+  browserIdleTimer = setTimeout(() => {
+    closeSharedPlaywrightBrowser();
+  }, DEFAULT_BROWSER_IDLE_MS);
+}
+
 async function closeSharedPlaywrightBrowser() {
+  if (browserIdleTimer) {
+    clearTimeout(browserIdleTimer);
+    browserIdleTimer = null;
+  }
   sharedPlaywrightPage = null;
   if (!sharedPlaywrightBrowser) return;
   try {
@@ -813,6 +834,7 @@ async function closeSharedPlaywrightBrowser() {
   } catch {}
   sharedPlaywrightBrowser = null;
   sharedPlaywrightBrowserKey = null;
+  console.log("[Playwright] Browser closed");
 }
 
 async function getSharedPlaywrightBrowser(playwright, { playwrightBrowsersPath = null, headless = true } = {}) {
@@ -823,12 +845,15 @@ async function getSharedPlaywrightBrowser(playwright, { playwrightBrowsersPath =
   });
 
   if (sharedPlaywrightBrowser && sharedPlaywrightBrowserKey === key && sharedPlaywrightBrowser.isConnected()) {
+    resetBrowserIdleTimer();
     return sharedPlaywrightBrowser;
   }
 
   await closeSharedPlaywrightBrowser();
+  console.log("[Playwright] Launching browser...");
   sharedPlaywrightBrowser = await playwright.chromium.launch({ headless });
   sharedPlaywrightBrowserKey = key;
+  resetBrowserIdleTimer();
   return sharedPlaywrightBrowser;
 }
 
@@ -848,6 +873,7 @@ async function fetchEurlexHtmlWithPlaywright({
   playwrightBrowsersPath = null,
   maxRetries = DEFAULT_PLAYWRIGHT_RETRIES,
   headless = true,
+  closeBrowserAfterFetch = false,
 }) {
   const playwright = await loadPlaywrightModule(playwrightModulePath);
   const previousBrowsersPath = process.env.PLAYWRIGHT_BROWSERS_PATH;
@@ -862,6 +888,9 @@ async function fetchEurlexHtmlWithPlaywright({
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: timeoutMs });
         await page.waitForTimeout(1_000);
         const html = await page.content();
+        if (closeBrowserAfterFetch) {
+          await closeSharedPlaywrightBrowser();
+        }
         return html;
       } catch (error) {
         if (isRetriablePlaywrightError(error)) {
@@ -888,6 +917,7 @@ async function fetchEurlexHtmlLaw({
   timeoutMs = 30_000,
   usePlaywright = false,
   usePlaywrightOnChallenge = false,
+  closeBrowserAfterFetch = true,
   playwrightModulePath = null,
   playwrightBrowsersPath = null,
   playwrightHeadless = true,
@@ -922,6 +952,7 @@ async function fetchEurlexHtmlLaw({
         playwrightModulePath,
         playwrightBrowsersPath,
         headless: playwrightHeadless,
+        closeBrowserAfterFetch,
       });
     } else if (response.status === 202 && String(response.headers.get("x-amzn-waf-action") || "").toLowerCase() === "challenge") {
       if (usePlaywrightOnChallenge) {
@@ -931,6 +962,7 @@ async function fetchEurlexHtmlLaw({
           playwrightModulePath,
           playwrightBrowsersPath,
           headless: playwrightHeadless,
+          closeBrowserAfterFetch,
         });
       } else {
         throw new ClientError(
@@ -975,6 +1007,7 @@ async function fetchAndParseEurlexHtmlLaw({
   includeRawHtml = false,
   usePlaywright = false,
   usePlaywrightOnChallenge = false,
+  closeBrowserAfterFetch = true,
   playwrightModulePath = null,
   playwrightBrowsersPath = null,
   playwrightHeadless = true,
@@ -988,6 +1021,7 @@ async function fetchAndParseEurlexHtmlLaw({
     timeoutMs,
     usePlaywright,
     usePlaywrightOnChallenge,
+    closeBrowserAfterFetch,
     playwrightModulePath,
     playwrightBrowsersPath,
     playwrightHeadless,

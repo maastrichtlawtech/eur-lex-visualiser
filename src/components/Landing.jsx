@@ -133,7 +133,6 @@ export function Landing({ forcedLocale = null }) {
         onFormexLangChange={handleUnifiedLanguageChange}
         hasCelex={true}
         onResetApp={resetWholeApp}
-        onManualAddLaw={openAddLawDialog}
         showSearch={false}
       />
 
@@ -171,6 +170,7 @@ export function Landing({ forcedLocale = null }) {
         <div className="mt-12 w-full max-w-3xl">
           <LandingLibrary
             laws={allLaws}
+            onManualAddLaw={openAddLawDialog}
             onOpenLaw={handleOpenLaw}
             locale={activeLocale}
             t={t}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion as Motion } from "framer-motion";
+import { FilePlus2 } from "lucide-react";
 import { Button } from "./Button.jsx";
 
 const MOBILE_VISIBLE_LIMIT = 8;
@@ -177,7 +178,13 @@ function LawLibraryCard({ law, onOpen, t }) {
   );
 }
 
-export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
+export function LandingLibrary({
+  laws,
+  onManualAddLaw,
+  onOpenLaw,
+  locale,
+  t,
+}) {
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") return true;
     return window.matchMedia("(min-width: 640px)").matches;
@@ -213,13 +220,26 @@ export function LandingLibrary({ laws, onOpenLaw, locale, t }) {
         transition={{ delay: 0.1 }}
         className="mt-8 w-full"
       >
-        <div>
-          <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
-            {t("landing.recentTitle")}
-          </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {t("landing.recentDescription")}
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xs font-medium uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400">
+              {t("landing.recentTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              {t("landing.recentDescription")}
+            </p>
+          </div>
+          {onManualAddLaw ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="inline-flex rounded-full px-4 sm:shrink-0"
+              onClick={onManualAddLaw}
+            >
+              <FilePlus2 className="mr-2 h-4 w-4" />
+              {t("landing.manualAddLaw")}
+            </Button>
+          ) : null}
         </div>
       </Motion.div>
 
