@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Căutarea legilor este temporar indisponibilă.",
+    "currentLawFallback": "această lege",
+    "lawResultType": "Lege",
+    "modeCurrentLaw": "Legea curentă",
+    "modeLabel": "Mod de căutare",
+    "modeLaws": "Găsește legi",
+    "modeMatches": "Caută în legi",
+    "noResultsCurrentLaw": "Nu s-au găsit rezultate pentru „{query}“ în {law}.",
+    "noResultsLaws": "Nu s-au găsit acte primare UE pentru „{query}“.",
+    "openLaw": "Deschide legea",
+    "placeholderCurrentLaw": "Căutare în {law}...",
+    "placeholderLaws": "Căutați acte primare UE după titlu, referință sau CELEX",
+    "placeholderMatches": "Căutare în ultimele legi deschise...",
+    "searchingCurrentLaw": "Se caută în {law}.",
+    "searchingLaws": "Se caută acte primare UE din indexul LegalViz din 2010.",
+    "searchingMatches": "Se caută în {count} ultime {lawWord} deschise în {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Caută legi",
+    "typeCurrentLaw": "Tastați pentru a căuta în {law}.",
+    "typeLaws": "Căutați acte primare UE după titlu, referință sau CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Închide vizualizarea comparativă",
+    "openSideBySide": "Deschide vizualizarea comparativă"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Alegeți cum doriți să adăugați actul. Puteți introduce referința oficială sau puteți folosi o pagină EUR-Lex.",
     "addByReferenceTab": "După referința oficială",
     "addFromEurlexTab": "Din EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Adăugați actul",
     "addingLaw": "Se adaugă...",
     "openFromEurlex": "Adăugați acte direct din EUR-Lex în biblioteca dumneavoastră",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Această pagină EUR-Lex nu a putut fi asociată cu un act pe care LegalViz îl poate deschide.",
     "addLawShort": "Adăugați încă un act",
     "addByReferenceTitle": "Adăugați după referință juridică",
-    "extensionInline": "Sau instalați extensia noastră pentru a deschide orice act direct din EUR-Lex făcând clic pe pictograma extensiei, fără a copia URL-uri:"
+    "extensionInline": "Sau instalați extensia noastră pentru a deschide orice act direct din EUR-Lex făcând clic pe pictograma extensiei, fără a copia URL-uri:",
+    "manualAddLaw": "Adaugă lege manual",
+    "recentDescription": "Reveniți la legile pe care le-ați deschis recent.",
+    "recentEmpty": "Nu există legi deschise recent. Căutați una pentru a începe.",
+    "recentShowAll": "Arată toate cele {count} legi deschise recent",
+    "recentShowLess": "Arată mai puțin",
+    "recentTitle": "Ultimele legi deschise",
+    "searchCta": "Găsiți o lege rapid",
+    "searchHint": "Căutați acte primare UE după titlu, referință sau CELEX și deschideți-le direct.",
+    "searchPlaceholder": "Căutați acte primare UE după titlu, referință sau CELEX",
+    "searchPlaceholderMobile": "Căutați acte primare UE"
   },
   "resetFooter": {
     "title": "Ceva nu funcționează?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Se rezolvă…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Cuprins",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Puteți folosi și tastele săgeată pentru a naviga între articole.",
+    "languageItemUnavailable": "{label} {id} nu este disponibil în {lang}.",
+    "legacyHtmlFallbackMessage": "Această lege este afișată dintr-un format HTML mai vechi al EUR-Lex. LegalViz a schimbat limba înapoi în engleză pentru fiabilitate.",
+    "legacyHtmlFallbackTitle": "Format EUR-Lex mai vechi",
+    "loadingLanguage": "Se încarcă versiunea {lang}...",
+    "primaryLanguage": "Limba principală",
+    "resolvingLinkedLaw": "Se deschide legea legată: {label}",
+    "resolvingLinkedLawFallback": "lege legată",
+    "secondaryLanguage": "A doua limbă",
+    "sideBySideDesktopOnly": "Citirea comparativă este disponibilă pe ecrane mai mari.",
+    "textOnly": "Doar text"
   },
   "printView": {
     "documentTitle": "Document juridic al UE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Tipărit din LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Modificare",
+    "corrigendum": "Rectificare",
+    "loading": "Se încarcă modificările…",
+    "title": "Istoricul modificărilor"
+  },
+  "metadata": {
+    "caseLaw": "Jurisprudența CJUE",
+    "caseLawNoResults": "Nicio cauză nu corespunde căutării dvs.",
+    "caseLawSearchPlaceholder": "Căutare după parte, număr de cauză sau articol…",
+    "dateOfDocument": "Data documentului",
+    "eea": "Relevant pentru SEE",
+    "endOfValidity": "Încetarea validității",
+    "entryIntoForce": "Începutul aplicării",
+    "implementingActs": "Acte de punere în aplicare / Acte delegate",
+    "inForce": "În vigoare",
+    "loading": "Se încarcă metadatele…",
+    "notInForce": "Nu mai este în vigoare",
+    "status": "Stare",
+    "title": "Stare și date",
+    "unavailable": "Metadate indisponibile",
+    "yes": "Da"
   }
 }

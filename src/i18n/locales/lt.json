@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Įstatymų paieška laikinai nepasiekiama.",
+    "currentLawFallback": "šis įstatymas",
+    "lawResultType": "Įstatymas",
+    "modeCurrentLaw": "Dabartinis įstatymas",
+    "modeLabel": "Paieškos režimas",
+    "modeLaws": "Rasti įstatymus",
+    "modeMatches": "Ieškoti įstatymuose",
+    "noResultsCurrentLaw": "Rezultatų pagal „{query}“ įstatyme {law} nerasta.",
+    "noResultsLaws": "Pirminių ES teisės aktų pagal „{query}“ nerasta.",
+    "openLaw": "Atidaryti įstatymą",
+    "placeholderCurrentLaw": "Ieškoti įstatyme {law}...",
+    "placeholderLaws": "Ieškoti pirminių ES teisės aktų pagal pavadinimą, nuorodą arba CELEX",
+    "placeholderMatches": "Ieškoti paskutiniuose atidarytuose įstatymuose...",
+    "searchingCurrentLaw": "Ieškoma įstatyme {law}.",
+    "searchingLaws": "Ieškoma pirminių ES teisės aktų iš LegalViz indekso nuo 2010 m.",
+    "searchingMatches": "Ieškoma {count} paskutinių atidarytų {lawWord} kalba {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Ieškoti įstatymų",
+    "typeCurrentLaw": "Rašykite, kad ieškotumėte įstatyme {law}.",
+    "typeLaws": "Ieškokite pirminių ES teisės aktų pagal pavadinimą, nuorodą arba CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Uždaryti gretinį vaizdą",
+    "openSideBySide": "Atidaryti gretinį vaizdą"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Pasirinkite, kaip norite pridėti teisės aktą. Galite įvesti jo oficialią nuorodą arba naudoti EUR-Lex puslapį.",
     "addByReferenceTab": "Pagal oficialią nuorodą",
     "addFromEurlexTab": "Iš EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Pridėti teisės aktą",
     "addingLaw": "Pridedama...",
     "openFromEurlex": "Pridėkite teisės aktus tiesiai iš EUR-Lex į savo biblioteką",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Šio EUR-Lex puslapio nepavyko susieti su teisės aktu, kurį gali atidaryti „LegalViz“.",
     "addLawShort": "Pridėti dar vieną teisės aktą",
     "addByReferenceTitle": "Pridėti pagal teisinę nuorodą",
-    "extensionInline": "Arba įdiekite mūsų plėtinį ir atidarykite bet kurį teisės aktą tiesiai iš EUR-Lex spustelėdami plėtinio piktogramą, nekopijuodami URL:"
+    "extensionInline": "Arba įdiekite mūsų plėtinį ir atidarykite bet kurį teisės aktą tiesiai iš EUR-Lex spustelėdami plėtinio piktogramą, nekopijuodami URL:",
+    "manualAddLaw": "Pridėti įstatymą rankiniu būdu",
+    "recentDescription": "Grįžkite prie neseniai atidarytų įstatymų.",
+    "recentEmpty": "Dar nėra neseniai atidarytų įstatymų.",
+    "recentShowAll": "Rodyti visus {count} paskutinius atidarytus įstatymus",
+    "recentShowLess": "Rodyti mažiau",
+    "recentTitle": "Paskutiniai atidaryti įstatymai",
+    "searchCta": "Greitai raskite įstatymą",
+    "searchHint": "Ieškokite pirminių ES teisės aktų pagal pavadinimą, nuorodą arba CELEX.",
+    "searchPlaceholder": "Ieškoti pirminių ES teisės aktų pagal pavadinimą, nuorodą arba CELEX",
+    "searchPlaceholderMobile": "Ieškoti pirminių ES teisės aktų"
   },
   "resetFooter": {
     "title": "Kažkas neveikia?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Nustatoma…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Turinys",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Taip pat galite naudoti rodyklių klavišus, kad judėtumėte tarp straipsnių.",
+    "languageItemUnavailable": "{label} {id} nėra prieinamas kalba {lang}.",
+    "legacyHtmlFallbackMessage": "Šis įstatymas rodomas iš senesnio EUR-Lex HTML formato. LegalViz pakeitė kalbą atgal į anglų dėl patikimumo.",
+    "legacyHtmlFallbackTitle": "Senesnis EUR-Lex formatas",
+    "loadingLanguage": "Įkeliama {lang} versija...",
+    "primaryLanguage": "Pagrindinė kalba",
+    "resolvingLinkedLaw": "Atidaromas susietas įstatymas: {label}",
+    "resolvingLinkedLawFallback": "susietas įstatymas",
+    "secondaryLanguage": "Antra kalba",
+    "sideBySideDesktopOnly": "Skaitymas greta prieinamas didesniuose ekranuose.",
+    "textOnly": "Tik tekstas"
   },
   "printView": {
     "documentTitle": "ES teisės dokumentas",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Atspausdinta iš LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Pakeitimas",
+    "corrigendum": "Klaidų ištaisymas",
+    "loading": "Pakeitimų įkėlimas…",
+    "title": "Pakeitimų istorija"
+  },
+  "metadata": {
+    "caseLaw": "ESTT teismų praktika",
+    "caseLawNoResults": "Jokia byla neatitinka jūsų paieškos.",
+    "caseLawSearchPlaceholder": "Ieškoti pagal šalį, bylos numerį arba straipsnį…",
+    "dateOfDocument": "Dokumento data",
+    "eea": "Svarbu EEE",
+    "endOfValidity": "Galiojimo pabaiga",
+    "entryIntoForce": "Taikymo pradžia",
+    "implementingActs": "Įgyvendinimo / Deleguotieji aktai",
+    "inForce": "Galioja",
+    "loading": "Įkeliami metaduomenys…",
+    "notInForce": "Nebegalioja",
+    "status": "Būsena",
+    "title": "Būsena ir datos",
+    "unavailable": "Metaduomenys neprieinami",
+    "yes": "Taip"
   }
 }

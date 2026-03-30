@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "La recherche de lois est temporairement indisponible.",
+    "currentLawFallback": "cette loi",
+    "lawResultType": "Loi",
+    "modeCurrentLaw": "Loi actuelle",
+    "modeLabel": "Mode de recherche",
+    "modeLaws": "Trouver des lois",
+    "modeMatches": "Rechercher dans les lois",
+    "noResultsCurrentLaw": "Aucun résultat pour « {query} » dans {law}.",
+    "noResultsLaws": "Aucun acte primaire de l'UE trouvé pour « {query} ».",
+    "openLaw": "Ouvrir la loi",
+    "placeholderCurrentLaw": "Rechercher dans {law}...",
+    "placeholderLaws": "Rechercher des actes primaires de l'UE par titre, référence ou CELEX",
+    "placeholderMatches": "Rechercher dans les dernières lois ouvertes...",
+    "searchingCurrentLaw": "Recherche dans {law}.",
+    "searchingLaws": "Recherche d'actes primaires de l'UE dans l'index LegalViz depuis 2010. Les actes secondaires ne sont pas encore inclus.",
+    "searchingMatches": "Recherche dans {count} dernières {lawWord} ouvertes en {language}. Ouvrez une loi dans cette langue pour la rendre recherchable.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Rechercher des lois",
+    "typeCurrentLaw": "Tapez pour rechercher dans {law}.",
+    "typeLaws": "Recherchez des actes primaires de l'UE par titre, référence ou CELEX. Les actes secondaires ne sont pas encore inclus."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Masquer la barre latérale",
     "showSidebar": "Afficher la barre latérale",
     "printPdf": "Imprimer / PDF",
-    "viewOnEurlex": "Voir sur EUR-Lex"
+    "viewOnEurlex": "Voir sur EUR-Lex",
+    "closeSideBySide": "Fermer la vue côte à côte",
+    "openSideBySide": "Ouvrir la vue côte à côte"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Choisissez comment vous souhaitez ajouter l'acte. Vous pouvez saisir sa référence officielle ou utiliser une page EUR-Lex.",
     "addByReferenceTab": "Par référence officielle",
     "addFromEurlexTab": "Depuis EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Ajouter l'acte",
     "addingLaw": "Ajout en cours...",
     "openFromEurlex": "Ajoutez des actes directement depuis EUR-Lex à votre bibliothèque",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Cette page EUR-Lex n'a pas pu être associée à un acte que LegalViz peut ouvrir.",
     "addLawShort": "Ajouter un autre acte",
     "addByReferenceTitle": "Ajouter par référence juridique",
-    "extensionInline": "Ou installez notre extension pour ouvrir directement n'importe quel acte depuis EUR-Lex en cliquant sur l'icône de l'extension, sans copier d'URL :"
+    "extensionInline": "Ou installez notre extension pour ouvrir directement n'importe quel acte depuis EUR-Lex en cliquant sur l'icône de l'extension, sans copier d'URL :",
+    "manualAddLaw": "Ajouter une loi manuellement",
+    "recentDescription": "Revenez aux lois que vous avez ouvertes récemment.",
+    "recentEmpty": "Aucune loi ouverte récemment. Recherchez-en une pour commencer.",
+    "recentShowAll": "Afficher les {count} dernières lois ouvertes",
+    "recentShowLess": "Afficher moins",
+    "recentTitle": "Dernières lois ouvertes",
+    "searchCta": "Trouvez une loi rapidement",
+    "searchHint": "Recherchez des actes primaires de l'UE par titre, référence ou CELEX et ouvrez-les directement.",
+    "searchPlaceholder": "Rechercher des actes primaires de l'UE par titre, référence ou CELEX",
+    "searchPlaceholderMobile": "Rechercher des actes primaires de l'UE"
   },
   "resetFooter": {
     "title": "Quelque chose ne fonctionne pas ?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Résolution…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Table des matières",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Vous pouvez également utiliser les touches fléchées gauche et droite pour naviguer entre les articles.",
+    "languageItemUnavailable": "{label} {id} n'est pas disponible en {lang}.",
+    "legacyHtmlFallbackMessage": "Cette loi est affichée à partir d'un ancien format HTML d'EUR-Lex. La mise en page peut être approximative et LegalViz a remis la langue en anglais pour plus de fiabilité.",
+    "legacyHtmlFallbackTitle": "Ancien format EUR-Lex",
+    "loadingLanguage": "Chargement de la version {lang}...",
+    "primaryLanguage": "Langue principale",
+    "resolvingLinkedLaw": "Ouverture de la loi liée : {label}",
+    "resolvingLinkedLawFallback": "loi liée",
+    "secondaryLanguage": "Deuxième langue",
+    "sideBySideDesktopOnly": "La lecture côte à côte est disponible sur les écrans plus grands. Cet appareil continue d'afficher uniquement la langue principale.",
+    "textOnly": "Texte uniquement"
   },
   "printView": {
     "documentTitle": "Document juridique de l’UE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Imprimé depuis LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Modification",
+    "corrigendum": "Rectificatif",
+    "loading": "Chargement des modifications…",
+    "title": "Historique des modifications"
+  },
+  "metadata": {
+    "caseLaw": "Jurisprudence de la CJUE",
+    "caseLawNoResults": "Aucune affaire ne correspond à votre recherche.",
+    "caseLawSearchPlaceholder": "Rechercher par partie, numéro d'affaire ou article…",
+    "dateOfDocument": "Date du document",
+    "eea": "Pertinent pour l'EEE",
+    "endOfValidity": "Fin de validité",
+    "entryIntoForce": "Début d'application",
+    "implementingActs": "Actes d'exécution / Actes délégués",
+    "inForce": "En vigueur",
+    "loading": "Chargement des métadonnées…",
+    "notInForce": "N'est plus en vigueur",
+    "status": "Statut",
+    "title": "Statut et dates",
+    "unavailable": "Métadonnées non disponibles",
+    "yes": "Oui"
   }
 }

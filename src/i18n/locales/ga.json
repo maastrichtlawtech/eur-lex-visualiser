@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Tá cuardach dlíthe gan fáil go sealadach.",
+    "currentLawFallback": "an dlí seo",
+    "lawResultType": "Dlí",
+    "modeCurrentLaw": "Dlí reatha",
+    "modeLabel": "Mód cuardaigh",
+    "modeLaws": "Aimsigh dlíthe",
+    "modeMatches": "Cuardaigh laistigh de dhlíthe",
+    "noResultsCurrentLaw": "Níor aimsíodh torthaí do \"{query}\" i {law}.",
+    "noResultsLaws": "Níor aimsíodh aon ghníomhartha príomha AE do \"{query}\".",
+    "openLaw": "Oscail dlí",
+    "placeholderCurrentLaw": "Cuardaigh laistigh de {law}...",
+    "placeholderLaws": "Cuardaigh gníomhartha príomha an AE de réir teidil, tagartha nó CELEX",
+    "placeholderMatches": "Cuardaigh dlíthe a osclaíodh le déanaí...",
+    "searchingCurrentLaw": "Ag cuardach laistigh de {law}.",
+    "searchingLaws": "Ag cuardach gníomhartha príomha AE ó innéacs LegalViz ó 2010.",
+    "searchingMatches": "Ag cuardach i {count} {lawWord} a osclaíodh le déanaí i {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Cuardaigh dlíthe",
+    "typeCurrentLaw": "Clóscríobh chun cuardach a dhéanamh i {law}.",
+    "typeLaws": "Cuardaigh gníomhartha príomha an AE de réir teidil, tagartha nó CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Dún taobh le taobh",
+    "openSideBySide": "Oscail taobh le taobh"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Roghnaigh conas is mian leat an dlí a chur leis. Is féidir leat a thagairt oifigiúil a iontráil nó leathanach EUR-Lex a úsáid.",
     "addByReferenceTab": "De réir tagartha oifigiúla",
     "addFromEurlexTab": "Ó EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Cuir dlí leis",
     "addingLaw": "Á chur leis...",
     "openFromEurlex": "Cuir dlíthe go díreach ó EUR-Lex le do leabharlann",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Níorbh fhéidir an leathanach EUR-Lex seo a mheaitseáil le dlí is féidir le LegalViz a oscailt.",
     "addLawShort": "Cuir dlí eile leis",
     "addByReferenceTitle": "Cuir leis de réir tagartha dlí",
-    "extensionInline": "Nó suiteáil ár síneadh chun aon dlí a oscailt go díreach ó EUR-Lex trí chliceáil ar dheilbhín an tsínidh, gan URLanna a chóipeáil:"
+    "extensionInline": "Nó suiteáil ár síneadh chun aon dlí a oscailt go díreach ó EUR-Lex trí chliceáil ar dheilbhín an tsínidh, gan URLanna a chóipeáil:",
+    "manualAddLaw": "Cuir dlí leis de láimh",
+    "recentDescription": "Fill ar na dlíthe a d'oscail tú le déanaí.",
+    "recentEmpty": "Níl aon dlíthe oscailte le déanaí fós. Cuardaigh ceann chun tosú.",
+    "recentShowAll": "Taispeáin gach {count} dlí a osclaíodh le déanaí",
+    "recentShowLess": "Taispeáin níos lú",
+    "recentTitle": "Dlíthe a osclaíodh le déanaí",
+    "searchCta": "Aimsigh dlí go tapa",
+    "searchHint": "Cuardaigh gníomhartha príomha an AE de réir teidil, tagartha nó CELEX agus oscail iad go díreach.",
+    "searchPlaceholder": "Cuardaigh gníomhartha príomha an AE de réir teidil, tagartha nó CELEX",
+    "searchPlaceholderMobile": "Cuardaigh gníomhartha príomha an AE"
   },
   "resetFooter": {
     "title": "Nach bhfuil rud éigin ag obair?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Á réiteach…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Clár ábhair",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Is féidir leat na heochracha saighead clé agus deas a úsáid freisin.",
+    "languageItemUnavailable": "Níl {label} {id} ar fáil i {lang}.",
+    "legacyHtmlFallbackMessage": "Tá an dlí seo á thaispeáint ó sheanfhormáid HTML EUR-Lex. D'athraigh LegalViz an teanga ar ais go Béarla ar mhaithe le hiontaofacht.",
+    "legacyHtmlFallbackTitle": "Seanfhormáid EUR-Lex",
+    "loadingLanguage": "Leagan {lang} á lódáil...",
+    "primaryLanguage": "Príomhtheanga",
+    "resolvingLinkedLaw": "Dlí nasctha á oscailt: {label}",
+    "resolvingLinkedLawFallback": "dlí nasctha",
+    "secondaryLanguage": "Dara teanga",
+    "sideBySideDesktopOnly": "Tá léamh taobh le taobh ar fáil ar scáileáin níos mó.",
+    "textOnly": "Téacs amháin"
   },
   "printView": {
     "documentTitle": "Doiciméad dlí AE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Priontáilte ó LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Leasú",
+    "corrigendum": "Ceartúchán",
+    "loading": "Leasuithe á lódáil…",
+    "title": "Stair na leasuithe"
+  },
+  "metadata": {
+    "caseLaw": "Cásdlí CBBE",
+    "caseLawNoResults": "Níl aon chásanna ag teacht le do chuardach.",
+    "caseLawSearchPlaceholder": "Cuardaigh de réir páirtí, uimhir cháis nó airteagal…",
+    "dateOfDocument": "Dáta an doiciméid",
+    "eea": "Ábhartha don LEE",
+    "endOfValidity": "Deireadh bailíochta",
+    "entryIntoForce": "Tús cur i bhfeidhm",
+    "implementingActs": "Gníomhartha cur chun feidhme / Gníomhartha tarmligthe",
+    "inForce": "I bhfeidhm",
+    "loading": "Meiteashonraí á lódáil…",
+    "notInForce": "Níl i bhfeidhm a thuilleadh",
+    "status": "Stádas",
+    "title": "Stádas agus dátaí",
+    "unavailable": "Meiteashonraí nach bhfuil ar fáil",
+    "yes": "Tá"
   }
 }

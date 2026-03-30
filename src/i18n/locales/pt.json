@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "A pesquisa de leis está temporariamente indisponível.",
+    "currentLawFallback": "esta lei",
+    "lawResultType": "Lei",
+    "modeCurrentLaw": "Lei atual",
+    "modeLabel": "Modo de pesquisa",
+    "modeLaws": "Encontrar leis",
+    "modeMatches": "Pesquisar em leis",
+    "noResultsCurrentLaw": "Sem resultados para «{query}» em {law}.",
+    "noResultsLaws": "Nenhum ato primário da UE encontrado para «{query}».",
+    "openLaw": "Abrir lei",
+    "placeholderCurrentLaw": "Pesquisar em {law}...",
+    "placeholderLaws": "Pesquisar atos primários da UE por título, referência ou CELEX",
+    "placeholderMatches": "Pesquisar nas últimas leis abertas...",
+    "searchingCurrentLaw": "A pesquisar em {law}.",
+    "searchingLaws": "A pesquisar atos primários da UE no índice LegalViz desde 2010. Os atos secundários ainda não estão incluídos.",
+    "searchingMatches": "A pesquisar em {count} últimas {lawWord} abertas em {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Pesquisar leis",
+    "typeCurrentLaw": "Escreva para pesquisar em {law}.",
+    "typeLaws": "Pesquise atos primários da UE por título, referência ou CELEX. Os atos secundários ainda não estão incluídos."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Fechar vista lado a lado",
+    "openSideBySide": "Abrir vista lado a lado"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Escolha como quer adicionar a lei. Pode introduzir a referência oficial ou usar uma página EUR-Lex.",
     "addByReferenceTab": "Por referência oficial",
     "addFromEurlexTab": "A partir do EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Adicionar lei",
     "addingLaw": "A adicionar...",
     "openFromEurlex": "Adicione leis diretamente do EUR-Lex à sua biblioteca",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Esta página EUR-Lex não pôde ser associada a uma lei que o LegalViz possa abrir.",
     "addLawShort": "Adicionar outra lei",
     "addByReferenceTitle": "Adicionar por referência jurídica",
-    "extensionInline": "Ou instale a nossa extensão para abrir qualquer lei diretamente a partir do EUR-Lex clicando no ícone da extensão, sem copiar URLs:"
+    "extensionInline": "Ou instale a nossa extensão para abrir qualquer lei diretamente a partir do EUR-Lex clicando no ícone da extensão, sem copiar URLs:",
+    "manualAddLaw": "Adicionar lei manualmente",
+    "recentDescription": "Volte às leis que abriu recentemente.",
+    "recentEmpty": "Ainda não há leis abertas recentemente. Pesquise uma para começar.",
+    "recentShowAll": "Mostrar todas as {count} últimas leis abertas",
+    "recentShowLess": "Mostrar menos",
+    "recentTitle": "Últimas leis abertas",
+    "searchCta": "Encontre uma lei rapidamente",
+    "searchHint": "Pesquise atos primários da UE por título, referência ou CELEX e abra-os diretamente.",
+    "searchPlaceholder": "Pesquisar atos primários da UE por título, referência ou CELEX",
+    "searchPlaceholderMobile": "Pesquisar atos primários da UE"
   },
   "resetFooter": {
     "title": "Algo não está a funcionar?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "A resolver…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Índice",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Também pode usar as teclas de seta para navegar entre artigos.",
+    "languageItemUnavailable": "{label} {id} não está disponível em {lang}.",
+    "legacyHtmlFallbackMessage": "Esta lei está a ser exibida a partir de um formato HTML mais antigo do EUR-Lex. O LegalViz alterou o idioma para inglês por fiabilidade.",
+    "legacyHtmlFallbackTitle": "Formato EUR-Lex mais antigo",
+    "loadingLanguage": "A carregar versão {lang}...",
+    "primaryLanguage": "Idioma principal",
+    "resolvingLinkedLaw": "A abrir lei relacionada: {label}",
+    "resolvingLinkedLawFallback": "lei relacionada",
+    "secondaryLanguage": "Segundo idioma",
+    "sideBySideDesktopOnly": "A leitura lado a lado está disponível em ecrãs maiores.",
+    "textOnly": "Apenas texto"
   },
   "printView": {
     "documentTitle": "Documento jurídico da UE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Impresso a partir do LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Alteração",
+    "corrigendum": "Retificação",
+    "loading": "A carregar alterações…",
+    "title": "Histórico de alterações"
+  },
+  "metadata": {
+    "caseLaw": "Jurisprudência do TJUE",
+    "caseLawNoResults": "Nenhum processo corresponde à sua pesquisa.",
+    "caseLawSearchPlaceholder": "Pesquisar por parte, número de processo ou artigo…",
+    "dateOfDocument": "Data do documento",
+    "eea": "Relevante para o EEE",
+    "endOfValidity": "Fim da validade",
+    "entryIntoForce": "Início da aplicação",
+    "implementingActs": "Atos de execução / Atos delegados",
+    "inForce": "Em vigor",
+    "loading": "A carregar metadados…",
+    "notInForce": "Já não está em vigor",
+    "status": "Estado",
+    "title": "Estado e datas",
+    "unavailable": "Metadados não disponíveis",
+    "yes": "Sim"
   }
 }

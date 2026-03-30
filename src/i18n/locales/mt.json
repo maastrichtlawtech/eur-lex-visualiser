@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "It-tfittxija tal-liġijiet mhix disponibbli temporanjament.",
+    "currentLawFallback": "din il-liġi",
+    "lawResultType": "Liġi",
+    "modeCurrentLaw": "Liġi attwali",
+    "modeLabel": "Mod ta' tfittxija",
+    "modeLaws": "Sib liġijiet",
+    "modeMatches": "Fittex fil-liġijiet",
+    "noResultsCurrentLaw": "Ma nstab l-ebda riżultat għal \"{query}\" f'{law}.",
+    "noResultsLaws": "Ma nstabu l-ebda atti primarji tal-UE għal \"{query}\".",
+    "openLaw": "Iftaħ liġi",
+    "placeholderCurrentLaw": "Fittex f'{law}...",
+    "placeholderLaws": "Fittex atti primarji tal-UE skont it-titlu, ir-referenza jew CELEX",
+    "placeholderMatches": "Fittex fl-aħħar liġijiet miftuħa...",
+    "searchingCurrentLaw": "Qed issir tfittxija f'{law}.",
+    "searchingLaws": "Qed jiġu mfittxija atti primarji tal-UE mill-indiċi ta' LegalViz mill-2010.",
+    "searchingMatches": "Qed issir tfittxija f'{count} {lawWord} miftuħa l-aħħar f'{language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Fittex liġijiet",
+    "typeCurrentLaw": "Ittajpja biex tfittex f'{law}.",
+    "typeLaws": "Fittex atti primarji tal-UE skont it-titlu, ir-referenza jew CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Agħlaq il-veduta maġenb xulxin",
+    "openSideBySide": "Iftaħ il-veduta maġenb xulxin"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Agħżel kif trid iżżid il-liġi. Tista' ddaħħal ir-referenza uffiċjali tagħha jew tuża paġna ta' EUR-Lex.",
     "addByReferenceTab": "Bir-referenza uffiċjali",
     "addFromEurlexTab": "Minn EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Żid liġi",
     "addingLaw": "Qed iżżid...",
     "openFromEurlex": "Żid liġijiet direttament minn EUR-Lex mal-librerija tiegħek",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Din il-paġna ta' EUR-Lex ma setgħetx tiġi marbuta ma' liġi li LegalViz jista' jiftaħ.",
     "addLawShort": "Żid liġi oħra",
     "addByReferenceTitle": "Żid b'referenza legali",
-    "extensionInline": "Jew installa l-estensjoni tagħna biex tiftaħ kwalunkwe liġi direttament minn EUR-Lex billi tikklikkja fuq l-ikona tal-estensjoni, mingħajr ma tikkopja URLs:"
+    "extensionInline": "Jew installa l-estensjoni tagħna biex tiftaħ kwalunkwe liġi direttament minn EUR-Lex billi tikklikkja fuq l-ikona tal-estensjoni, mingħajr ma tikkopja URLs:",
+    "manualAddLaw": "Żid liġi manwalment",
+    "recentDescription": "Erġa' lura għal-liġijiet li ftaħt dan l-aħħar.",
+    "recentEmpty": "Għad m'hemmx liġijiet miftuħa dan l-aħħar.",
+    "recentShowAll": "Uri l-{count} liġi kollha miftuħa l-aħħar",
+    "recentShowLess": "Uri inqas",
+    "recentTitle": "L-aħħar liġijiet miftuħa",
+    "searchCta": "Sib liġi malajr",
+    "searchHint": "Fittex atti primarji tal-UE skont it-titlu, ir-referenza jew CELEX.",
+    "searchPlaceholder": "Fittex atti primarji tal-UE skont it-titlu, ir-referenza jew CELEX",
+    "searchPlaceholderMobile": "Fittex atti primarji tal-UE"
   },
   "resetFooter": {
     "title": "Xi ħaġa ma taħdimx?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Qed jiġi riżolt…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Werrej",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Tista' tuża wkoll iċ-ċwievet tas-saġġetta biex timxi bejn l-artikoli.",
+    "languageItemUnavailable": "{label} {id} mhux disponibbli f'{lang}.",
+    "legacyHtmlFallbackMessage": "Din il-liġi qed tintwera minn format HTML eqdem ta' EUR-Lex.",
+    "legacyHtmlFallbackTitle": "Format EUR-Lex eqdem",
+    "loadingLanguage": "Qed jitgħabbew il-verżjoni {lang}...",
+    "primaryLanguage": "Lingwa prinċipali",
+    "resolvingLinkedLaw": "Qed tinfetaħ liġi marbuta: {label}",
+    "resolvingLinkedLawFallback": "liġi marbuta",
+    "secondaryLanguage": "It-tieni lingwa",
+    "sideBySideDesktopOnly": "Il-qari maġenb xulxin huwa disponibbli fuq skrinijiet akbar.",
+    "textOnly": "Test biss"
   },
   "printView": {
     "documentTitle": "Dokument legali tal-UE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Stampat minn LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Emenda",
+    "corrigendum": "Corrigendum",
+    "loading": "Qed jitgħabbew l-emendi…",
+    "title": "Storja tal-emendi"
+  },
+  "metadata": {
+    "caseLaw": "Ġurisprudenza tal-QĠUE",
+    "caseLawNoResults": "L-ebda każ ma jaqbel mat-tfittxija tiegħek.",
+    "caseLawSearchPlaceholder": "Fittex skont il-parti, in-numru tal-kawża jew l-artikolu…",
+    "dateOfDocument": "Data tad-dokument",
+    "eea": "Rilevanti għaż-ŻEE",
+    "endOfValidity": "Tmiem il-validità",
+    "entryIntoForce": "Bidu tal-applikazzjoni",
+    "implementingActs": "Atti ta' implimentazzjoni / Atti delegati",
+    "inForce": "Fis-seħħ",
+    "loading": "Qed jitgħabbew il-metadata…",
+    "notInForce": "M'għadux fis-seħħ",
+    "status": "Status",
+    "title": "Status u dati",
+    "unavailable": "Metadata mhux disponibbli",
+    "yes": "Iva"
   }
 }

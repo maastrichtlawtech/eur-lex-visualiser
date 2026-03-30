@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Seaduste otsing on ajutiselt kättesaamatu.",
+    "currentLawFallback": "see seadus",
+    "lawResultType": "Seadus",
+    "modeCurrentLaw": "Praegune seadus",
+    "modeLabel": "Otsimisrežiim",
+    "modeLaws": "Leia seadusi",
+    "modeMatches": "Otsi seaduste seest",
+    "noResultsCurrentLaw": "Tulemusi päringule „{query}“ seaduses {law} ei leitud.",
+    "noResultsLaws": "ELi esmaseid õigusakte päringule „{query}“ ei leitud.",
+    "openLaw": "Ava seadus",
+    "placeholderCurrentLaw": "Otsi seadusest {law}...",
+    "placeholderLaws": "Otsi ELi esmaseid õigusakte pealkirja, viite või CELEXi järgi",
+    "placeholderMatches": "Otsi viimati avatud seadustest...",
+    "searchingCurrentLaw": "Otsimine seadusest {law}.",
+    "searchingLaws": "ELi esmaste õigusaktide otsimine LegalVizi indeksist alates 2010. Teisesed õigusaktid ei ole veel kaasatud.",
+    "searchingMatches": "Otsimine {count} viimati avatud {lawWord} keeles {language}. Avage seadus selles keeles, et muuta see otsitavaks.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Otsi seadusi",
+    "typeCurrentLaw": "Tippige seadusest {law} otsimiseks.",
+    "typeLaws": "Otsige ELi esmaseid õigusakte pealkirja, viite või CELEXi järgi. Teisesed õigusaktid ei ole veel kaasatud."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Peida külgriba",
     "showSidebar": "Näita külgriba",
     "printPdf": "Prindi / PDF",
-    "viewOnEurlex": "Vaata EUR-Lexis"
+    "viewOnEurlex": "Vaata EUR-Lexis",
+    "closeSideBySide": "Sulge kõrvutivaade",
+    "openSideBySide": "Ava kõrvutivaade"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Valige, kuidas soovite õigusakti lisada. Saate sisestada selle ametliku viite või kasutada EUR-Lexi lehte.",
     "addByReferenceTab": "Ametliku viite järgi",
     "addFromEurlexTab": "EUR-Lexist",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Lisa õigusakt",
     "addingLaw": "Lisamine...",
     "openFromEurlex": "Lisage õigusakte otse EUR-Lexist oma kogusse",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Seda EUR-Lexi lehte ei saanud siduda õigusaktiga, mida LegalViz suudab avada.",
     "addLawShort": "Lisa veel üks õigusakt",
     "addByReferenceTitle": "Lisa õigusviite järgi",
-    "extensionInline": "Või paigaldage meie laiendus, et avada mis tahes õigusakt otse EUR-Lexist, klõpsates laienduse ikooni, ilma URL-e kopeerimata:"
+    "extensionInline": "Või paigaldage meie laiendus, et avada mis tahes õigusakt otse EUR-Lexist, klõpsates laienduse ikooni, ilma URL-e kopeerimata:",
+    "manualAddLaw": "Lisa seadus käsitsi",
+    "recentDescription": "Pöörduge tagasi hiljuti avatud seaduste juurde.",
+    "recentEmpty": "Hiljuti avatud seadusi pole veel. Otsige alustamiseks.",
+    "recentShowAll": "Kuva kõik {count} viimati avatud seadust",
+    "recentShowLess": "Kuva vähem",
+    "recentTitle": "Viimati avatud seadused",
+    "searchCta": "Leidke seadus kiiresti",
+    "searchHint": "Otsige ELi esmaseid õigusakte pealkirja, viite või CELEXi järgi ja avage need otse.",
+    "searchPlaceholder": "Otsi ELi esmaseid õigusakte pealkirja, viite või CELEXi järgi",
+    "searchPlaceholderMobile": "Otsi ELi esmaseid õigusakte"
   },
   "resetFooter": {
     "title": "Kas miski ei tööta?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Lahendamine…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Sisukord",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Artiklite vahel liikumiseks saate kasutada ka vasak- ja paremnooleklahve.",
+    "languageItemUnavailable": "{label} {id} ei ole saadaval keeles {lang}.",
+    "legacyHtmlFallbackMessage": "See seadus kuvatakse EUR-Lexi vanemast HTML-vormingust, mitte struktureeritud Formexi andmetest. Paigutus võib olla jäme ja LegalViz on usaldusväärsuse tagamiseks dokumendi keele inglise keelele tagasi lülitanud.",
+    "legacyHtmlFallbackTitle": "Vanem EUR-Lexi vorming",
+    "loadingLanguage": "{lang} versiooni laadimine...",
+    "primaryLanguage": "Põhikeel",
+    "resolvingLinkedLaw": "Lingitud seaduse avamine: {label}",
+    "resolvingLinkedLawFallback": "lingitud seadus",
+    "secondaryLanguage": "Teine keel",
+    "sideBySideDesktopOnly": "Kõrvuti lugemine on saadaval suuremate ekraanide korral. See seade näitab edasi ainult põhikeelt.",
+    "textOnly": "Ainult tekst"
   },
   "printView": {
     "documentTitle": "ELi õigusdokument",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Trükitud LegalViz.EU-st"
+  },
+  "amendmentHistory": {
+    "amendment": "Muudatus",
+    "corrigendum": "Parandus",
+    "loading": "Muudatuste laadimine…",
+    "title": "Muudatuste ajalugu"
+  },
+  "metadata": {
+    "caseLaw": "Euroopa Kohtu kohtupraktika",
+    "caseLawNoResults": "Ükski kohtuasi ei vasta teie otsingule.",
+    "caseLawSearchPlaceholder": "Otsi poole, kohtuasja numbri või artikli järgi…",
+    "dateOfDocument": "Dokumendi kuupäev",
+    "eea": "EMP asjakohane",
+    "endOfValidity": "Kehtivuse lõpp",
+    "entryIntoForce": "Kohaldamise algus",
+    "implementingActs": "Rakendus- / Delegeeritud aktid",
+    "inForce": "Kehtiv",
+    "loading": "Metaandmete laadimine…",
+    "notInForce": "Ei ole enam kehtiv",
+    "status": "Staatus",
+    "title": "Staatus ja kuupäevad",
+    "unavailable": "Metaandmed pole saadaval",
+    "yes": "Jah"
   }
 }

@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Lakien haku on tilapäisesti poissa käytöstä.",
+    "currentLawFallback": "tämä laki",
+    "lawResultType": "Laki",
+    "modeCurrentLaw": "Nykyinen laki",
+    "modeLabel": "Hakutila",
+    "modeLaws": "Etsi lakeja",
+    "modeMatches": "Hae laeista",
+    "noResultsCurrentLaw": "Ei tuloksia haulle \"{query}\" laissa {law}.",
+    "noResultsLaws": "EU:n ensisijaisia säädöksiä haulle \"{query}\" ei löytynyt.",
+    "openLaw": "Avaa laki",
+    "placeholderCurrentLaw": "Hae laista {law}...",
+    "placeholderLaws": "Hae EU:n ensisijaisia säädöksiä otsikon, viitteen tai CELEX-tunnuksen mukaan",
+    "placeholderMatches": "Hae viimeksi avatuista laeista...",
+    "searchingCurrentLaw": "Haetaan laista {law}.",
+    "searchingLaws": "Haetaan EU:n ensisijaisia säädöksiä LegalViz-indeksistä vuodesta 2010. Toissijaisia säädöksiä ei ole vielä mukana.",
+    "searchingMatches": "Haetaan {count} viimeksi avatusta {lawWord} kielellä {language}. Avaa laki tällä kielellä tehdäksesi siitä haettavan.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Hae lakeja",
+    "typeCurrentLaw": "Kirjoita hakeaksesi laista {law}.",
+    "typeLaws": "Hae EU:n ensisijaisia säädöksiä otsikon, viitteen tai CELEX-tunnuksen mukaan. Toissijaisia säädöksiä ei ole vielä mukana."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Piilota sivupalkki",
     "showSidebar": "Näytä sivupalkki",
     "printPdf": "Tulosta / PDF",
-    "viewOnEurlex": "Näytä EUR-Lexissä"
+    "viewOnEurlex": "Näytä EUR-Lexissä",
+    "closeSideBySide": "Sulje rinnakkaisnäkymä",
+    "openSideBySide": "Avaa rinnakkaisnäkymä"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Valitse, miten haluat lisätä säädöksen. Voit syöttää sen virallisen viitteen tai käyttää EUR-Lex-sivua.",
     "addByReferenceTab": "Virallisen viitteen perusteella",
     "addFromEurlexTab": "EUR-Lexistä",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Lisää säädös",
     "addingLaw": "Lisätään...",
     "openFromEurlex": "Lisää säädöksiä suoraan EUR-Lexistä kirjastoosi",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Tätä EUR-Lex-sivua ei voitu yhdistää säädökseen, jonka LegalViz voi avata.",
     "addLawShort": "Lisää toinen säädös",
     "addByReferenceTitle": "Lisää oikeusviitteellä",
-    "extensionInline": "Tai asenna laajennuksemme avataksesi minkä tahansa säädöksen suoraan EUR-Lexistä napsauttamalla laajennuksen kuvaketta ilman URL-osoitteiden kopiointia:"
+    "extensionInline": "Tai asenna laajennuksemme avataksesi minkä tahansa säädöksen suoraan EUR-Lexistä napsauttamalla laajennuksen kuvaketta ilman URL-osoitteiden kopiointia:",
+    "manualAddLaw": "Lisää laki manuaalisesti",
+    "recentDescription": "Palaa lakeihin, jotka avasit äskettäin.",
+    "recentEmpty": "Ei äskettäin avattuja lakeja. Hae lakia aloittaaksesi.",
+    "recentShowAll": "Näytä kaikki {count} viimeksi avattua lakia",
+    "recentShowLess": "Näytä vähemmän",
+    "recentTitle": "Viimeksi avatut lait",
+    "searchCta": "Löydä laki nopeasti",
+    "searchHint": "Hae EU:n ensisijaisia säädöksiä otsikon, viitteen tai CELEX-tunnuksen mukaan ja avaa ne suoraan.",
+    "searchPlaceholder": "Hae EU:n ensisijaisia säädöksiä otsikon, viitteen tai CELEX-tunnuksen mukaan",
+    "searchPlaceholderMobile": "Hae EU:n ensisijaisia säädöksiä"
   },
   "resetFooter": {
     "title": "Eikö jokin toimi?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Ratkaistaan…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Sisällysluettelo",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Voit myös käyttää vasenta ja oikeaa nuolinäppäintä siirtyäksesi artikkelien välillä.",
+    "languageItemUnavailable": "{label} {id} ei ole saatavilla kielellä {lang}.",
+    "legacyHtmlFallbackMessage": "Tämä laki näytetään vanhemmasta EUR-Lex HTML-muodosta. Asettelu voi olla karkea ja LegalViz on vaihtanut kielen takaisin englanniksi luotettavuuden vuoksi.",
+    "legacyHtmlFallbackTitle": "Vanhempi EUR-Lex-muoto",
+    "loadingLanguage": "Ladataan {lang}-versiota...",
+    "primaryLanguage": "Pääkieli",
+    "resolvingLinkedLaw": "Avataan linkitettyä lakia: {label}",
+    "resolvingLinkedLawFallback": "linkitetty laki",
+    "secondaryLanguage": "Toinen kieli",
+    "sideBySideDesktopOnly": "Rinnakkaisluku on käytettävissä suuremmilla näytöillä. Tämä laite näyttää vain pääkielen.",
+    "textOnly": "Vain teksti"
   },
   "printView": {
     "documentTitle": "EU-oikeusasiakirja",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Tulostettu LegalViz.EU:sta"
+  },
+  "amendmentHistory": {
+    "amendment": "Muutos",
+    "corrigendum": "Oikaisu",
+    "loading": "Ladataan muutoksia…",
+    "title": "Muutoshistoria"
+  },
+  "metadata": {
+    "caseLaw": "EU-tuomioistuimen oikeuskäytäntö",
+    "caseLawNoResults": "Yksikään tapaus ei vastaa hakuasi.",
+    "caseLawSearchPlaceholder": "Hae osapuolen, asian numeron tai artiklan mukaan…",
+    "dateOfDocument": "Asiakirjan päivämäärä",
+    "eea": "ETA-merkityksellinen",
+    "endOfValidity": "Voimassaolon päättyminen",
+    "entryIntoForce": "Soveltamisen alkaminen",
+    "implementingActs": "Täytäntöönpano- / Delegoidut säädökset",
+    "inForce": "Voimassa",
+    "loading": "Ladataan metatietoja…",
+    "notInForce": "Ei enää voimassa",
+    "status": "Tila",
+    "title": "Tila ja päivämäärät",
+    "unavailable": "Metatiedot eivät ole saatavilla",
+    "yes": "Kyllä"
   }
 }

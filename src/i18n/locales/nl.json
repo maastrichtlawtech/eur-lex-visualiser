@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Het zoeken naar wetten is tijdelijk niet beschikbaar.",
+    "currentLawFallback": "deze wet",
+    "lawResultType": "Wet",
+    "modeCurrentLaw": "Huidige wet",
+    "modeLabel": "Zoekmodus",
+    "modeLaws": "Wetten zoeken",
+    "modeMatches": "Zoeken in wetten",
+    "noResultsCurrentLaw": "Geen resultaten voor \"{query}\" in {law}.",
+    "noResultsLaws": "Geen primaire EU-rechtshandelingen gevonden voor \"{query}\".",
+    "openLaw": "Wet openen",
+    "placeholderCurrentLaw": "Zoeken in {law}...",
+    "placeholderLaws": "Zoek primaire EU-rechtshandelingen op titel, referentie of CELEX",
+    "placeholderMatches": "Zoeken in laatst geopende wetten...",
+    "searchingCurrentLaw": "Zoeken in {law}.",
+    "searchingLaws": "Zoeken naar primaire EU-rechtshandelingen uit de LegalViz-index sinds 2010. Secundaire handelingen zijn nog niet opgenomen.",
+    "searchingMatches": "Zoeken in {count} laatst geopende {lawWord} in het {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Wetten zoeken",
+    "typeCurrentLaw": "Typ om te zoeken in {law}.",
+    "typeLaws": "Zoek primaire EU-rechtshandelingen op titel, referentie of CELEX. Secundaire handelingen zijn nog niet opgenomen."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Zij-aan-zij sluiten",
+    "openSideBySide": "Zij-aan-zij openen"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Kies hoe je de wet wilt toevoegen. Je kunt de officiële verwijzing invoeren of een EUR-Lex-pagina gebruiken.",
     "addByReferenceTab": "Via officiële verwijzing",
     "addFromEurlexTab": "Vanuit EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Wet toevoegen",
     "addingLaw": "Toevoegen...",
     "openFromEurlex": "Voeg wetten rechtstreeks vanuit EUR-Lex toe aan je bibliotheek",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Deze EUR-Lex-pagina kon niet worden gekoppeld aan een wet die LegalViz kan openen.",
     "addLawShort": "Nog een wet toevoegen",
     "addByReferenceTitle": "Toevoegen via juridische verwijzing",
-    "extensionInline": "Of installeer onze extensie om elke wet direct vanuit EUR-Lex te openen door op het extensiepictogram te klikken, zonder URL's te kopiëren:"
+    "extensionInline": "Of installeer onze extensie om elke wet direct vanuit EUR-Lex te openen door op het extensiepictogram te klikken, zonder URL's te kopiëren:",
+    "manualAddLaw": "Wet handmatig toevoegen",
+    "recentDescription": "Ga terug naar de wetten die u onlangs hebt geopend.",
+    "recentEmpty": "Nog geen recent geopende wetten. Zoek er een om te beginnen.",
+    "recentShowAll": "Toon alle {count} laatst geopende wetten",
+    "recentShowLess": "Toon minder",
+    "recentTitle": "Laatst geopende wetten",
+    "searchCta": "Vind snel een wet",
+    "searchHint": "Zoek primaire EU-rechtshandelingen op titel, referentie of CELEX en open ze direct.",
+    "searchPlaceholder": "Zoek primaire EU-rechtshandelingen op titel, referentie of CELEX",
+    "searchPlaceholderMobile": "Zoek primaire EU-rechtshandelingen"
   },
   "resetFooter": {
     "title": "Werkt er iets niet?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Bezig met oplossen…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Inhoudsopgave",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "U kunt ook de pijltjestoetsen gebruiken om tussen artikelen te navigeren.",
+    "languageItemUnavailable": "{label} {id} is niet beschikbaar in het {lang}.",
+    "legacyHtmlFallbackMessage": "Deze wet wordt getoond vanuit een ouder EUR-Lex HTML-formaat. LegalViz heeft de taal teruggeschakeld naar Engels voor de betrouwbaarheid.",
+    "legacyHtmlFallbackTitle": "Ouder EUR-Lex-formaat",
+    "loadingLanguage": "{lang}-versie laden...",
+    "primaryLanguage": "Hoofdtaal",
+    "resolvingLinkedLaw": "Gekoppelde wet openen: {label}",
+    "resolvingLinkedLawFallback": "gekoppelde wet",
+    "secondaryLanguage": "Tweede taal",
+    "sideBySideDesktopOnly": "Zij-aan-zij lezen is beschikbaar op grotere schermen.",
+    "textOnly": "Alleen tekst"
   },
   "printView": {
     "documentTitle": "EU-rechtsdocument",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Afgedrukt vanuit LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Wijziging",
+    "corrigendum": "Rectificatie",
+    "loading": "Wijzigingen laden…",
+    "title": "Wijzigingsgeschiedenis"
+  },
+  "metadata": {
+    "caseLaw": "Rechtspraak van het HvJ-EU",
+    "caseLawNoResults": "Geen zaken komen overeen met uw zoekopdracht.",
+    "caseLawSearchPlaceholder": "Zoek op partij, zaaknummer of artikel…",
+    "dateOfDocument": "Datum van het document",
+    "eea": "EER-relevant",
+    "endOfValidity": "Einde geldigheid",
+    "entryIntoForce": "Begin van toepassing",
+    "implementingActs": "Uitvoerings- / Gedelegeerde handelingen",
+    "inForce": "Van kracht",
+    "loading": "Metadata laden…",
+    "notInForce": "Niet meer van kracht",
+    "status": "Status",
+    "title": "Status en data",
+    "unavailable": "Metadata niet beschikbaar",
+    "yes": "Ja"
   }
 }

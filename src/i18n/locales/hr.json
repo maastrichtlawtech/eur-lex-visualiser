@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Pretraživanje zakona privremeno je nedostupno.",
+    "currentLawFallback": "ovaj zakon",
+    "lawResultType": "Zakon",
+    "modeCurrentLaw": "Trenutni zakon",
+    "modeLabel": "Način pretraživanja",
+    "modeLaws": "Pronađi zakone",
+    "modeMatches": "Pretraži unutar zakona",
+    "noResultsCurrentLaw": "Nema rezultata za „{query}“ u {law}.",
+    "noResultsLaws": "Nisu pronađeni primarni akti EU za „{query}“.",
+    "openLaw": "Otvori zakon",
+    "placeholderCurrentLaw": "Pretraži unutar {law}...",
+    "placeholderLaws": "Pretraži primarne akte EU prema naslovu, referenci ili CELEX-u",
+    "placeholderMatches": "Pretraži zadnje otvorene zakone...",
+    "searchingCurrentLaw": "Pretraživanje unutar {law}.",
+    "searchingLaws": "Pretraživanje primarnih akata EU iz indeksa LegalViz od 2010. Sekundarni akti još nisu uključeni.",
+    "searchingMatches": "Pretraživanje u {count} zadnje otvorenih {lawWord} na jeziku {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Pretraži zakone",
+    "typeCurrentLaw": "Upišite za pretraživanje unutar {law}.",
+    "typeLaws": "Pretražujte primarne akte EU prema naslovu, referenci ili CELEX-u. Sekundarni akti još nisu uključeni."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Zatvori usporedni prikaz",
+    "openSideBySide": "Otvori usporedni prikaz"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Odaberite kako želite dodati propis. Možete unijeti njegovu službenu oznaku ili upotrijebiti stranicu EUR-Lexa.",
     "addByReferenceTab": "Prema službenoj oznaci",
     "addFromEurlexTab": "S EUR-Lexa",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Dodaj propis",
     "addingLaw": "Dodavanje...",
     "openFromEurlex": "Dodajte propise izravno s EUR-Lexa u svoju biblioteku",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Ovu stranicu EUR-Lexa nije bilo moguće povezati s propisom koji LegalViz može otvoriti.",
     "addLawShort": "Dodaj još jedan propis",
     "addByReferenceTitle": "Dodaj prema pravnoj oznaci",
-    "extensionInline": "Ili instalirajte naše proširenje kako biste otvorili bilo koji propis izravno s EUR-Lexa klikom na ikonu proširenja, bez kopiranja URL-ova:"
+    "extensionInline": "Ili instalirajte naše proširenje kako biste otvorili bilo koji propis izravno s EUR-Lexa klikom na ikonu proširenja, bez kopiranja URL-ova:",
+    "manualAddLaw": "Ručno dodaj zakon",
+    "recentDescription": "Vratite se na zakone koje ste nedavno otvorili.",
+    "recentEmpty": "Još nema nedavno otvorenih zakona. Pretražite jedan za početak.",
+    "recentShowAll": "Prikaži svih {count} zadnje otvorenih zakona",
+    "recentShowLess": "Prikaži manje",
+    "recentTitle": "Zadnje otvoreni zakoni",
+    "searchCta": "Brzo pronađite zakon",
+    "searchHint": "Pretražujte primarne akte EU prema naslovu, referenci ili CELEX-u i otvorite ih izravno.",
+    "searchPlaceholder": "Pretraži primarne akte EU prema naslovu, referenci ili CELEX-u",
+    "searchPlaceholderMobile": "Pretraži primarne akte EU"
   },
   "resetFooter": {
     "title": "Nešto ne radi?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Rješavanje…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Sadržaj",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Također možete koristiti tipke sa strelicama lijevo i desno za kretanje između članaka.",
+    "languageItemUnavailable": "{label} {id} nije dostupan na jeziku {lang}.",
+    "legacyHtmlFallbackMessage": "Ovaj zakon prikazuje se iz starijeg HTML formata EUR-Lexa. LegalViz je vratio jezik dokumenta na engleski radi pouzdanosti.",
+    "legacyHtmlFallbackTitle": "Stariji format EUR-Lexa",
+    "loadingLanguage": "Učitavanje verzije na {lang}...",
+    "primaryLanguage": "Glavni jezik",
+    "resolvingLinkedLaw": "Otvaranje povezanog zakona: {label}",
+    "resolvingLinkedLawFallback": "povezani zakon",
+    "secondaryLanguage": "Drugi jezik",
+    "sideBySideDesktopOnly": "Čitanje usporedno dostupno je na većim zaslonima.",
+    "textOnly": "Samo tekst"
   },
   "printView": {
     "documentTitle": "Dokument prava EU-a",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Ispisano iz LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Izmjena",
+    "corrigendum": "Ispravak",
+    "loading": "Učitavanje izmjena…",
+    "title": "Povijest izmjena"
+  },
+  "metadata": {
+    "caseLaw": "Sudska praksa Suda EU-a",
+    "caseLawNoResults": "Nijedan predmet ne odgovara vašem pretraživanju.",
+    "caseLawSearchPlaceholder": "Pretraži po stranci, broju predmeta ili članku…",
+    "dateOfDocument": "Datum dokumenta",
+    "eea": "Relevantno za EGP",
+    "endOfValidity": "Kraj valjanosti",
+    "entryIntoForce": "Početak primjene",
+    "implementingActs": "Provedbeni / Delegirani akti",
+    "inForce": "Na snazi",
+    "loading": "Učitavanje metapodataka…",
+    "notInForce": "Više nije na snazi",
+    "status": "Status",
+    "title": "Status i datumi",
+    "unavailable": "Metapodaci nisu dostupni",
+    "yes": "Da"
   }
 }

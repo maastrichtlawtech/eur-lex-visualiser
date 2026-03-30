@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Iskanje zakonov je začasno nedostopno.",
+    "currentLawFallback": "ta zakon",
+    "lawResultType": "Zakon",
+    "modeCurrentLaw": "Trenutni zakon",
+    "modeLabel": "Način iskanja",
+    "modeLaws": "Poišči zakone",
+    "modeMatches": "Išči v zakonih",
+    "noResultsCurrentLaw": "Ni rezultatov za „{query}“ v {law}.",
+    "noResultsLaws": "Primarni akti EU za „{query}“ niso bili najdeni.",
+    "openLaw": "Odpri zakon",
+    "placeholderCurrentLaw": "Iskanje v {law}...",
+    "placeholderLaws": "Iskanje primarnih aktov EU po naslovu, referenci ali CELEX",
+    "placeholderMatches": "Iskanje v zadnjih odprtih zakonih...",
+    "searchingCurrentLaw": "Iskanje v {law}.",
+    "searchingLaws": "Iskanje primarnih aktov EU iz indeksa LegalViz od leta 2010.",
+    "searchingMatches": "Iskanje v {count} zadnjih odprtih {lawWord} v jeziku {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Išči zakone",
+    "typeCurrentLaw": "Tipkajte za iskanje v {law}.",
+    "typeLaws": "Iščite primarne akte EU po naslovu, referenci ali CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Zapri prikaz ob bok",
+    "openSideBySide": "Odpri prikaz ob bok"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Izberite, kako želite dodati akt. Vnesete lahko njegovo uradno navedbo ali uporabite stran EUR-Lex.",
     "addByReferenceTab": "Po uradni navedbi",
     "addFromEurlexTab": "Iz EUR-Lexa",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Dodaj akt",
     "addingLaw": "Dodajanje...",
     "openFromEurlex": "Dodajajte akte neposredno iz EUR-Lexa v svojo knjižnico",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Te strani EUR-Lex ni bilo mogoče povezati z aktom, ki ga LegalViz lahko odpre.",
     "addLawShort": "Dodaj še en akt",
     "addByReferenceTitle": "Dodaj po pravnem sklicu",
-    "extensionInline": "Ali namestite našo razširitev, da odprete kateri koli akt neposredno iz EUR-Lexa s klikom na ikono razširitve, brez kopiranja URL-jev:"
+    "extensionInline": "Ali namestite našo razširitev, da odprete kateri koli akt neposredno iz EUR-Lexa s klikom na ikono razširitve, brez kopiranja URL-jev:",
+    "manualAddLaw": "Ročno dodaj zakon",
+    "recentDescription": "Vrnite se k zakonom, ki ste jih nedavno odprli.",
+    "recentEmpty": "Še ni nedavno odprtih zakonov.",
+    "recentShowAll": "Prikaži vseh {count} zadnjih odprtih zakonov",
+    "recentShowLess": "Prikaži manj",
+    "recentTitle": "Zadnji odprti zakoni",
+    "searchCta": "Hitro poiščite zakon",
+    "searchHint": "Iščite primarne akte EU po naslovu, referenci ali CELEX.",
+    "searchPlaceholder": "Iskanje primarnih aktov EU po naslovu, referenci ali CELEX",
+    "searchPlaceholderMobile": "Iskanje primarnih aktov EU"
   },
   "resetFooter": {
     "title": "Nekaj ne deluje?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Razreševanje…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Kazalo",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Za premikanje med členi lahko uporabite tudi puščični tipki.",
+    "languageItemUnavailable": "{label} {id} ni na voljo v jeziku {lang}.",
+    "legacyHtmlFallbackMessage": "Ta zakon je prikazan iz starejšega formata HTML EUR-Lex. LegalViz je za zanesljivost preklopil jezik na angleščino.",
+    "legacyHtmlFallbackTitle": "Starejši format EUR-Lex",
+    "loadingLanguage": "Nalaganje različice {lang}...",
+    "primaryLanguage": "Glavni jezik",
+    "resolvingLinkedLaw": "Odpiranje povezanega zakona: {label}",
+    "resolvingLinkedLawFallback": "povezan zakon",
+    "secondaryLanguage": "Drugi jezik",
+    "sideBySideDesktopOnly": "Branje ob bok je na voljo na večjih zaslonih.",
+    "textOnly": "Samo besedilo"
   },
   "printView": {
     "documentTitle": "Pravni dokument EU",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Natisnjeno iz LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Sprememba",
+    "corrigendum": "Popravek",
+    "loading": "Nalaganje sprememb…",
+    "title": "Zgodovina sprememb"
+  },
+  "metadata": {
+    "caseLaw": "Sodna praksa Sodišča EU",
+    "caseLawNoResults": "Nobena zadeva ne ustreza vašemu iskanju.",
+    "caseLawSearchPlaceholder": "Iskanje po stranki, številki zadeve ali členu…",
+    "dateOfDocument": "Datum dokumenta",
+    "eea": "Pomembno za EGP",
+    "endOfValidity": "Konec veljavnosti",
+    "entryIntoForce": "Začetek uporabe",
+    "implementingActs": "Izvedbeni / Delegirani akti",
+    "inForce": "V veljavi",
+    "loading": "Nalaganje metapodatkov…",
+    "notInForce": "Ne velja več",
+    "status": "Stanje",
+    "title": "Stanje in datumi",
+    "unavailable": "Metapodatki niso na voljo",
+    "yes": "Da"
   }
 }

@@ -57,7 +57,27 @@
     "escToClose": "ESC за затваряне",
     "bestMatch": "Най-добро съвпадение",
     "law": "акт",
-    "laws": "акта"
+    "laws": "акта",
+    "apiUnavailable": "Търсенето на закони е временно недостъпно.",
+    "currentLawFallback": "този закон",
+    "lawResultType": "Закон",
+    "modeCurrentLaw": "Текущ закон",
+    "modeLabel": "Режим на търсене",
+    "modeLaws": "Намиране на закони",
+    "modeMatches": "Търсене в законите",
+    "noResultsCurrentLaw": "Няма резултати за „{query}“ в {law}.",
+    "noResultsLaws": "Не са намерени първични актове на ЕС за „{query}“.",
+    "openLaw": "Отвори закон",
+    "placeholderCurrentLaw": "Търсене в {law}...",
+    "placeholderLaws": "Търсене на първични актове на ЕС по заглавие, референция или CELEX",
+    "placeholderMatches": "Търсене в последно отваряните закони...",
+    "searchingCurrentLaw": "Търсене в {law}.",
+    "searchingLaws": "Търсене на първични актове на ЕС от индекса на LegalViz от 2010 г. Вторичните актове все още не са включени.",
+    "searchingMatches": "Търсене в {count} последно отваряни {lawWord} на {language}. Отворете закон на този език, за да го направите търсим.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Търсене на закони",
+    "typeCurrentLaw": "Въведете, за да търсите в {law}.",
+    "typeLaws": "Търсете първични актове на ЕС по заглавие, референция или CELEX. Вторичните актове все още не са включени."
   },
   "topBar": {
     "byline": "От Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Скрий страничния панел",
     "showSidebar": "Покажи страничния панел",
     "printPdf": "Печат / PDF",
-    "viewOnEurlex": "Виж в EUR-Lex"
+    "viewOnEurlex": "Виж в EUR-Lex",
+    "closeSideBySide": "Затвори едно до друго",
+    "openSideBySide": "Отвори едно до друго"
   },
   "languageSelector": {
     "formexTitle": "Език на документа ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Изберете как искате да добавите акта. Можете да въведете официалното му позоваване или да използвате страница от EUR-Lex.",
     "addByReferenceTab": "По официално позоваване",
     "addFromEurlexTab": "От EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Добавяне на акт",
     "addingLaw": "Добавяне...",
     "openFromEurlex": "Добавете актове директно от EUR-Lex в библиотеката си",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Тази страница от EUR-Lex не може да бъде свързана с акт, който LegalViz може да отвори.",
     "addLawShort": "Добавете още един акт",
     "addByReferenceTitle": "Добавяне по правно позоваване",
-    "extensionInline": "Или инсталирайте нашето разширение, за да отваряте всеки акт директно от EUR-Lex, като щракнете върху иконата на разширението, без да копирате URL адреси:"
+    "extensionInline": "Или инсталирайте нашето разширение, за да отваряте всеки акт директно от EUR-Lex, като щракнете върху иконата на разширението, без да копирате URL адреси:",
+    "manualAddLaw": "Ръчно добавяне на закон",
+    "recentDescription": "Върнете се към законите, които сте отваряли наскоро.",
+    "recentEmpty": "Все още няма наскоро отваряни закони. Потърсете, за да започнете.",
+    "recentShowAll": "Покажи всички {count} последно отваряни закони",
+    "recentShowLess": "Покажи по-малко",
+    "recentTitle": "Последно отваряни закони",
+    "searchCta": "Намерете закон бързо",
+    "searchHint": "Търсете първични актове на ЕС по заглавие, референция или CELEX и ги отваряйте директно.",
+    "searchPlaceholder": "Търсене на първични актове на ЕС по заглавие, референция или CELEX",
+    "searchPlaceholderMobile": "Търсене на първични актове на ЕС"
   },
   "resetFooter": {
     "title": "Нещо не работи?",
@@ -157,7 +188,8 @@
     "title": "Препратки",
     "references": "Този {itemLabel} препраща към:",
     "referencedBy": "Препратки към него:",
-    "external": "Препратки към друго законодателство:"
+    "external": "Препратки към друго законодателство:",
+    "resolving": "Обработка…"
   },
   "lawViewer": {
     "notAvailableTitle": "Този акт все още не е наличен тук",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Скочете директно до конкретен номер на член, съображение или приложение.",
     "tableOfContents": "Съдържание",
     "noArticles": "Няма налични членове.",
-    "popupBlocked": "Моля, разрешете изскачащите прозорци за печат"
+    "popupBlocked": "Моля, разрешете изскачащите прозорци за печат",
+    "articleNavigationHint": "Можете също да използвате клавишите със стрелки наляво и надясно, за да се придвижвате между членовете по време на четене.",
+    "languageItemUnavailable": "{label} {id} не е наличен на {lang}.",
+    "legacyHtmlFallbackMessage": "Този закон е показан от по-стар HTML формат на EUR-Lex, а не от структурирани данни Formex. Оформлението може да е грубо, а LegalViz е превключил езика на документа обратно на английски за надеждност.",
+    "legacyHtmlFallbackTitle": "По-стар формат на EUR-Lex",
+    "loadingLanguage": "Зареждане на версията на {lang}...",
+    "primaryLanguage": "Основен език",
+    "resolvingLinkedLaw": "Отваряне на свързан закон: {label}",
+    "resolvingLinkedLawFallback": "свързан закон",
+    "secondaryLanguage": "Втори език",
+    "sideBySideDesktopOnly": "Четенето едно до друго е налично на по-големи екрани. Това устройство продължава да показва само основния език.",
+    "textOnly": "Само текст"
   },
   "printView": {
     "documentTitle": "Документ на правото на ЕС",
     "generatedOn": "Генерирано на {date}",
     "printedFrom": "Отпечатано от LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Изменение",
+    "corrigendum": "Поправка",
+    "loading": "Зареждане на измененията…",
+    "title": "История на измененията"
+  },
+  "metadata": {
+    "caseLaw": "Съдебна практика на СЕС",
+    "caseLawNoResults": "Няма дела, съответстващи на вашето търсене.",
+    "caseLawSearchPlaceholder": "Търсене по страна, номер на дело или член…",
+    "dateOfDocument": "Дата на документа",
+    "eea": "Значение за ЕИП",
+    "endOfValidity": "Край на валидността",
+    "entryIntoForce": "Начало на прилагането",
+    "implementingActs": "Актове за изпълнение / Делегирани актове",
+    "inForce": "В сила",
+    "loading": "Зареждане на метаданни…",
+    "notInForce": "Вече не е в сила",
+    "status": "Статус",
+    "title": "Статус и дати",
+    "unavailable": "Метаданните не са налични",
+    "yes": "Да"
   }
 }

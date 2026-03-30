@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "La búsqueda de leyes no está disponible temporalmente.",
+    "currentLawFallback": "esta ley",
+    "lawResultType": "Ley",
+    "modeCurrentLaw": "Ley actual",
+    "modeLabel": "Modo de búsqueda",
+    "modeLaws": "Buscar leyes",
+    "modeMatches": "Buscar en leyes",
+    "noResultsCurrentLaw": "No se encontraron resultados para «{query}» en {law}.",
+    "noResultsLaws": "No se encontraron actos primarios de la UE para «{query}».",
+    "openLaw": "Abrir ley",
+    "placeholderCurrentLaw": "Buscar en {law}...",
+    "placeholderLaws": "Buscar actos primarios de la UE por título, referencia o CELEX",
+    "placeholderMatches": "Buscar en las últimas leyes abiertas...",
+    "searchingCurrentLaw": "Buscando en {law}.",
+    "searchingLaws": "Buscando actos primarios de la UE en el índice de LegalViz desde 2010. Los actos secundarios aún no están incluidos.",
+    "searchingMatches": "Buscando en {count} últimas {lawWord} abiertas en {language}. Abra una ley en este idioma para hacerla buscable.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Buscar leyes",
+    "typeCurrentLaw": "Escriba para buscar en {law}.",
+    "typeLaws": "Busque actos primarios de la UE por título, referencia o CELEX. Los actos secundarios aún no están incluidos."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Ocultar barra lateral",
     "showSidebar": "Mostrar barra lateral",
     "printPdf": "Imprimir / PDF",
-    "viewOnEurlex": "Ver en EUR-Lex"
+    "viewOnEurlex": "Ver en EUR-Lex",
+    "closeSideBySide": "Cerrar vista en paralelo",
+    "openSideBySide": "Abrir vista en paralelo"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Elija cómo quiere añadir la norma. Puede introducir su referencia oficial o usar una página de EUR-Lex.",
     "addByReferenceTab": "Por referencia oficial",
     "addFromEurlexTab": "Desde EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Añadir norma",
     "addingLaw": "Añadiendo...",
     "openFromEurlex": "Añada normas directamente desde EUR-Lex a su biblioteca",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Esta página de EUR-Lex no pudo vincularse a una norma que LegalViz pueda abrir.",
     "addLawShort": "Añadir otra norma",
     "addByReferenceTitle": "Añadir por referencia jurídica",
-    "extensionInline": "O instale nuestra extensión para abrir cualquier norma directamente desde EUR-Lex haciendo clic en el icono de la extensión, sin copiar URL:"
+    "extensionInline": "O instale nuestra extensión para abrir cualquier norma directamente desde EUR-Lex haciendo clic en el icono de la extensión, sin copiar URL:",
+    "manualAddLaw": "Añadir ley manualmente",
+    "recentDescription": "Vuelva a las leyes que abrió recientemente.",
+    "recentEmpty": "Aún no hay leyes abiertas recientemente. Busque una para empezar.",
+    "recentShowAll": "Mostrar las {count} últimas leyes abiertas",
+    "recentShowLess": "Mostrar menos",
+    "recentTitle": "Últimas leyes abiertas",
+    "searchCta": "Encuentre una ley rápidamente",
+    "searchHint": "Busque actos primarios de la UE por título, referencia o CELEX y ábralos directamente.",
+    "searchPlaceholder": "Buscar actos primarios de la UE por título, referencia o CELEX",
+    "searchPlaceholderMobile": "Buscar actos primarios de la UE"
   },
   "resetFooter": {
     "title": "¿Algo no funciona?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Resolviendo…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Tabla de contenido",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "También puede usar las teclas de flecha izquierda y derecha para moverse entre artículos mientras lee.",
+    "languageItemUnavailable": "{label} {id} no está disponible en {lang}.",
+    "legacyHtmlFallbackMessage": "Esta ley se muestra desde un formato HTML más antiguo de EUR-Lex en lugar de datos estructurados Formex. El diseño puede ser tosco y LegalViz ha cambiado el idioma del documento a inglés por fiabilidad.",
+    "legacyHtmlFallbackTitle": "Formato EUR-Lex anterior",
+    "loadingLanguage": "Cargando versión en {lang}...",
+    "primaryLanguage": "Idioma principal",
+    "resolvingLinkedLaw": "Abriendo ley vinculada: {label}",
+    "resolvingLinkedLawFallback": "ley vinculada",
+    "secondaryLanguage": "Segundo idioma",
+    "sideBySideDesktopOnly": "La lectura en paralelo está disponible en pantallas más grandes. Este dispositivo sigue mostrando solo el idioma principal.",
+    "textOnly": "Solo texto"
   },
   "printView": {
     "documentTitle": "Documento jurídico de la UE",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Impreso desde LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Modificación",
+    "corrigendum": "Corrección de errores",
+    "loading": "Cargando modificaciones…",
+    "title": "Historial de modificaciones"
+  },
+  "metadata": {
+    "caseLaw": "Jurisprudencia del TJUE",
+    "caseLawNoResults": "Ningún caso coincide con su búsqueda.",
+    "caseLawSearchPlaceholder": "Buscar por parte, número de asunto o artículo…",
+    "dateOfDocument": "Fecha del documento",
+    "eea": "Pertinente para el EEE",
+    "endOfValidity": "Fin de la vigencia",
+    "entryIntoForce": "Inicio de la aplicación",
+    "implementingActs": "Actos de ejecución / Actos delegados",
+    "inForce": "En vigor",
+    "loading": "Cargando metadatos…",
+    "notInForce": "Ya no está en vigor",
+    "status": "Estado",
+    "title": "Estado y fechas",
+    "unavailable": "Metadatos no disponibles",
+    "yes": "Sí"
   }
 }

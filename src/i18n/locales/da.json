@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Lovsøgning er midlertidigt utilgængelig.",
+    "currentLawFallback": "denne lov",
+    "lawResultType": "Lov",
+    "modeCurrentLaw": "Aktuel lov",
+    "modeLabel": "Søgetilstand",
+    "modeLaws": "Find love",
+    "modeMatches": "Søg i love",
+    "noResultsCurrentLaw": "Ingen resultater for \"{query}\" i {law}.",
+    "noResultsLaws": "Ingen primære EU-retsakter fundet for \"{query}\".",
+    "openLaw": "Åbn lov",
+    "placeholderCurrentLaw": "Søg i {law}...",
+    "placeholderLaws": "Søg i primære EU-retsakter efter titel, reference eller CELEX",
+    "placeholderMatches": "Søg i sidst åbnede love...",
+    "searchingCurrentLaw": "Søger i {law}.",
+    "searchingLaws": "Søger i primære EU-retsakter fra LegalViz-indekset siden 2010. Sekundære retsakter er endnu ikke inkluderet.",
+    "searchingMatches": "Søger i {count} sidst åbnede {lawWord} på {language}. Åbn en lov på dette sprog for at gøre den søgbar.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Søg love",
+    "typeCurrentLaw": "Skriv for at søge i {law}.",
+    "typeLaws": "Søg i primære EU-retsakter efter titel, reference eller CELEX. Sekundære retsakter er endnu ikke inkluderet."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Skjul sidepanel",
     "showSidebar": "Vis sidepanel",
     "printPdf": "Udskriv / PDF",
-    "viewOnEurlex": "Se i EUR-Lex"
+    "viewOnEurlex": "Se i EUR-Lex",
+    "closeSideBySide": "Luk side om side",
+    "openSideBySide": "Åbn side om side"
   },
   "languageSelector": {
     "formexTitle": "Dokumentsprog ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Vælg, hvordan du vil tilføje loven. Du kan indtaste dens officielle henvisning eller bruge en EUR-Lex-side.",
     "addByReferenceTab": "Via officiel henvisning",
     "addFromEurlexTab": "Fra EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Tilføj lov",
     "addingLaw": "Tilføjer...",
     "openFromEurlex": "Tilføj love direkte fra EUR-Lex til dit bibliotek",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Denne EUR-Lex-side kunne ikke knyttes til en lov, som LegalViz kan åbne.",
     "addLawShort": "Tilføj endnu en lov",
     "addByReferenceTitle": "Tilføj via lovhenvisning",
-    "extensionInline": "Eller installer vores udvidelse for at åbne enhver lov direkte fra EUR-Lex ved at klikke på udvidelsesikonet uden at kopiere URL'er:"
+    "extensionInline": "Eller installer vores udvidelse for at åbne enhver lov direkte fra EUR-Lex ved at klikke på udvidelsesikonet uden at kopiere URL'er:",
+    "manualAddLaw": "Tilføj lov manuelt",
+    "recentDescription": "Gå tilbage til de love, du har åbnet for nylig.",
+    "recentEmpty": "Ingen nyligt åbnede love endnu. Søg efter en for at komme i gang.",
+    "recentShowAll": "Vis alle {count} sidst åbnede love",
+    "recentShowLess": "Vis mindre",
+    "recentTitle": "Sidst åbnede love",
+    "searchCta": "Find en lov hurtigt",
+    "searchHint": "Søg i primære EU-retsakter efter titel, reference eller CELEX, og åbn dem direkte.",
+    "searchPlaceholder": "Søg i primære EU-retsakter efter titel, reference eller CELEX",
+    "searchPlaceholderMobile": "Søg i primære EU-retsakter"
   },
   "resetFooter": {
     "title": "Virker noget ikke?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Løser…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Indholdsfortegnelse",
     "noArticles": "Ingen artikler tilgængelige.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Du kan også bruge venstre og højre piletaster til at navigere mellem artikler under læsning.",
+    "languageItemUnavailable": "{label} {id} er ikke tilgængelig på {lang}.",
+    "legacyHtmlFallbackMessage": "Denne lov vises fra et ældre EUR-Lex HTML-format i stedet for strukturerede Formex-data. Layoutet kan være groft, og LegalViz har skiftet dokumentsproget tilbage til engelsk for pålidelighed.",
+    "legacyHtmlFallbackTitle": "Ældre EUR-Lex-format",
+    "loadingLanguage": "Indlæser {lang}-versionen...",
+    "primaryLanguage": "Hovedsprog",
+    "resolvingLinkedLaw": "Åbner tilknyttet lov: {label}",
+    "resolvingLinkedLawFallback": "tilknyttet lov",
+    "secondaryLanguage": "Andet sprog",
+    "sideBySideDesktopOnly": "Side om side-læsning er tilgængelig på større skærme. Denne enhed viser kun hovedsproget.",
+    "textOnly": "Kun tekst"
   },
   "printView": {
     "documentTitle": "EU-retligt dokument",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Udskrevet fra LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Ændring",
+    "corrigendum": "Berigtigelse",
+    "loading": "Indlæser ændringer…",
+    "title": "Ændringshistorik"
+  },
+  "metadata": {
+    "caseLaw": "EU-Domstolens retspraksis",
+    "caseLawNoResults": "Ingen sager matcher din søgning.",
+    "caseLawSearchPlaceholder": "Søg efter part, sagsnummer eller artikel…",
+    "dateOfDocument": "Dokumentets dato",
+    "eea": "EØS-relevant",
+    "endOfValidity": "Udløb af gyldighed",
+    "entryIntoForce": "Anvendelsesstart",
+    "implementingActs": "Gennemførelses- / Delegerede retsakter",
+    "inForce": "I kraft",
+    "loading": "Indlæser metadata…",
+    "notInForce": "Ikke længere i kraft",
+    "status": "Status",
+    "title": "Status og datoer",
+    "unavailable": "Metadata ikke tilgængelige",
+    "yes": "Ja"
   }
 }

@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Vyhľadávanie zákonov je dočasne nedostupné.",
+    "currentLawFallback": "tento zákon",
+    "lawResultType": "Zákon",
+    "modeCurrentLaw": "Aktuálny zákon",
+    "modeLabel": "Režim vyhľadávania",
+    "modeLaws": "Nájsť zákony",
+    "modeMatches": "Hľadať v zákonoch",
+    "noResultsCurrentLaw": "Žiadne výsledky pre „{query}“ v {law}.",
+    "noResultsLaws": "Nenašli sa žiadne primárne právne akty EÚ pre „{query}“.",
+    "openLaw": "Otvoriť zákon",
+    "placeholderCurrentLaw": "Hľadať v {law}...",
+    "placeholderLaws": "Vyhľadávanie primárnych právnych aktov EÚ podľa názvu, referencie alebo CELEX",
+    "placeholderMatches": "Vyhľadávanie v naposledy otvorených zákonoch...",
+    "searchingCurrentLaw": "Vyhľadávanie v {law}.",
+    "searchingLaws": "Vyhľadávanie primárnych právnych aktov EÚ z indexu LegalViz od roku 2010.",
+    "searchingMatches": "Vyhľadávanie v {count} naposledy otvorených {lawWord} v jazyku {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Hľadať zákony",
+    "typeCurrentLaw": "Začnite písať pre vyhľadávanie v {law}.",
+    "typeLaws": "Vyhľadávajte primárne právne akty EÚ podľa názvu, referencie alebo CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Zavrieť zobrazenie vedľa seba",
+    "openSideBySide": "Otvoriť zobrazenie vedľa seba"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Vyberte, ako chcete predpis pridať. Môžete zadať jeho oficiálnu referenciu alebo použiť stránku EUR-Lex.",
     "addByReferenceTab": "Podľa oficiálnej referencie",
     "addFromEurlexTab": "Z EUR-Lexu",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Pridať predpis",
     "addingLaw": "Pridáva sa...",
     "openFromEurlex": "Pridávajte predpisy priamo z EUR-Lexu do svojej knižnice",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Túto stránku EUR-Lex sa nepodarilo priradiť k predpisu, ktorý môže LegalViz otvoriť.",
     "addLawShort": "Pridať ďalší predpis",
     "addByReferenceTitle": "Pridať podľa právnej referencie",
-    "extensionInline": "Alebo si nainštalujte naše rozšírenie a otvárajte akýkoľvek predpis priamo z EUR-Lexu kliknutím na ikonu rozšírenia bez kopírovania URL adries:"
+    "extensionInline": "Alebo si nainštalujte naše rozšírenie a otvárajte akýkoľvek predpis priamo z EUR-Lexu kliknutím na ikonu rozšírenia bez kopírovania URL adries:",
+    "manualAddLaw": "Pridať zákon manuálne",
+    "recentDescription": "Vráťte sa k zákonom, ktoré ste nedávno otvorili.",
+    "recentEmpty": "Zatiaľ žiadne nedávno otvorené zákony.",
+    "recentShowAll": "Zobraziť všetkých {count} naposledy otvorených zákonov",
+    "recentShowLess": "Zobraziť menej",
+    "recentTitle": "Naposledy otvorené zákony",
+    "searchCta": "Rýchlo nájdite zákon",
+    "searchHint": "Vyhľadávajte primárne právne akty EÚ podľa názvu, referencie alebo CELEX.",
+    "searchPlaceholder": "Vyhľadávanie primárnych právnych aktov EÚ podľa názvu, referencie alebo CELEX",
+    "searchPlaceholderMobile": "Vyhľadávanie primárnych právnych aktov EÚ"
   },
   "resetFooter": {
     "title": "Niečo nefunguje?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Riešenie…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Obsah",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Na pohyb medzi článkami môžete použiť aj klávesy so šípkami.",
+    "languageItemUnavailable": "{label} {id} nie je k dispozícii v jazyku {lang}.",
+    "legacyHtmlFallbackMessage": "Tento zákon sa zobrazuje zo staršieho formátu HTML z EUR-Lex. LegalViz prepol jazyk späť na angličtinu pre spoľahlivosť.",
+    "legacyHtmlFallbackTitle": "Starší formát EUR-Lex",
+    "loadingLanguage": "Načítavanie verzie {lang}...",
+    "primaryLanguage": "Hlavný jazyk",
+    "resolvingLinkedLaw": "Otváranie prepojeného zákona: {label}",
+    "resolvingLinkedLawFallback": "prepojený zákon",
+    "secondaryLanguage": "Druhý jazyk",
+    "sideBySideDesktopOnly": "Čítanie vedľa seba je k dispozícii na väčších obrazovkách.",
+    "textOnly": "Iba text"
   },
   "printView": {
     "documentTitle": "Právny dokument EÚ",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Vytlačené z LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Zmena",
+    "corrigendum": "Korigendum",
+    "loading": "Načítavanie zmien…",
+    "title": "História zmien"
+  },
+  "metadata": {
+    "caseLaw": "Judikatúra Súdneho dvora EÚ",
+    "caseLawNoResults": "Žiadne prípady nezodpovedajú vášmu vyhľadávaniu.",
+    "caseLawSearchPlaceholder": "Hľadať podľa strany, čísla prípadu alebo článku…",
+    "dateOfDocument": "Dátum dokumentu",
+    "eea": "Relevantné pre EHP",
+    "endOfValidity": "Koniec platnosti",
+    "entryIntoForce": "Začiatok uplatňovania",
+    "implementingActs": "Vykonávacie / Delegované akty",
+    "inForce": "V platnosti",
+    "loading": "Načítavanie metaúdajov…",
+    "notInForce": "Už neplatný",
+    "status": "Stav",
+    "title": "Stav a dátumy",
+    "unavailable": "Metaúdaje nie sú k dispozícii",
+    "yes": "Áno"
   }
 }

@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Η αναζήτηση νόμων είναι προσωρινά μη διαθέσιμη.",
+    "currentLawFallback": "αυτόν τον νόμο",
+    "lawResultType": "Νόμος",
+    "modeCurrentLaw": "Τρέχων νόμος",
+    "modeLabel": "Λειτουργία αναζήτησης",
+    "modeLaws": "Εύρεση νόμων",
+    "modeMatches": "Αναζήτηση σε νόμους",
+    "noResultsCurrentLaw": "Δεν βρέθηκαν αποτελέσματα για «{query}» σε {law}.",
+    "noResultsLaws": "Δεν βρέθηκαν πρωτογενείς πράξεις ΕΕ για «{query}».",
+    "openLaw": "Άνοιγμα νόμου",
+    "placeholderCurrentLaw": "Αναζήτηση σε {law}...",
+    "placeholderLaws": "Αναζήτηση πρωτογενών πράξεων ΕΕ κατά τίτλο, αναφορά ή CELEX",
+    "placeholderMatches": "Αναζήτηση στους τελευταία ανοιγμένους νόμους...",
+    "searchingCurrentLaw": "Αναζήτηση σε {law}.",
+    "searchingLaws": "Αναζήτηση πρωτογενών πράξεων ΕΕ από το ευρετήριο LegalViz από το 2010. Οι δευτερογενείς πράξεις δεν περιλαμβάνονται ακόμα.",
+    "searchingMatches": "Αναζήτηση σε {count} τελευταία ανοιγμένους {lawWord} στα {language}. Ανοίξτε έναν νόμο σε αυτήν τη γλώσσα.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Αναζήτηση νόμων",
+    "typeCurrentLaw": "Πληκτρολογήστε για αναζήτηση σε {law}.",
+    "typeLaws": "Αναζητήστε πρωτογενείς πράξεις ΕΕ κατά τίτλο, αναφορά ή CELEX. Οι δευτερογενείς πράξεις δεν περιλαμβάνονται ακόμα."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Απόκρυψη πλαϊνής στήλης",
     "showSidebar": "Εμφάνιση πλαϊνής στήλης",
     "printPdf": "Εκτύπωση / PDF",
-    "viewOnEurlex": "Προβολή στο EUR-Lex"
+    "viewOnEurlex": "Προβολή στο EUR-Lex",
+    "closeSideBySide": "Κλείσιμο δίπλα-δίπλα",
+    "openSideBySide": "Άνοιγμα δίπλα-δίπλα"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Επιλέξτε πώς θέλετε να προσθέσετε την πράξη. Μπορείτε να εισαγάγετε την επίσημη παραπομπή της ή να χρησιμοποιήσετε μια σελίδα EUR-Lex.",
     "addByReferenceTab": "Με επίσημη παραπομπή",
     "addFromEurlexTab": "Από το EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Προσθήκη πράξης",
     "addingLaw": "Προσθήκη...",
     "openFromEurlex": "Προσθέστε πράξεις απευθείας από το EUR-Lex στη βιβλιοθήκη σας",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Αυτή η σελίδα EUR-Lex δεν μπόρεσε να αντιστοιχιστεί σε πράξη που μπορεί να ανοίξει το LegalViz.",
     "addLawShort": "Προσθήκη άλλης πράξης",
     "addByReferenceTitle": "Προσθήκη με νομική παραπομπή",
-    "extensionInline": "Ή εγκαταστήστε την επέκτασή μας για να ανοίγετε οποιαδήποτε πράξη απευθείας από το EUR-Lex κάνοντας κλικ στο εικονίδιο της επέκτασης, χωρίς αντιγραφή διευθύνσεων URL:"
+    "extensionInline": "Ή εγκαταστήστε την επέκτασή μας για να ανοίγετε οποιαδήποτε πράξη απευθείας από το EUR-Lex κάνοντας κλικ στο εικονίδιο της επέκτασης, χωρίς αντιγραφή διευθύνσεων URL:",
+    "manualAddLaw": "Μη αυτόματη προσθήκη νόμου",
+    "recentDescription": "Επιστρέψτε στους νόμους που ανοίξατε πρόσφατα.",
+    "recentEmpty": "Δεν υπάρχουν πρόσφατα ανοιγμένοι νόμοι. Αναζητήστε έναν για να ξεκινήσετε.",
+    "recentShowAll": "Εμφάνιση όλων των {count} τελευταία ανοιγμένων νόμων",
+    "recentShowLess": "Εμφάνιση λιγότερων",
+    "recentTitle": "Τελευταία ανοιγμένοι νόμοι",
+    "searchCta": "Βρείτε γρήγορα έναν νόμο",
+    "searchHint": "Αναζητήστε πρωτογενείς πράξεις της ΕΕ κατά τίτλο, αναφορά ή CELEX και ανοίξτε τις απευθείας.",
+    "searchPlaceholder": "Αναζήτηση πρωτογενών πράξεων ΕΕ κατά τίτλο, αναφορά ή CELEX",
+    "searchPlaceholderMobile": "Αναζήτηση πρωτογενών πράξεων ΕΕ"
   },
   "resetFooter": {
     "title": "Κάτι δεν λειτουργεί;",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Επίλυση…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Πίνακας περιεχομένων",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Μπορείτε επίσης να χρησιμοποιήσετε τα πλήκτρα βέλους αριστερά και δεξιά για πλοήγηση μεταξύ άρθρων κατά την ανάγνωση.",
+    "languageItemUnavailable": "Το {label} {id} δεν είναι διαθέσιμο στα {lang}.",
+    "legacyHtmlFallbackMessage": "Αυτός ο νόμος εμφανίζεται από παλαιότερη μορφή HTML του EUR-Lex αντί για δομημένα δεδομένα Formex. Η διάταξη μπορεί να είναι ατελής και το LegalViz έχει επαναφέρει τη γλώσσα του εγγράφου στα αγγλικά για αξιοπιστία.",
+    "legacyHtmlFallbackTitle": "Παλαιότερη μορφή EUR-Lex",
+    "loadingLanguage": "Φόρτωση της έκδοσης {lang}...",
+    "primaryLanguage": "Κύρια γλώσσα",
+    "resolvingLinkedLaw": "Άνοιγμα συνδεδεμένου νόμου: {label}",
+    "resolvingLinkedLawFallback": "συνδεδεμένος νόμος",
+    "secondaryLanguage": "Δεύτερη γλώσσα",
+    "sideBySideDesktopOnly": "Η ανάγνωση δίπλα-δίπλα είναι διαθέσιμη σε μεγαλύτερες οθόνες. Αυτή η συσκευή συνεχίζει να εμφανίζει μόνο την κύρια γλώσσα.",
+    "textOnly": "Μόνο κείμενο"
   },
   "printView": {
     "documentTitle": "Έγγραφο δικαίου της ΕΕ",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Εκτυπώθηκε από το LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Τροποποίηση",
+    "corrigendum": "Διορθωτικό",
+    "loading": "Φόρτωση τροποποιήσεων…",
+    "title": "Ιστορικό τροποποιήσεων"
+  },
+  "metadata": {
+    "caseLaw": "Νομολογία ΔΕΕ",
+    "caseLawNoResults": "Δεν βρέθηκαν υποθέσεις.",
+    "caseLawSearchPlaceholder": "Αναζήτηση κατά μέρος, αριθμό υπόθεσης ή άρθρο…",
+    "dateOfDocument": "Ημερομηνία εγγράφου",
+    "eea": "Σχετικό με τον ΕΟΧ",
+    "endOfValidity": "Λήξη ισχύος",
+    "entryIntoForce": "Έναρξη εφαρμογής",
+    "implementingActs": "Εκτελεστικές / Κατ' εξουσιοδότηση πράξεις",
+    "inForce": "Σε ισχύ",
+    "loading": "Φόρτωση μεταδεδομένων…",
+    "notInForce": "Δεν ισχύει πλέον",
+    "status": "Κατάσταση",
+    "title": "Κατάσταση και ημερομηνίες",
+    "unavailable": "Τα μεταδεδομένα δεν είναι διαθέσιμα",
+    "yes": "Ναι"
   }
 }

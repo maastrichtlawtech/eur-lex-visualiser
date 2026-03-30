@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Lagssökning är tillfälligt otillgänglig.",
+    "currentLawFallback": "denna lag",
+    "lawResultType": "Lag",
+    "modeCurrentLaw": "Aktuell lag",
+    "modeLabel": "Sökläge",
+    "modeLaws": "Hitta lagar",
+    "modeMatches": "Sök i lagar",
+    "noResultsCurrentLaw": "Inga resultat för \"{query}\" i {law}.",
+    "noResultsLaws": "Inga primära EU-rättsakter hittades för \"{query}\".",
+    "openLaw": "Öppna lag",
+    "placeholderCurrentLaw": "Sök i {law}...",
+    "placeholderLaws": "Sök primära EU-rättsakter efter titel, referens eller CELEX",
+    "placeholderMatches": "Sök i senast öppnade lagar...",
+    "searchingCurrentLaw": "Söker i {law}.",
+    "searchingLaws": "Söker primära EU-rättsakter från LegalViz-indexet sedan 2010. Sekundära akter är ännu inte inkluderade.",
+    "searchingMatches": "Söker i {count} senast öppnade {lawWord} på {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Sök lagar",
+    "typeCurrentLaw": "Skriv för att söka i {law}.",
+    "typeLaws": "Sök primära EU-rättsakter efter titel, referens eller CELEX. Sekundära akter är ännu inte inkluderade."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Stäng sida vid sida",
+    "openSideBySide": "Öppna sida vid sida"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Välj hur du vill lägga till rättsakten. Du kan ange dess officiella hänvisning eller använda en EUR-Lex-sida.",
     "addByReferenceTab": "Via officiell hänvisning",
     "addFromEurlexTab": "Från EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Lägg till rättsakt",
     "addingLaw": "Lägger till...",
     "openFromEurlex": "Lägg till rättsakter direkt från EUR-Lex i ditt bibliotek",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Den här EUR-Lex-sidan kunde inte kopplas till en rättsakt som LegalViz kan öppna.",
     "addLawShort": "Lägg till en rättsakt till",
     "addByReferenceTitle": "Lägg till via rättslig hänvisning",
-    "extensionInline": "Eller installera vårt tillägg för att öppna vilken rättsakt som helst direkt från EUR-Lex genom att klicka på tilläggsikonen, utan att kopiera URL:er:"
+    "extensionInline": "Eller installera vårt tillägg för att öppna vilken rättsakt som helst direkt från EUR-Lex genom att klicka på tilläggsikonen, utan att kopiera URL:er:",
+    "manualAddLaw": "Lägg till lag manuellt",
+    "recentDescription": "Gå tillbaka till de lagar du öppnade nyligen.",
+    "recentEmpty": "Inga nyligen öppnade lagar ännu. Sök efter en för att börja.",
+    "recentShowAll": "Visa alla {count} senast öppnade lagar",
+    "recentShowLess": "Visa mindre",
+    "recentTitle": "Senast öppnade lagar",
+    "searchCta": "Hitta en lag snabbt",
+    "searchHint": "Sök efter primära EU-rättsakter efter titel, referens eller CELEX och öppna dem direkt.",
+    "searchPlaceholder": "Sök primära EU-rättsakter efter titel, referens eller CELEX",
+    "searchPlaceholderMobile": "Sök primära EU-rättsakter"
   },
   "resetFooter": {
     "title": "Är det något som inte fungerar?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Löser…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Innehållsförteckning",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Du kan också använda piltangenterna för att navigera mellan artiklar.",
+    "languageItemUnavailable": "{label} {id} är inte tillgänglig på {lang}.",
+    "legacyHtmlFallbackMessage": "Denna lag visas från ett äldre EUR-Lex HTML-format. LegalViz har bytt språket till engelska för tillförlitlighet.",
+    "legacyHtmlFallbackTitle": "Äldre EUR-Lex-format",
+    "loadingLanguage": "Laddar {lang}-versionen...",
+    "primaryLanguage": "Huvudspråk",
+    "resolvingLinkedLaw": "Öppnar länkad lag: {label}",
+    "resolvingLinkedLawFallback": "länkad lag",
+    "secondaryLanguage": "Andra språket",
+    "sideBySideDesktopOnly": "Sida vid sida-läsning är tillgänglig på större skärmar.",
+    "textOnly": "Endast text"
   },
   "printView": {
     "documentTitle": "EU-rättsligt dokument",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Utskrivet från LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Ändring",
+    "corrigendum": "Rättelse",
+    "loading": "Laddar ändringar…",
+    "title": "Ändringshistorik"
+  },
+  "metadata": {
+    "caseLaw": "EU-domstolens rättspraxis",
+    "caseLawNoResults": "Inga mål matchar din sökning.",
+    "caseLawSearchPlaceholder": "Sök efter part, målnummer eller artikel…",
+    "dateOfDocument": "Dokumentets datum",
+    "eea": "EES-relevant",
+    "endOfValidity": "Giltighetstidens slut",
+    "entryIntoForce": "Tillämpningsstart",
+    "implementingActs": "Genomförande- / Delegerade akter",
+    "inForce": "I kraft",
+    "loading": "Laddar metadata…",
+    "notInForce": "Inte längre i kraft",
+    "status": "Status",
+    "title": "Status och datum",
+    "unavailable": "Metadata inte tillgänglig",
+    "yes": "Ja"
   }
 }

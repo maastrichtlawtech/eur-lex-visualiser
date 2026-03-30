@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "A jogszabály-keresés átmenetileg nem érhető el.",
+    "currentLawFallback": "ez a jogszabály",
+    "lawResultType": "Jogszabály",
+    "modeCurrentLaw": "Jelenlegi jogszabály",
+    "modeLabel": "Keresési mód",
+    "modeLaws": "Jogszabályok keresése",
+    "modeMatches": "Keresés jogszabályokban",
+    "noResultsCurrentLaw": "Nincs találat a(z) „{query}“ keresésre a(z) {law} jogszabályban.",
+    "noResultsLaws": "Nem található elsődleges uniós jogi aktus a(z) „{query}“ keresésre.",
+    "openLaw": "Jogszabály megnyitása",
+    "placeholderCurrentLaw": "Keresés a(z) {law} jogszabályban...",
+    "placeholderLaws": "Elsődleges uniós jogi aktusok keresése cím, hivatkozás vagy CELEX szerint",
+    "placeholderMatches": "Keresés a legutóbb megnyitott jogszabályokban...",
+    "searchingCurrentLaw": "Keresés a(z) {law} jogszabályban.",
+    "searchingLaws": "Elsődleges uniós jogi aktusok keresése a LegalViz indexéből 2010 óta.",
+    "searchingMatches": "Keresés {count} legutóbb megnyitott {lawWord} nyelven: {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Jogszabályok keresése",
+    "typeCurrentLaw": "Írjon a(z) {law} jogszabályban való kereséshez.",
+    "typeLaws": "Keressen elsődleges uniós jogi aktusokat cím, hivatkozás vagy CELEX szerint."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Egymás melletti nézet bezárása",
+    "openSideBySide": "Egymás melletti nézet megnyitása"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Válassza ki, hogyan szeretné hozzáadni a jogszabályt. Megadhatja a hivatalos hivatkozását, vagy használhat EUR-Lex oldalt.",
     "addByReferenceTab": "Hivatalos hivatkozással",
     "addFromEurlexTab": "EUR-Lexből",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Jogszabály hozzáadása",
     "addingLaw": "Hozzáadás...",
     "openFromEurlex": "Jogszabályok hozzáadása közvetlenül az EUR-Lexből a könyvtárához",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Ezt az EUR-Lex oldalt nem lehetett olyan jogszabályhoz kapcsolni, amelyet a LegalViz meg tud nyitni.",
     "addLawShort": "Újabb jogszabály hozzáadása",
     "addByReferenceTitle": "Hozzáadás jogi hivatkozással",
-    "extensionInline": "Vagy telepítse a bővítményünket, hogy bármely jogszabályt közvetlenül az EUR-Lexből nyisson meg a bővítmény ikonjára kattintva, URL-ek másolása nélkül:"
+    "extensionInline": "Vagy telepítse a bővítményünket, hogy bármely jogszabályt közvetlenül az EUR-Lexből nyisson meg a bővítmény ikonjára kattintva, URL-ek másolása nélkül:",
+    "manualAddLaw": "Jogszabály kézi hozzáadása",
+    "recentDescription": "Térjen vissza a nemrég megnyitott jogszabályokhoz.",
+    "recentEmpty": "Még nincsenek nemrég megnyitott jogszabályok. Keressen egyet a kezdéshez.",
+    "recentShowAll": "Mind a(z) {count} legutóbb megnyitott jogszabály megjelenítése",
+    "recentShowLess": "Kevesebb megjelenítése",
+    "recentTitle": "Legutóbb megnyitott jogszabályok",
+    "searchCta": "Találjon jogszabályt gyorsan",
+    "searchHint": "Keressen elsődleges uniós jogi aktusokat cím, hivatkozás vagy CELEX szerint.",
+    "searchPlaceholder": "Elsődleges uniós jogi aktusok keresése cím, hivatkozás vagy CELEX szerint",
+    "searchPlaceholderMobile": "Elsődleges uniós jogi aktusok keresése"
   },
   "resetFooter": {
     "title": "Valami nem működik?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Feloldás…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Tartalomjegyzék",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "A bal és jobb nyílbillentyűkkel is mozoghat a cikkek között.",
+    "languageItemUnavailable": "A(z) {label} {id} nem érhető el {lang} nyelven.",
+    "legacyHtmlFallbackMessage": "Ez a jogszabály egy régebbi EUR-Lex HTML formátumból jelenik meg. A LegalViz a megbízhatóság érdekében visszaállította a dokumentum nyelvét angolra.",
+    "legacyHtmlFallbackTitle": "Régebbi EUR-Lex formátum",
+    "loadingLanguage": "{lang} verzió betöltése...",
+    "primaryLanguage": "Fő nyelv",
+    "resolvingLinkedLaw": "Kapcsolt jogszabály megnyitása: {label}",
+    "resolvingLinkedLawFallback": "kapcsolt jogszabály",
+    "secondaryLanguage": "Második nyelv",
+    "sideBySideDesktopOnly": "Az egymás melletti olvasás nagyobb képernyőkön érhető el.",
+    "textOnly": "Csak szöveg"
   },
   "printView": {
     "documentTitle": "EU-jogi dokumentum",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Nyomtatva a LegalViz.EU-ból"
+  },
+  "amendmentHistory": {
+    "amendment": "Módosítás",
+    "corrigendum": "Helyesbítés",
+    "loading": "Módosítások betöltése…",
+    "title": "Módosítási előzmények"
+  },
+  "metadata": {
+    "caseLaw": "Az EUB ítélkezési gyakorlata",
+    "caseLawNoResults": "Egyetlen ügy sem felel meg a keresésének.",
+    "caseLawSearchPlaceholder": "Keresés fél, ügyszám vagy cikk szerint…",
+    "dateOfDocument": "A dokumentum dátuma",
+    "eea": "EGT vonatkozású",
+    "endOfValidity": "Érvényesség vége",
+    "entryIntoForce": "Alkalmazás kezdete",
+    "implementingActs": "Végrehajtási / Felhatalmazáson alapuló jogi aktusok",
+    "inForce": "Hatályos",
+    "loading": "Metaadatok betöltése…",
+    "notInForce": "Már nem hatályos",
+    "status": "Állapot",
+    "title": "Állapot és dátumok",
+    "unavailable": "A metaadatok nem érhetők el",
+    "yes": "Igen"
   }
 }

@@ -57,7 +57,27 @@
     "escToClose": "ESC pro zavření",
     "bestMatch": "Nejlepší shoda",
     "law": "předpisu",
-    "laws": "předpisech"
+    "laws": "předpisech",
+    "apiUnavailable": "Vyhledávání zákonů je dočasně nedostupné.",
+    "currentLawFallback": "tento zákon",
+    "lawResultType": "Zákon",
+    "modeCurrentLaw": "Aktuální zákon",
+    "modeLabel": "Režim vyhledávání",
+    "modeLaws": "Najít zákony",
+    "modeMatches": "Hledat v zákonech",
+    "noResultsCurrentLaw": "Žádné výsledky pro „{query}“ v {law}.",
+    "noResultsLaws": "Nebyly nalezeny žádné primární právní akty EU pro „{query}“.",
+    "openLaw": "Otevřít zákon",
+    "placeholderCurrentLaw": "Hledat v {law}...",
+    "placeholderLaws": "Vyhledávání primárních právních aktů EU podle názvu, reference nebo CELEX",
+    "placeholderMatches": "Vyhledávání v naposledy otevřených zákonech...",
+    "searchingCurrentLaw": "Vyhledávání v {law}.",
+    "searchingLaws": "Vyhledávání primárních právních aktů EU z indexu LegalViz od roku 2010. Sekundární akty zatím nejsou zahrnuty.",
+    "searchingMatches": "Vyhledávání v {count} naposledy otevřených {lawWord} v jazyce {language}. Otevřete zákon v tomto jazyce, aby byl vyhledatelný.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Hledat zákony",
+    "typeCurrentLaw": "Začněte psát pro vyhledávání v {law}.",
+    "typeLaws": "Vyhledávejte primární právní akty EU podle názvu, reference nebo CELEX. Sekundární akty zatím nejsou zahrnuty."
   },
   "topBar": {
     "byline": "Od Konrada Kollniga, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Skrýt postranní panel",
     "showSidebar": "Zobrazit postranní panel",
     "printPdf": "Tisk / PDF",
-    "viewOnEurlex": "Zobrazit v EUR-Lex"
+    "viewOnEurlex": "Zobrazit v EUR-Lex",
+    "closeSideBySide": "Zavřít vedle sebe",
+    "openSideBySide": "Otevřít vedle sebe"
   },
   "languageSelector": {
     "formexTitle": "Jazyk dokumentu ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Vyberte, jak chcete předpis přidat. Můžete zadat jeho oficiální citaci nebo použít stránku EUR-Lex.",
     "addByReferenceTab": "Podle oficiální citace",
     "addFromEurlexTab": "Z EUR-Lexu",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Přidat předpis",
     "addingLaw": "Přidávání...",
     "openFromEurlex": "Přidávejte předpisy přímo z EUR-Lexu do své knihovny",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Tuto stránku EUR-Lex se nepodařilo přiřadit k předpisu, který může LegalViz otevřít.",
     "addLawShort": "Přidat další předpis",
     "addByReferenceTitle": "Přidat podle právní citace",
-    "extensionInline": "Nebo si nainstalujte naše rozšíření a otevírejte jakýkoli předpis přímo z EUR-Lexu kliknutím na ikonu rozšíření, bez kopírování URL:"
+    "extensionInline": "Nebo si nainstalujte naše rozšíření a otevírejte jakýkoli předpis přímo z EUR-Lexu kliknutím na ikonu rozšíření, bez kopírování URL:",
+    "manualAddLaw": "Přidat zákon ručně",
+    "recentDescription": "Vraťte se k zákonům, které jste nedávno otevřeli.",
+    "recentEmpty": "Zatím žádné nedávno otevřené zákony. Vyhledejte zákon a začněte.",
+    "recentShowAll": "Zobrazit všech {count} naposledy otevřených zákonů",
+    "recentShowLess": "Zobrazit méně",
+    "recentTitle": "Naposledy otevřené zákony",
+    "searchCta": "Rychle najděte zákon",
+    "searchHint": "Vyhledávejte primární právní akty EU podle názvu, reference nebo CELEX a otevírejte je přímo.",
+    "searchPlaceholder": "Vyhledávání primárních právních aktů EU podle názvu, reference nebo CELEX",
+    "searchPlaceholderMobile": "Vyhledávání primárních právních aktů EU"
   },
   "resetFooter": {
     "title": "Něco nefunguje?",
@@ -157,7 +188,8 @@
     "title": "Křížové odkazy",
     "references": "Tento {itemLabel} odkazuje na:",
     "referencedBy": "Odkazováno z:",
-    "external": "Odkazy na jiné právní předpisy:"
+    "external": "Odkazy na jiné právní předpisy:",
+    "resolving": "Načítání…"
   },
   "lawViewer": {
     "notAvailableTitle": "Tento předpis zde zatím není k dispozici",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Přejděte přímo na konkrétní číslo článku, bodu odůvodnění nebo přílohy.",
     "tableOfContents": "Obsah",
     "noArticles": "Nejsou k dispozici žádné články.",
-    "popupBlocked": "Povolte prosím vyskakovací okna pro tisk"
+    "popupBlocked": "Povolte prosím vyskakovací okna pro tisk",
+    "articleNavigationHint": "Mezi články se můžete přesouvat také pomocí kláves se šipkami doleva a doprava.",
+    "languageItemUnavailable": "{label} {id} není k dispozici v jazyce {lang}.",
+    "legacyHtmlFallbackMessage": "Tento zákon je zobrazen ze staršího formátu HTML z EUR-Lex místo strukturovaných dat Formex. Rozvržení může být hrubé a LegalViz přepnul jazyk dokumentu zpět na angličtinu pro spolehlivost.",
+    "legacyHtmlFallbackTitle": "Starší formát EUR-Lex",
+    "loadingLanguage": "Načítání verze {lang}...",
+    "primaryLanguage": "Hlavní jazyk",
+    "resolvingLinkedLaw": "Otevírání propojeného zákona: {label}",
+    "resolvingLinkedLawFallback": "propojený zákon",
+    "secondaryLanguage": "Druhý jazyk",
+    "sideBySideDesktopOnly": "Čtení vedle sebe je k dispozici na větších obrazovkách. Toto zařízení nadále zobrazuje pouze hlavní jazyk.",
+    "textOnly": "Pouze text"
   },
   "printView": {
     "documentTitle": "Dokument práva EU",
     "generatedOn": "Vygenerováno {date}",
     "printedFrom": "Vytištěno z LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Změna",
+    "corrigendum": "Oprava",
+    "loading": "Načítání změn…",
+    "title": "Historie změn"
+  },
+  "metadata": {
+    "caseLaw": "Judikatura SDEU",
+    "caseLawNoResults": "Žádné případy neodpovídají vašemu vyhledávání.",
+    "caseLawSearchPlaceholder": "Hledat podle strany, čísla případu nebo článku…",
+    "dateOfDocument": "Datum dokumentu",
+    "eea": "Význam pro EHP",
+    "endOfValidity": "Konec platnosti",
+    "entryIntoForce": "Začátek použitelnosti",
+    "implementingActs": "Prováděcí / Delegované akty",
+    "inForce": "V platnosti",
+    "loading": "Načítání metadat…",
+    "notInForce": "Již neplatný",
+    "status": "Stav",
+    "title": "Stav a data",
+    "unavailable": "Metadata nejsou k dispozici",
+    "yes": "Ano"
   }
 }

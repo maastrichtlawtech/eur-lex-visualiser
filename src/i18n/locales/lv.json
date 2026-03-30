@@ -57,7 +57,27 @@
     "escToClose": "ESC to close",
     "bestMatch": "Best Match",
     "law": "law",
-    "laws": "laws"
+    "laws": "laws",
+    "apiUnavailable": "Likumu meklēšana īslaicīgi nav pieejama.",
+    "currentLawFallback": "šis likums",
+    "lawResultType": "Likums",
+    "modeCurrentLaw": "Pašreizējais likums",
+    "modeLabel": "Meklēšanas režīms",
+    "modeLaws": "Atrast likumus",
+    "modeMatches": "Meklēt likumos",
+    "noResultsCurrentLaw": "Nav rezultātu meklējumam „{query}“ likumā {law}.",
+    "noResultsLaws": "ES primārie tiesību akti meklējumam „{query}“ nav atrasti.",
+    "openLaw": "Atvērt likumu",
+    "placeholderCurrentLaw": "Meklēt likumā {law}...",
+    "placeholderLaws": "Meklēt ES primāros tiesību aktus pēc nosaukuma, atsauces vai CELEX",
+    "placeholderMatches": "Meklēt pēdējos atvērtajos likumos...",
+    "searchingCurrentLaw": "Meklēšana likumā {law}.",
+    "searchingLaws": "ES primāro tiesību aktu meklēšana no LegalViz indeksa kopš 2010. gada.",
+    "searchingMatches": "Meklēšana {count} pēdējos atvērtajos {lawWord} valodā {language}.",
+    "shortcut": "Cmd+K",
+    "submitLawSearch": "Meklēt likumus",
+    "typeCurrentLaw": "Rakstiet, lai meklētu likumā {law}.",
+    "typeLaws": "Meklējiet ES primāros tiesību aktus pēc nosaukuma, atsauces vai CELEX."
   },
   "topBar": {
     "byline": "By Konrad Kollnig, Law & Tech Lab Maastricht",
@@ -65,7 +85,9 @@
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
     "printPdf": "Print / PDF",
-    "viewOnEurlex": "View on EUR-Lex"
+    "viewOnEurlex": "View on EUR-Lex",
+    "closeSideBySide": "Aizvērt blakus skatu",
+    "openSideBySide": "Atvērt blakus skatu"
   },
   "languageSelector": {
     "formexTitle": "Formex API ({lang})",
@@ -113,7 +135,6 @@
     "addLawDialogDescription": "Izvēlieties, kā vēlaties pievienot tiesību aktu. Varat ievadīt tā oficiālo norādi vai izmantot EUR-Lex lapu.",
     "addByReferenceTab": "Pēc oficiālās norādes",
     "addFromEurlexTab": "No EUR-Lex",
-    "referenceHelper": "Choose the act type, year, and number. If automatic lookup fails, LegalViz opens the matching EUR-Lex search page.",
     "addLawSubmit": "Pievienot tiesību aktu",
     "addingLaw": "Pievieno...",
     "openFromEurlex": "Pievienojiet tiesību aktus tieši no EUR-Lex savai bibliotēkai",
@@ -124,7 +145,17 @@
     "importResolveFailed": "Šo EUR-Lex lapu nevarēja sasaistīt ar tiesību aktu, ko LegalViz var atvērt.",
     "addLawShort": "Pievienot vēl vienu tiesību aktu",
     "addByReferenceTitle": "Pievienot pēc juridiskās norādes",
-    "extensionInline": "Vai arī instalējiet mūsu paplašinājumu, lai atvērtu jebkuru tiesību aktu tieši no EUR-Lex, noklikšķinot uz paplašinājuma ikonas, nekopējot URL:"
+    "extensionInline": "Vai arī instalējiet mūsu paplašinājumu, lai atvērtu jebkuru tiesību aktu tieši no EUR-Lex, noklikšķinot uz paplašinājuma ikonas, nekopējot URL:",
+    "manualAddLaw": "Pievienot likumu manuāli",
+    "recentDescription": "Atgriezieties pie nesen atvērtajiem likumiem.",
+    "recentEmpty": "Vēl nav nesen atvērtu likumu.",
+    "recentShowAll": "Rādīt visus {count} pēdējos atvērtos likumus",
+    "recentShowLess": "Rādīt mazāk",
+    "recentTitle": "Pēdējie atvērtie likumi",
+    "searchCta": "Atrodiet likumu ātri",
+    "searchHint": "Meklējiet ES primāros tiesību aktus pēc nosaukuma, atsauces vai CELEX.",
+    "searchPlaceholder": "Meklēt ES primāros tiesību aktus pēc nosaukuma, atsauces vai CELEX",
+    "searchPlaceholderMobile": "Meklēt ES primāros tiesību aktus"
   },
   "resetFooter": {
     "title": "Kaut kas nedarbojas?",
@@ -157,7 +188,8 @@
     "title": "Cross-References",
     "references": "This {itemLabel} references:",
     "referencedBy": "Referenced by:",
-    "external": "References to other legislation:"
+    "external": "References to other legislation:",
+    "resolving": "Atrisināšana…"
   },
   "lawViewer": {
     "notAvailableTitle": "This law is not available here yet",
@@ -178,11 +210,45 @@
     "quickNavigationHelp": "Jump directly to a specific article, recital, or annex number.",
     "tableOfContents": "Saturs",
     "noArticles": "No articles available.",
-    "popupBlocked": "Please allow popups to print"
+    "popupBlocked": "Please allow popups to print",
+    "articleNavigationHint": "Varat arī izmantot bultiņu taustiņus, lai pārvietotos starp pantiem.",
+    "languageItemUnavailable": "{label} {id} nav pieejams valodā {lang}.",
+    "legacyHtmlFallbackMessage": "Šis likums tiek rādīts no vecāka EUR-Lex HTML formāta. LegalViz ir pārslēdzis valodu uz angļu uzticamības labad.",
+    "legacyHtmlFallbackTitle": "Vecāks EUR-Lex formāts",
+    "loadingLanguage": "{lang} versijas ielāde...",
+    "primaryLanguage": "Galvenā valoda",
+    "resolvingLinkedLaw": "Saistītā likuma atvēršana: {label}",
+    "resolvingLinkedLawFallback": "saistītais likums",
+    "secondaryLanguage": "Otrā valoda",
+    "sideBySideDesktopOnly": "Blakus lasīšana ir pieejama lielākos ekrānos.",
+    "textOnly": "Tikai teksts"
   },
   "printView": {
     "documentTitle": "ES tiesību dokuments",
     "generatedOn": "Generated on {date}",
     "printedFrom": "Izdrukāts no LegalViz.EU"
+  },
+  "amendmentHistory": {
+    "amendment": "Grozījums",
+    "corrigendum": "Labojums",
+    "loading": "Grozījumu ielāde…",
+    "title": "Grozījumu vēsture"
+  },
+  "metadata": {
+    "caseLaw": "EST judikatūra",
+    "caseLawNoResults": "Neviena lieta neatbilst jūsu meklējumam.",
+    "caseLawSearchPlaceholder": "Meklēt pēc puses, lietas numura vai panta…",
+    "dateOfDocument": "Dokumenta datums",
+    "eea": "EEZ nozīme",
+    "endOfValidity": "Derīguma beigas",
+    "entryIntoForce": "Piemērošanas sākums",
+    "implementingActs": "Īstenošanas / Deleģētie akti",
+    "inForce": "Spēkā",
+    "loading": "Metadatu ielāde…",
+    "notInForce": "Vairs nav spēkā",
+    "status": "Statuss",
+    "title": "Statuss un datumi",
+    "unavailable": "Metadati nav pieejami",
+    "yes": "Jā"
   }
 }
