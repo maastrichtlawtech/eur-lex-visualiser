@@ -8,6 +8,8 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { createScrapeQueue, isWafOrNetworkError } = require('./scrape-queue');
+const { closeSharedPlaywrightBrowser } = require('./eurlex-html-parser');
 
 async function fetchMetadata(celex, runSparqlQuery) {
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
@@ -64,7 +66,7 @@ SELECT DISTINCT ?type ?sourceCelex ?date WHERE {
   OPTIONAL { ?sourceWork cdm:work_date_document ?date }
 }
 ORDER BY ?date
-LIMIT 50`;
+LIMIT 200`;
 
   const data = await runSparqlQuery(query);
   const amendments = (data.results?.bindings || []).map((b) => {
@@ -99,7 +101,7 @@ SELECT DISTINCT ?actCelex ?date ?title WHERE {
   }
 }
 ORDER BY ?date
-LIMIT 100`;
+LIMIT 500`;
 
   const data = await runSparqlQuery(query);
   const acts = (data.results?.bindings || []).map((b) => {
@@ -114,7 +116,7 @@ LIMIT 100`;
   return { celex, acts };
 }
 
-const CASE_LAW_ENRICH_BUDGET_MS = 1_500;
+const CASE_LAW_ENRICH_BUDGET_MS = 15_000;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -125,6 +127,7 @@ async function fetchCaseLaw(celex, runSparqlQuery, {
   detailsFetcher = fetchCaseDetails,
   enrichBudgetMs = CASE_LAW_ENRICH_BUDGET_MS,
   enrichConcurrency = 3,
+  scrapeQueue = null,
 } = {}) {
   const cache = cacheDir ? loadCaseLawCache(cacheDir) : {};
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
@@ -140,7 +143,7 @@ SELECT DISTINCT ?caseCelex ?ecli ?date WHERE {
   OPTIONAL { ?caseWork cdm:work_date_document ?date }
 }
 ORDER BY ?date
-LIMIT 200`;
+LIMIT 500`;
 
   const data = await runSparqlQuery(query);
   const cases = (data.results?.bindings || []).map((b) => {
@@ -165,15 +168,34 @@ LIMIT 200`;
   // Enrich uncached cases with full details (name + decisions + articles)
   const uncached = cases.filter((c) => !cache[c.celex]);
   if (uncached.length > 0) {
+    // Create a dedicated queue if none was supplied
+    const ownQueue = !scrapeQueue;
+    const queue = scrapeQueue || createScrapeQueue({
+      concurrency: enrichConcurrency,
+      minDelayMs: 500,
+      maxRetries: 4,
+      baseBackoffMs: 2_000,
+      maxBackoffMs: 30_000,
+      timeoutMs: 60_000,
+      isRetriable: isWafOrNetworkError,
+      name: 'case-law-enrich',
+    });
+
     const enrichPromise = enrichWithCaseDetails(uncached, cache, {
       concurrency: enrichConcurrency,
       detailsFetcher,
+      scrapeQueue: queue,
     })
       .then(() => {
         if (cacheDir) saveCaseLawCache(cacheDir, cache);
       })
       .catch((err) => {
         console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
+      })
+      .finally(() => {
+        if (ownQueue) queue.destroy();
+        // Free Playwright browser RAM as soon as enrichment batch is done
+        closeSharedPlaywrightBrowser().catch(() => {});
       });
 
     if (enrichBudgetMs > 0) {
@@ -401,27 +423,63 @@ function formatArticlePill(citation) {
 
 /**
  * Fetch full HTML for a case and extract decision + article citations.
+ *
+ * When a WAF challenge (HTTP 202) is encountered and `fetchWithPlaywright` is
+ * provided, Playwright is used to bypass the challenge instead of retrying
+ * with plain fetch (which will always fail against WAF).
+ *
+ * @param {string} caseCelex
+ * @param {object} [opts]
+ * @param {Function} [opts.fetchWithPlaywright] Playwright-based fetcher (from eurlex-html-parser).
+ * @param {string}   [opts.eurlexBase]          EUR-Lex base URL.
  */
-async function fetchCaseDetails(caseCelex) {
-  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
+async function fetchCaseDetails(caseCelex, {
+  fetchWithPlaywright = null,
+  eurlexBase = 'https://eur-lex.europa.eu',
+} = {}) {
+  const url = `${eurlexBase}/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), 45_000);
 
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      let html = null;
 
-      if (isChallengeResponse(res)) {
-        clearTimeout(timeout);
-        const delay = 2000 * (2 ** attempt);
-        await new Promise((r) => setTimeout(r, delay));
-        continue;
+      // On first attempt, try plain fetch. On subsequent retries after WAF, use Playwright.
+      if (attempt === 0 || !fetchWithPlaywright) {
+        const res = await fetch(url, { signal: controller.signal });
+
+        if (isChallengeResponse(res)) {
+          clearTimeout(timeout);
+          if (fetchWithPlaywright) {
+            // Immediately try Playwright instead of waiting
+            console.log(`[case-law] WAF challenge for ${caseCelex}, using Playwright`);
+            html = await fetchWithPlaywright({
+              url,
+              timeoutMs: 45_000,
+              closeBrowserAfterFetch: false,
+            });
+          } else {
+            // No Playwright available, backoff and retry plain fetch
+            const delay = 2000 * (2 ** attempt);
+            await new Promise((r) => setTimeout(r, delay));
+            continue;
+          }
+        } else if (!res.ok) {
+          return null;
+        } else {
+          html = await res.text();
+        }
+      } else {
+        // Retry via Playwright directly (we already know WAF is active)
+        html = await fetchWithPlaywright({
+          url,
+          timeoutMs: 45_000,
+          closeBrowserAfterFetch: false,
+        });
       }
 
-      if (!res.ok) return null;
-
-      const html = await res.text();
       if (!html || html.length < 200) return null;
 
       const dom = new JSDOM(html);
@@ -453,6 +511,11 @@ async function fetchCaseDetails(caseCelex) {
         declarations: operative.declarations,
         articlesCited,
       };
+    } catch (err) {
+      // Let the scrape queue handle retries for transient errors
+      if (attempt >= 3) throw err;
+      const delay = 2000 * (2 ** attempt);
+      await new Promise((r) => setTimeout(r, delay));
     } finally {
       clearTimeout(timeout);
     }
@@ -462,13 +525,41 @@ async function fetchCaseDetails(caseCelex) {
 }
 
 /**
- * Enrich cases with full details (decisions + articles). Lower concurrency
- * than party-name enrichment since we fetch full pages.
+ * Enrich cases with full details (decisions + articles) via the scrape queue.
+ * Falls back to the old concurrency-pool approach when no queue is provided.
  */
 async function enrichWithCaseDetails(cases, detailsCache, {
   concurrency = 3,
   detailsFetcher = fetchCaseDetails,
+  scrapeQueue = null,
 } = {}) {
+  if (scrapeQueue) {
+    // Use the queue: each case becomes a queued task with built-in retry/backoff
+    const results = await scrapeQueue.enqueueAll(
+      cases.map((c) => async () => {
+        const details = await detailsFetcher(c.celex);
+        return { c, details };
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.details) {
+        const { c, details } = result.value;
+        detailsCache[c.celex] = details;
+        c.declarations = details.declarations;
+        c.articlesCited = details.articlesCited;
+        if (details.name && !c.name) c.name = details.name;
+      }
+    }
+
+    const failCount = results.filter((r) => r.status === 'rejected').length;
+    if (failCount > 0) {
+      console.warn(`[case-law] ${failCount}/${cases.length} detail fetches failed`);
+    }
+    return;
+  }
+
+  // Fallback: manual concurrency pool (for callers that don't use a queue)
   let consecutiveFails = 0;
   let blocked = false;
   let i = 0;
@@ -497,4 +588,4 @@ async function enrichWithCaseDetails(cases, detailsCache, {
   await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, next));
 }
 
-module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
+module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw, fetchCaseDetails };
