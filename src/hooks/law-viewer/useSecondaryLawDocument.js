@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchFormex, fetchParsedLaw, getCachedLawPayload } from "../../utils/formexApi.js";
+import { fetchFormex, fetchParsedLaw, getCachedLawPayload, cacheParsedLaw } from "../../utils/formexApi.js";
 import { parseLawPayloadToCombined } from "../../utils/parsers.js";
 import { EMPTY_LAW_DATA } from "../../utils/law-viewer/constants.js";
 import { getLoadErrorDetails, isMissingStructuredLawText } from "../../utils/law-viewer/errors.js";
@@ -30,8 +30,9 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
           nextData = parseLawPayloadToCombined(cached);
         } else {
           try {
-            const text = await fetchFormex(celex, secondaryLang);
-            nextData = parseLawPayloadToCombined(text);
+            const xmlText = await fetchFormex(celex, secondaryLang);
+            nextData = parseLawPayloadToCombined(xmlText);
+            cacheParsedLaw(celex, secondaryLang, nextData, xmlText);
           } catch (error) {
             if (!isMissingStructuredLawText(error)) {
               throw error;
