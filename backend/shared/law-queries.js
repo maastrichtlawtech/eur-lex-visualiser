@@ -9,8 +9,12 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
+function sanitizeCelex(celex) {
+  return String(celex).replace(/[<>"'\\{}|^`\x00-\x1f]/g, '');
+}
+
 async function fetchMetadata(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -48,7 +52,7 @@ LIMIT 10`;
 }
 
 async function fetchAmendments(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -80,7 +84,7 @@ LIMIT 50`;
 }
 
 async function fetchImplementing(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -115,6 +119,7 @@ LIMIT 100`;
 }
 
 const CASE_LAW_ENRICH_BUDGET_MS = 1_500;
+const DEFAULT_FETCH_TIMEOUT_MS = 30_000;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -122,12 +127,16 @@ function wait(ms) {
 
 async function fetchCaseLaw(celex, runSparqlQuery, {
   cacheDir,
-  detailsFetcher = fetchCaseDetails,
+  detailsFetcher,
   enrichBudgetMs = CASE_LAW_ENRICH_BUDGET_MS,
   enrichConcurrency = 3,
+  fetchTimeoutMs = DEFAULT_FETCH_TIMEOUT_MS,
 } = {}) {
+  if (!detailsFetcher) {
+    detailsFetcher = (caseCelex) => fetchCaseDetails(caseCelex, { timeoutMs: fetchTimeoutMs });
+  }
   const cache = cacheDir ? loadCaseLawCache(cacheDir) : {};
-  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -402,12 +411,12 @@ function formatArticlePill(citation) {
 /**
  * Fetch full HTML for a case and extract decision + article citations.
  */
-async function fetchCaseDetails(caseCelex) {
-  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
+async function fetchCaseDetails(caseCelex, { timeoutMs = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
+  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${sanitizeCelex(caseCelex)}`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30_000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const res = await fetch(url, { signal: controller.signal });

@@ -50,6 +50,11 @@ const rateLimitMiddleware = createRateLimitMiddleware({
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  next();
+});
 
 // Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
