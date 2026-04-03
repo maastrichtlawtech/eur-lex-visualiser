@@ -166,6 +166,15 @@ function buildEliCandidates(reference) {
     );
   }
 
+  if (!/^\d{4}$/.test(reference.year)) {
+    throw new ClientError(
+      'Reference year must be a 4-digit year',
+      400,
+      'invalid_reference',
+      { parsed: reference }
+    );
+  }
+
   if (reference.actType === 'directive') {
     return [`http://publications.europa.eu/resource/eli/dir/${reference.year}/${number}/oj`];
   }
