@@ -274,7 +274,7 @@ test("GET /api/laws/:celex/parsed skips the FMX probe when requested", async () 
   assert.equal(prepareCalled, false);
 });
 
-test("GET /api/laws/:celex/case-law uses a short cache ttl", async () => {
+test("GET /api/laws/:celex/case-law uses a bounded cache ttl", async () => {
   const resolutionCache = new Map();
   const cacheDir = fs.mkdtempSync(path.join(os.tmpdir(), "case-law-route-"));
   const { app } = registerTestRoutes({
@@ -299,8 +299,8 @@ test("GET /api/laws/:celex/case-law uses a short cache ttl", async () => {
   assert.ok(entry, "Expected case-law response to be cached");
 
   const ttlMs = entry.expiresAt - startedAt;
-  assert.ok(ttlMs <= 5 * 60 * 1000 + 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
-  assert.ok(ttlMs >= 5 * 60 * 1000 - 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
+  assert.ok(ttlMs <= 60 * 60 * 1000 + 1_000, `Expected bounded cache ttl, got ${ttlMs}ms`);
+  assert.ok(ttlMs >= 60 * 60 * 1000 - 1_000, `Expected bounded cache ttl, got ${ttlMs}ms`);
 });
 
 test("GET /api/resolve-url returns cache-backed ELI resolution", async () => {
