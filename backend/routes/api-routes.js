@@ -1,5 +1,4 @@
 const fs = require("fs");
-const fsp = require("fs/promises");
 
 const { ClientError } = require("../shared/api-utils");
 const { createSearchHandler } = require("../search/search-route");
@@ -39,9 +38,9 @@ function registerApiRoutes(app, deps) {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
-  app.get('/api/laws', rateLimitMiddleware, async (req, res) => {
+  app.get('/api/laws', rateLimitMiddleware, (req, res) => {
     try {
-      const files = await fsp.readdir(FMX_DIR);
+      const files = fs.readdirSync(FMX_DIR);
       const laws = files.filter((filename) => filename.endsWith('.xml') || filename.endsWith('.zip'));
       res.json({ laws });
     } catch (err) {
@@ -149,7 +148,7 @@ function registerApiRoutes(app, deps) {
       if (!skipFmxProbe) {
         try {
           const { servePath } = await prepareLawPayload(celex, lang);
-          const xmlText = await fsp.readFile(servePath, 'utf8');
+          const xmlText = fs.readFileSync(servePath, 'utf8');
           parsed = await parseFmxXml(xmlText);
         } catch (err) {
           if (!(err instanceof ClientError) || err.statusCode !== 404 || typeof fetchAndParseHtmlLaw !== 'function') {
@@ -163,7 +162,7 @@ function registerApiRoutes(app, deps) {
         source = parsed.source || 'eurlex-html';
       } else {
         const { servePath } = await prepareLawPayload(celex, lang);
-        const xmlText = await fsp.readFile(servePath, 'utf8');
+        const xmlText = fs.readFileSync(servePath, 'utf8');
         parsed = await parseFmxXml(xmlText);
       }
 

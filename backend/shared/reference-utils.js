@@ -146,10 +146,6 @@ function buildEurlexSearchFallbackUrl(reference, lang, toSearchLang, EURLEX_BASE
   return `${EURLEX_BASE}/search.html?${params.toString()}`;
 }
 
-function sanitizeSparqlValue(value) {
-  return String(value).replace(/[<>"'\\{}|^`\x00-\x1f]/g, '');
-}
-
 function buildEliCandidates(reference) {
   if (!reference.actType || !reference.year || !reference.number) {
     throw new ClientError(
@@ -270,11 +266,10 @@ function createReferenceResolver({
 
     const results = [];
     for (const eli of eliCandidates) {
-      const safeEli = sanitizeSparqlValue(eli);
       const query = `
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
 SELECT ?celex WHERE {
-  ?cellar ?p <${safeEli}> .
+  ?cellar ?p <${eli}> .
   ?cellar owl:sameAs ?celex .
   FILTER(STRSTARTS(STR(?celex), "http://publications.europa.eu/resource/celex/"))
 }

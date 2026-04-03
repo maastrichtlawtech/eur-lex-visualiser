@@ -9,12 +9,8 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 
-function sanitizeCelex(celex) {
-  return String(celex).replace(/[<>"'\\{}|^`\x00-\x1f]/g, '');
-}
-
 async function fetchMetadata(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -52,7 +48,7 @@ LIMIT 10`;
 }
 
 async function fetchAmendments(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -84,7 +80,7 @@ LIMIT 50`;
 }
 
 async function fetchImplementing(celex, runSparqlQuery) {
-  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -136,7 +132,7 @@ async function fetchCaseLaw(celex, runSparqlQuery, {
     detailsFetcher = (caseCelex) => fetchCaseDetails(caseCelex, { timeoutMs: fetchTimeoutMs });
   }
   const cache = cacheDir ? loadCaseLawCache(cacheDir) : {};
-  const celexUri = `http://publications.europa.eu/resource/celex/${sanitizeCelex(celex)}`;
+  const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
 PREFIX cdm: <http://publications.europa.eu/ontology/cdm#>
 PREFIX owl: <http://www.w3.org/2002/07/owl#>
@@ -412,7 +408,7 @@ function formatArticlePill(citation) {
  * Fetch full HTML for a case and extract decision + article citations.
  */
 async function fetchCaseDetails(caseCelex, { timeoutMs = DEFAULT_FETCH_TIMEOUT_MS } = {}) {
-  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${sanitizeCelex(caseCelex)}`;
+  const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
