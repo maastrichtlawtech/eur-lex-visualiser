@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
 const { createScrapeQueue, isWafOrNetworkError } = require('./scrape-queue');
+const { closeSharedPlaywrightBrowser } = require('./eurlex-html-parser');
 
 async function fetchMetadata(celex, runSparqlQuery) {
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
@@ -193,6 +194,8 @@ LIMIT 500`;
       })
       .finally(() => {
         if (ownQueue) queue.destroy();
+        // Free Playwright browser RAM as soon as enrichment batch is done
+        closeSharedPlaywrightBrowser().catch(() => {});
       });
 
     if (enrichBudgetMs > 0) {
