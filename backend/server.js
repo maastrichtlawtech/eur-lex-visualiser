@@ -21,6 +21,7 @@ const {
   toSearchLang,
   validateLang
 } = require('./shared/api-utils');
+const { createAnalytics } = require('./shared/analytics');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -47,16 +48,18 @@ const rateLimitMiddleware = createRateLimitMiddleware({
   max: RATE_LIMIT_MAX
 });
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-
 // Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
 }
 
 legalCacheStore.load();
+const analytics = createAnalytics({ cacheDir: CACHE_DIR });
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(analytics.middleware);
 const { findDownloadUrls, findFmx4Uri, prepareLawPayload, sendLawResponse } = createFmxService({
   CELLAR_BASE,
   FMX_DIR: CACHE_DIR,
@@ -166,6 +169,7 @@ async function fetchAndParseHtmlLawCached(celex, lang) {
 }
 
 registerApiRoutes(app, {
+  analytics,
   CELEX_NAMES,
   EURLEX_BASE,
   FMX_DIR: CACHE_DIR,
@@ -191,6 +195,8 @@ registerApiRoutes(app, {
   validateCelex,
   validateLang
 });
+
+process.on('SIGTERM', () => analytics.shutdown());
 
 app.listen(PORT, () => {
   console.log(`EUR-Lex FMX API running on port ${PORT}`);

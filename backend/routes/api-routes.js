@@ -9,6 +9,7 @@ const CASE_LAW_ROUTE_CACHE_MS = 5 * 60 * 1000;
 
 function registerApiRoutes(app, deps) {
   const {
+    analytics,
     CELEX_NAMES,
     EURLEX_BASE,
     FMX_DIR,
@@ -36,6 +37,14 @@ function registerApiRoutes(app, deps) {
 
   app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  app.get('/api/_stats', rateLimitMiddleware, (req, res) => {
+    const token = process.env.ANALYTICS_TOKEN;
+    if (!token) return res.status(404).json({ error: 'Not found' });
+    const provided = req.headers['x-analytics-token'] || req.query.token;
+    if (provided !== token) return res.status(401).json({ error: 'Unauthorized' });
+    res.json(analytics.getStats());
   });
 
   app.get('/api/laws', rateLimitMiddleware, (req, res) => {

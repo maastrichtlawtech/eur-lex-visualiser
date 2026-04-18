@@ -8,6 +8,17 @@
 const fs = require('fs');
 const path = require('path');
 const { JSDOM } = require('jsdom');
+const { getSharedPlaywrightPage, loadPlaywrightModule, closeSharedPlaywrightBrowser } = require('./eurlex-html-parser');
+
+const EURLEX_COOKIE_MAX_AGE_MS = parseInt(process.env.EURLEX_COOKIE_MAX_AGE_MS) || 12 * 60 * 60 * 1000; // 12h
+const PARTIAL_RETRY_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h
+
+let warmCookieHeader = null;
+let warmUserAgent = null;
+let cookieWarmPromise = null;
+
+// In-flight enrichment coalescing: celex -> Promise<void>
+const enrichInFlight = new Map();
 
 async function fetchMetadata(celex, runSparqlQuery) {
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
@@ -114,10 +125,93 @@ LIMIT 100`;
   return { celex, acts };
 }
 
+function loadCookiesFromDisk(cacheDir) {
+  if (!cacheDir) return;
+  try {
+    const filePath = path.join(cacheDir, 'eurlex-cookies.json');
+    if (!fs.existsSync(filePath)) return;
+    const { cookies, userAgent, fetchedAt } = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (Date.now() - fetchedAt > EURLEX_COOKIE_MAX_AGE_MS) return;
+    warmCookieHeader = cookies;
+    warmUserAgent = userAgent;
+  } catch {
+    // best-effort
+  }
+}
+
+function saveCookiesToDisk(cacheDir, cookies, userAgent) {
+  if (!cacheDir) return;
+  try {
+    const filePath = path.join(cacheDir, 'eurlex-cookies.json');
+    const tmp = filePath + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify({ cookies, userAgent, fetchedAt: Date.now() }), 'utf8');
+    fs.renameSync(tmp, filePath);
+  } catch {
+    // best-effort
+  }
+}
+
+function invalidateCookies(cacheDir) {
+  warmCookieHeader = null;
+  warmUserAgent = null;
+  if (cacheDir) {
+    try { fs.unlinkSync(path.join(cacheDir, 'eurlex-cookies.json')); } catch { /* ok */ }
+  }
+}
+
+async function warmEurlexCookies({ cacheDir } = {}) {
+  if (cookieWarmPromise) return cookieWarmPromise;
+
+  cookieWarmPromise = (async () => {
+    try {
+      const playwrightModulePath = process.env.PLAYWRIGHT_MODULE_PATH || null;
+      const playwright = await loadPlaywrightModule(playwrightModulePath);
+      const page = await getSharedPlaywrightPage(playwright, {
+        playwrightBrowsersPath: process.env.PLAYWRIGHT_BROWSERS_PATH || null,
+        headless: process.env.PLAYWRIGHT_HEADLESS !== 'false',
+      });
+      await page.goto('https://eur-lex.europa.eu/homepage.html', {
+        waitUntil: 'domcontentloaded',
+        timeout: 20_000,
+      });
+      try {
+        await page.waitForLoadState('networkidle', { timeout: 15_000 });
+      } catch {
+        // networkidle may time out on challenge pages — proceed anyway
+      }
+      const cookies = await page.context().cookies();
+      const cookieStr = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+      const ua = await page.evaluate(() => navigator.userAgent);
+
+      warmCookieHeader = cookieStr;
+      warmUserAgent = ua;
+      saveCookiesToDisk(cacheDir, cookieStr, ua);
+      console.log(`[case-law] EUR-Lex session cookies warmed (${cookies.length} cookies)`);
+    } catch (err) {
+      console.warn(`[case-law] Cookie warming failed: ${err.message}`);
+    }
+  })();
+
+  try {
+    await cookieWarmPromise;
+  } finally {
+    cookieWarmPromise = null;
+  }
+}
+
 const CASE_LAW_ENRICH_BUDGET_MS = 1_500;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isPartialEntry(entry) {
+  return !entry || !entry.name || !Array.isArray(entry.declarations) || entry.declarations.length === 0;
+}
+
+function isStaleEntry(entry) {
+  if (!isPartialEntry(entry)) return false;
+  return !entry?.lastFailedAt || (Date.now() - entry.lastFailedAt) > PARTIAL_RETRY_COOLDOWN_MS;
 }
 
 async function fetchCaseLaw(celex, runSparqlQuery, {
@@ -126,6 +220,9 @@ async function fetchCaseLaw(celex, runSparqlQuery, {
   enrichBudgetMs = CASE_LAW_ENRICH_BUDGET_MS,
   enrichConcurrency = 3,
 } = {}) {
+  if (cacheDir && warmCookieHeader === null && cookieWarmPromise === null) {
+    loadCookiesFromDisk(cacheDir);
+  }
   const cache = cacheDir ? loadCaseLawCache(cacheDir) : {};
   const celexUri = `http://publications.europa.eu/resource/celex/${celex}`;
   const query = `
@@ -162,19 +259,27 @@ LIMIT 200`;
     };
   }).filter((c) => c.celex);
 
-  // Enrich uncached cases with full details (name + decisions + articles)
-  const uncached = cases.filter((c) => !cache[c.celex]);
+  // Enrich uncached/stale cases with full details (name + decisions + articles)
+  const uncached = cases.filter((c) => isStaleEntry(cache[c.celex]));
   if (uncached.length > 0) {
-    const enrichPromise = enrichWithCaseDetails(uncached, cache, {
-      concurrency: enrichConcurrency,
-      detailsFetcher,
-    })
-      .then(() => {
-        if (cacheDir) saveCaseLawCache(cacheDir, cache);
+    let enrichPromise = enrichInFlight.get(celex);
+    if (!enrichPromise) {
+      enrichPromise = enrichWithCaseDetails(uncached, cache, {
+        concurrency: enrichConcurrency,
+        detailsFetcher,
+        cacheDir,
       })
-      .catch((err) => {
-        console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
-      });
+        .then(() => {
+          if (cacheDir) saveCaseLawCache(cacheDir, cache);
+        })
+        .catch((err) => {
+          console.warn(`[case-law] Details enrichment failed for ${celex}: ${err.message}`);
+        })
+        .finally(() => {
+          enrichInFlight.delete(celex);
+        });
+      enrichInFlight.set(celex, enrichPromise);
+    }
 
     if (enrichBudgetMs > 0) {
       await Promise.race([enrichPromise, wait(enrichBudgetMs)]);
@@ -401,21 +506,41 @@ function formatArticlePill(citation) {
 
 /**
  * Fetch full HTML for a case and extract decision + article citations.
+ * Uses warm EUR-Lex session cookies to bypass WAF challenge.
  */
-async function fetchCaseDetails(caseCelex) {
+async function fetchCaseDetails(caseCelex, { cacheDir } = {}) {
   const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
+
+  if (warmCookieHeader === null && cookieWarmPromise === null) {
+    loadCookiesFromDisk(cacheDir);
+  }
+  if (warmCookieHeader === null) {
+    await warmEurlexCookies({ cacheDir });
+  }
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30_000);
 
     try {
-      const res = await fetch(url, { signal: controller.signal });
+      const headers = {
+        'accept-language': 'en',
+      };
+      if (warmCookieHeader) {
+        headers['cookie'] = warmCookieHeader;
+        headers['user-agent'] = warmUserAgent || 'Mozilla/5.0';
+      }
+
+      const res = await fetch(url, { signal: controller.signal, headers });
 
       if (isChallengeResponse(res)) {
         clearTimeout(timeout);
-        const delay = 2000 * (2 ** attempt);
-        await new Promise((r) => setTimeout(r, delay));
+        invalidateCookies(cacheDir);
+        if (attempt === 0) {
+          await warmEurlexCookies({ cacheDir });
+        } else {
+          await new Promise((r) => setTimeout(r, 2000 * (2 ** attempt)));
+        }
         continue;
       }
 
@@ -468,6 +593,7 @@ async function fetchCaseDetails(caseCelex) {
 async function enrichWithCaseDetails(cases, detailsCache, {
   concurrency = 3,
   detailsFetcher = fetchCaseDetails,
+  cacheDir,
 } = {}) {
   let consecutiveFails = 0;
   let blocked = false;
@@ -477,12 +603,16 @@ async function enrichWithCaseDetails(cases, detailsCache, {
     while (i < cases.length && !blocked) {
       const c = cases[i++];
       try {
-        const details = await detailsFetcher(c.celex);
-        if (details) {
+        const details = await detailsFetcher(c.celex, { cacheDir });
+        if (details && !isPartialEntry(details)) {
           detailsCache[c.celex] = details;
           c.declarations = details.declarations;
           c.articlesCited = details.articlesCited;
           if (details.name && !c.name) c.name = details.name;
+        } else {
+          // Still partial after fetch — stamp cooldown to avoid tight retry loops
+          const existing = detailsCache[c.celex] || {};
+          detailsCache[c.celex] = { ...existing, lastFailedAt: Date.now() };
         }
         consecutiveFails = 0;
       } catch (err) {
