@@ -273,6 +273,7 @@ LIMIT 200`;
         concurrency: enrichConcurrency,
         detailsFetcher,
         cacheDir,
+        logLabel: celex,
       })
         .then(() => {
           if (cacheDir) saveCaseLawCache(cacheDir, cache);
@@ -513,7 +514,7 @@ function formatArticlePill(citation) {
  * Fetch full HTML for a case and extract decision + article citations.
  * Uses warm EUR-Lex session cookies to bypass WAF challenge.
  */
-async function fetchCaseDetails(caseCelex, { cacheDir } = {}) {
+async function fetchCaseDetails(caseCelex, { cacheDir, stats } = {}) {
   const url = `https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:${caseCelex}`;
 
   if (warmCookieHeader === null && cookieWarmPromise === null) {
@@ -540,6 +541,7 @@ async function fetchCaseDetails(caseCelex, { cacheDir } = {}) {
 
       if (isChallengeResponse(res)) {
         clearTimeout(timeout);
+        if (stats) stats.challenges++;
         invalidateCookies(cacheDir);
         if (attempt === 0) {
           await warmEurlexCookies({ cacheDir });
@@ -599,7 +601,9 @@ async function enrichWithCaseDetails(cases, detailsCache, {
   concurrency = 3,
   detailsFetcher = fetchCaseDetails,
   cacheDir,
+  logLabel = '',
 } = {}) {
+  const stats = { enriched: 0, partial: 0, errors: 0, challenges: 0 };
   let consecutiveFails = 0;
   let blocked = false;
   let i = 0;
@@ -608,19 +612,21 @@ async function enrichWithCaseDetails(cases, detailsCache, {
     while (i < cases.length && !blocked) {
       const c = cases[i++];
       try {
-        const details = await detailsFetcher(c.celex, { cacheDir });
+        const details = await detailsFetcher(c.celex, { cacheDir, stats });
         if (details && !isPartialEntry(details)) {
           detailsCache[c.celex] = details;
           c.declarations = details.declarations;
           c.articlesCited = details.articlesCited;
           if (details.name && !c.name) c.name = details.name;
+          stats.enriched++;
         } else {
-          // Still partial after fetch — stamp cooldown to avoid tight retry loops
           const existing = detailsCache[c.celex] || {};
           detailsCache[c.celex] = { ...existing, lastFailedAt: Date.now() };
+          stats.partial++;
         }
         consecutiveFails = 0;
       } catch (err) {
+        stats.errors++;
         consecutiveFails++;
         if (consecutiveFails >= 5) {
           blocked = true;
@@ -630,6 +636,12 @@ async function enrichWithCaseDetails(cases, detailsCache, {
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, next));
+
+  const suffix = logLabel ? ` for ${logLabel}` : '';
+  console.log(
+    `[case-law] Enrichment${suffix} done: ${stats.enriched} enriched, ` +
+    `${stats.partial} partial, ${stats.errors} errors, ${stats.challenges} WAF challenges (of ${cases.length} cases)`
+  );
 }
 
 module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
