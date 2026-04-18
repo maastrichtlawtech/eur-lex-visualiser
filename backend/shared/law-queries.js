@@ -16,6 +16,8 @@ const PARTIAL_RETRY_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6h
 let warmCookieHeader = null;
 let warmUserAgent = null;
 let cookieWarmPromise = null;
+let warmFailedAt = 0;
+const WARM_FAILURE_COOLDOWN_MS = 5 * 60 * 1000; // don't retry Playwright more than once per 5 min
 
 // In-flight enrichment coalescing: celex -> Promise<void>
 const enrichInFlight = new Map();
@@ -161,6 +163,7 @@ function invalidateCookies(cacheDir) {
 
 async function warmEurlexCookies({ cacheDir } = {}) {
   if (cookieWarmPromise) return cookieWarmPromise;
+  if (warmFailedAt && Date.now() - warmFailedAt < WARM_FAILURE_COOLDOWN_MS) return;
 
   cookieWarmPromise = (async () => {
     try {
@@ -185,10 +188,12 @@ async function warmEurlexCookies({ cacheDir } = {}) {
 
       warmCookieHeader = cookieStr;
       warmUserAgent = ua;
+      warmFailedAt = 0;
       saveCookiesToDisk(cacheDir, cookieStr, ua);
       console.log(`[case-law] EUR-Lex session cookies warmed (${cookies.length} cookies)`);
     } catch (err) {
-      console.warn(`[case-law] Cookie warming failed: ${err.message}`);
+      warmFailedAt = Date.now();
+      console.warn(`[case-law] Cookie warming failed: ${err.message} (cooling down ${WARM_FAILURE_COOLDOWN_MS / 1000}s)`);
     }
   })();
 
