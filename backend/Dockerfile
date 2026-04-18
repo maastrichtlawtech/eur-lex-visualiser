@@ -31,9 +31,19 @@ COPY package.json package-lock.json* ./
 RUN npm ci --omit=dev
 
 # Install Playwright Chromium browser binaries.
+# IMPORTANT: pin the npx version to match the installed playwright-core in
+# package.json. Bare `npx playwright install` does NOT find the local
+# playwright-core package (only the full `playwright` package registers the
+# `playwright` bin), so npx silently downloads the LATEST playwright from
+# the registry and installs browser binaries for that version. At runtime,
+# playwright-core@1.58.x looks for browser revision 1208 and crashes when
+# only the newer revision is on disk.
+#
 # In Playwright 1.49+, headless: true defaults to the chromium-headless-shell
-# variant (smaller, faster), which must be installed separately from full chromium.
-RUN npx playwright install chromium chromium-headless-shell
+# variant (smaller, faster), which must be installed alongside full chromium.
+RUN PW_VERSION=$(node -p "require('playwright-core/package.json').version") \
+    && echo "Installing Playwright browsers for version $PW_VERSION" \
+    && npx -y playwright@$PW_VERSION install chromium chromium-headless-shell
 
 # Show what actually landed in the browser cache so future build logs reveal
 # any path/variant changes without failing the build.
