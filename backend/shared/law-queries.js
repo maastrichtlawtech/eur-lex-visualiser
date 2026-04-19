@@ -351,6 +351,9 @@ function extractOperativePart(document) {
     // Try older Curia format (C41DispositifIntroduction + C08Dispositif)
     const oldFormat = extractOperativePartOldFormat(body);
     if (oldFormat.declarations.length > 0) return oldFormat;
+    // Try pre-2004 OJ format (<dt>N.</dt> after "hereby rules")
+    const legacy = extractOperativePartLegacyOj(document);
+    if (legacy.declarations.length > 0) return legacy;
     return extractOperativePartFromText(body.textContent || '');
   }
 
@@ -401,9 +404,69 @@ function extractOperativePart(document) {
   if (declarations.length === 0) {
     const oldFormat = extractOperativePartOldFormat(body);
     if (oldFormat.declarations.length > 0) return oldFormat;
+    const legacy = extractOperativePartLegacyOj(document);
+    if (legacy.declarations.length > 0) return legacy;
     return extractOperativePartFromText(body.textContent || '');
   }
 
+  return { declarations };
+}
+
+/**
+ * Extract operative part from pre-2004 OJ HTML format, e.g. 62001CJ0101.
+ * Structure:
+ *   <p>On those grounds, ... hereby rules:</p>
+ *   <b>
+ *     <dt>1.</dt><dd></dd> declaration text
+ *     <dt>2.</dt><dd></dd> ...
+ *   </b>
+ *   <table> signatures </table>
+ */
+function extractOperativePartLegacyOj(document) {
+  const body = document.body;
+  if (!body) return { declarations: [] };
+  const win = document.defaultView;
+  if (!win) return { declarations: [] };
+
+  const dts = [...body.querySelectorAll('dt')].filter((dt) => /^\d+\.?$/.test(cleanText(dt.textContent)));
+  if (dts.length === 0) return { declarations: [] };
+
+  const walker = document.createTreeWalker(body, win.NodeFilter.SHOW_TEXT);
+  let markerNode = null;
+  let n;
+  while ((n = walker.nextNode())) {
+    if (/hereby\s+(rules|declares|orders)/i.test(n.textContent)) { markerNode = n; break; }
+  }
+  if (!markerNode) return { declarations: [] };
+
+  const FOLLOWING = win.Node.DOCUMENT_POSITION_FOLLOWING;
+  const past = dts.filter((dt) => markerNode.compareDocumentPosition(dt) & FOLLOWING);
+  if (past.length === 0) return { declarations: [] };
+
+  function nextInDocOrder(node) {
+    if (node.firstChild) return node.firstChild;
+    while (node) {
+      if (node.nextSibling) return node.nextSibling;
+      node = node.parentNode;
+    }
+    return null;
+  }
+
+  const declarations = [];
+  for (let i = 0; i < past.length; i++) {
+    const dt = past[i];
+    const num = parseInt(cleanText(dt.textContent).match(/^(\d+)/)[1], 10);
+    const nextDt = past[i + 1];
+    let text = '';
+    let cur = dt;
+    while ((cur = nextInDocOrder(cur))) {
+      if (nextDt && cur === nextDt) break;
+      if (cur.nodeType === 1 && cur.tagName === 'TABLE') break;
+      if (cur.nodeType === 3) text += cur.textContent;
+    }
+    text = cleanText(text).replace(/^\d+\.\s*/, '');
+    if (text) declarations.push({ number: num, text });
+  }
   return { declarations };
 }
 
@@ -612,6 +675,19 @@ async function fetchCaseDetails(caseCelex, { cacheDir, stats } = {}) {
           const bMatches = [...pMatch[1].matchAll(/<b>([\s\S]*?)<\/b>/gi)];
           for (const b of bMatches) boldMatches.push(b);
           if (boldMatches.length >= 2) break;
+        }
+      }
+      if (boldMatches.length === 0) {
+        // Pre-2004 OJ format: <font class="oj-font*"><b>Name</b></font>
+        // First hit is usually "Case C-XX/YY"; prefer the first non-case-number hit.
+        const legacyPattern = /<font[^>]+class="[^"]*oj-font[^"]*"[^>]*>\s*<b>([\s\S]*?)<\/b>\s*<\/font>/gi;
+        for (const m of html.matchAll(legacyPattern)) {
+          const spaced = m[1].replace(/<br\s*\/?>/gi, ' ');
+          const plain = cleanBold(spaced);
+          if (plain && !/^Case\s+[CT]-\d/i.test(plain)) {
+            boldMatches.push([m[0], spaced]);
+            break;
+          }
         }
       }
 
