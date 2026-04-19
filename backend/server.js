@@ -5,7 +5,7 @@ const path = require('path');
 const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('./search/search-index');
 const { registerApiRoutes } = require('./routes/api-routes');
 const { createFmxService } = require('./shared/fmx-service');
-const { fetchEurlexHtmlLaw, parseEurlexHtmlToCombined } = require('./shared/eurlex-html-parser');
+const { fetchEurlexHtmlLaw, parseEurlexHtmlToCombined, closeSharedPlaywrightBrowser } = require('./shared/eurlex-html-parser');
 const { createHtmlCacheService } = require('./shared/html-cache-service');
 const { createRateLimitMiddleware } = require('./shared/rate-limit');
 const {
@@ -196,11 +196,36 @@ registerApiRoutes(app, {
   validateLang
 });
 
-process.on('SIGTERM', () => analytics.shutdown());
-
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`EUR-Lex FMX API running on port ${PORT}`);
   console.log(`Cache directory: ${CACHE_DIR} (FMX: ${STORAGE_LIMIT_MB} MB, HTML: ${HTML_CACHE_LIMIT_MB} MB)`);
   console.log(`Rate limit: ${RATE_LIMIT_MAX} req/15min per IP`);
   console.log(`Search cache: ${legalCacheStore.getStatus().ready ? 'loaded' : 'not loaded'} (${legalCacheStore.cachePath})`);
 });
+
+let shuttingDown = false;
+async function gracefulShutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`[shutdown] Received ${signal}, closing gracefully...`);
+
+  const forceExit = setTimeout(() => {
+    console.error('[shutdown] Grace period exceeded, forcing exit');
+    process.exit(1);
+  }, 10_000).unref();
+
+  try {
+    await new Promise((resolve) => server.close(resolve));
+    analytics.shutdown();
+    await closeSharedPlaywrightBrowser();
+    console.log('[shutdown] Clean exit');
+    clearTimeout(forceExit);
+    process.exit(0);
+  } catch (err) {
+    console.error('[shutdown] Error during shutdown:', err);
+    process.exit(1);
+  }
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
