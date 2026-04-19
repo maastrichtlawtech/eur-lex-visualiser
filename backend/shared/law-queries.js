@@ -348,6 +348,9 @@ function extractOperativePart(document) {
   }
 
   if (operativeStartIdx === -1) {
+    // Try older Curia format (C41DispositifIntroduction + C08Dispositif)
+    const oldFormat = extractOperativePartOldFormat(body);
+    if (oldFormat.declarations.length > 0) return oldFormat;
     return extractOperativePartFromText(body.textContent || '');
   }
 
@@ -396,7 +399,36 @@ function extractOperativePart(document) {
   }
 
   if (declarations.length === 0) {
+    const oldFormat = extractOperativePartOldFormat(body);
+    if (oldFormat.declarations.length > 0) return oldFormat;
     return extractOperativePartFromText(body.textContent || '');
+  }
+
+  return { declarations };
+}
+
+/**
+ * Extract operative part from older Curia HTML format (pre-2013-ish cases).
+ * Structure:
+ *   <P class="C41DispositifIntroduction">On those grounds, the Court ... hereby rules:</P>
+ *   <P class="C08Dispositif">1.&nbsp;...</P>
+ *   <P class="C08Dispositif">2.&nbsp;...</P>
+ * Some very old cases use a single C08Dispositif without numbering.
+ */
+function extractOperativePartOldFormat(body) {
+  const dispositifPs = body.querySelectorAll('p[class^="C08Dispositif"], p[class^="C09Dispositif"]');
+  if (dispositifPs.length === 0) return { declarations: [] };
+
+  const declarations = [];
+  for (const p of dispositifPs) {
+    const text = cleanText(p.textContent || '');
+    if (!text) continue;
+    const numMatch = text.match(/^(\d+)\.\s*(.+)$/s);
+    if (numMatch) {
+      declarations.push({ number: parseInt(numMatch[1], 10), text: cleanText(numMatch[2]) });
+    } else {
+      declarations.push({ number: declarations.length + 1, text });
+    }
   }
 
   return { declarations };
@@ -562,15 +594,29 @@ async function fetchCaseDetails(caseCelex, { cacheDir, stats } = {}) {
       const operative = extractOperativePart(doc);
       const articlesCited = extractArticleCitations(doc);
 
-      // Also extract party name from the full HTML (more reliable than Range request)
-      const boldPattern = /<span class="(?:coj-)?bold">([^<]+)<\/span>/g;
-      const boldMatches = [...html.matchAll(boldPattern)];
+      // Also extract party name from the full HTML (more reliable than Range request).
+      // Modern format: <span class="coj-bold">Name</span>
+      // Older Curia format: <P class="C02AlineaAltA"><B>Name</B></P>
+      const cleanBold = (raw) => raw
+        .replace(/<[^>]+>/g, '')
+        .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/[,;]+$/, '').trim();
+
+      const modernPattern = /<span class="(?:coj-)?bold">([^<]+)<\/span>/g;
+      let boldMatches = [...html.matchAll(modernPattern)];
+      if (boldMatches.length === 0) {
+        const oldPattern = /<p\s+class="C02AlineaAlt[^"]*"[^>]*>([\s\S]*?)<\/p>/gi;
+        for (const pMatch of html.matchAll(oldPattern)) {
+          const bMatches = [...pMatch[1].matchAll(/<b>([\s\S]*?)<\/b>/gi)];
+          for (const b of bMatches) boldMatches.push(b);
+          if (boldMatches.length >= 2) break;
+        }
+      }
+
       let name = null;
       if (boldMatches.length > 0) {
-        const cleanBold = (raw) => raw
-          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'")
-          .replace(/[,;]+$/, '').trim();
         const first = cleanBold(boldMatches[0][1]);
         if (first && boldMatches.length >= 2) {
           const second = cleanBold(boldMatches[1][1]);
