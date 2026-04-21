@@ -18,6 +18,7 @@ import { TopBar } from "./TopBar.jsx";
 import { PrintModal } from "./PrintModal.jsx";
 import { SEO } from "./SEO.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
+import { RelatedCaseLaw } from "./RelatedCaseLaw.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { useLandingLibrary } from "../hooks/useLandingLibrary.js";
@@ -341,6 +342,11 @@ export function LawViewer() {
                   recitals={recitalMap.get(selection.selected.id) || []}
                   allRecitals={primaryDocument.data.recitals}
                   onSelectRecital={selection.onClickRecital}
+                />
+                <RelatedCaseLaw
+                  celex={source.effectiveCelex}
+                  articleNumber={selection.selected.id}
+                  currentLang={displayedFormexLang}
                 />
               </>
             ) : null}
