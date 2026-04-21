@@ -128,11 +128,14 @@ eurlex resolve-url "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
   "annexes": [],
   "crossReferences": {
     "1": [
-      { "type": "article", "target": "2", "raw": "Article 2" }
+      { "type": "article", "target": "2", "raw": "Article 2" },
+      { "type": "external", "raw": "Directive 95/46/EC", "celex": "31995L0046" }
     ]
   }
 }
 ```
+
+Cross-references now include external-act forms (both post-2004 `Regulation (EU) 2016/679` and pre-2004 `Directive 95/46/EC` styles) with their resolved CELEX when available, so the viewer can link across acts.
 
 ### Global CLI options
 
@@ -159,18 +162,60 @@ cat input.xml | parse-fmx > output.json
 |--------|------|-------------|
 | `GET` | `/health` | Health check |
 | `GET` | `/api/laws` | List cached FMX files |
-| `GET` | `/api/laws/:celex?lang=ENG` | Download raw Formex XML by CELEX |
+| `GET` | `/api/laws/:celex?lang=ENG` | Download raw Formex XML by CELEX (falls back to EUR-Lex HTML when FMX isn't available) |
 | `GET` | `/api/laws/:celex/parsed?lang=ENG` | **Parsed law as structured JSON** |
 | `GET` | `/api/laws/:celex/info?lang=ENG` | Law type and format metadata |
 | `GET` | `/api/laws/:celex/metadata` | SPARQL metadata (entry into force, ELI, etc.) |
 | `GET` | `/api/laws/:celex/amendments` | Amendment and corrigendum history |
 | `GET` | `/api/laws/:celex/implementing` | Implementing and delegated acts |
+| `GET` | `/api/laws/:celex/case-law?lang=ENG` | CJEU judgments citing this act, with operative parts and structured `articleRefs` |
+| `GET` | `/api/laws/:celex/recital-map?lang=ENG` | Embedding-based recital→article relevance map (requires `OPENROUTER_API_KEY`) |
+| `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Runs a two-stage planner → answerer pipeline and returns a grounded markdown answer with bundle + token usage (requires `OPENROUTER_API_KEY`) |
 | `GET` | `/api/laws/by-reference?actType=...&year=...&number=...` | Fetch law by official reference |
 | `GET` | `/api/search?q=keyword&limit=10` | Search law metadata |
 | `GET` | `/api/resolve-reference?actType=...&year=...&number=...` | Resolve legal reference to CELEX |
 | `GET` | `/api/resolve-url?url=...` | Resolve EUR-Lex URL to CELEX |
 
 `/api/search` searches a local metadata cache of primary regulations/directives/decisions.
+
+### Case-law endpoint
+
+`/api/laws/:celex/case-law` returns every CJEU judgment that cites the act, parsed into:
+
+```json
+{
+  "celex": "62012CJ0131",
+  "ecli": "ECLI:EU:C:2014:317",
+  "caseNumber": "C-131/12",
+  "date": "2014-05-13",
+  "name": "Google Spain",
+  "declarations": [
+    { "number": 1, "text": "Article 2(b) of Directive 95/46/EC …" }
+  ],
+  "articleRefs": [
+    { "raw": "Article 7(f)", "act": "Directive 95/46", "actCelex": "31995L0046",
+      "article": "7", "paragraph": "f", "point": null }
+  ]
+}
+```
+
+The parser handles post-2004 EUR-Lex Formex, pre-2004 OJ HTML, and older Curia HTML shapes.
+
+### Q&A endpoint
+
+`POST /api/laws/:celex/ask` body: `{ "question": "..." }`. Returns:
+
+```json
+{
+  "answer": "markdown text with [Art. 5(1)(a)] citations …",
+  "model": "openai/gpt-oss-120b",
+  "plan": { "articles": ["15","17","21"], "rationale": "…", "model": "…" },
+  "bundle": { "meta": { "…": "…" }, "counts": { "articles": 3, "definitions": 8, "recitals": 11, "caseLaw": 14 } },
+  "usage": { "planner": { "…": "…" }, "answer": { "…": "…" } }
+}
+```
+
+Requires `OPENROUTER_API_KEY`. Model selectable via `ARTICLE_QA_MODEL` (default `openai/gpt-oss-120b`). Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then asks the model to answer with self-contained citations.
 
 ## Using from Python (and other languages)
 
@@ -341,11 +386,20 @@ backend/
 │  └─ search-route.test.js
 └─ shared/
    ├─ api-utils.js
-   ├─ fmx-parser-node.js  # Node.js wrapper for browser-side Formex parser
+   ├─ fmx-parser-node.js        # Node.js wrapper for browser-side Formex parser
    ├─ fmx-service.js
-   ├─ law-queries.js       # Shared SPARQL queries (metadata, amendments, implementing)
+   ├─ law-queries.js             # Shared SPARQL queries (metadata, amendments, implementing, case-law)
+   ├─ case-law-parser.js         # Parses CJEU judgments (FMX + pre-2004 OJ HTML + Curia HTML)
+   ├─ article-bundle.js          # Assembles law bundles for grounded Q&A
+   ├─ article-qa-service.js      # Planner + answerer prompts, legal-reasoning primer
+   ├─ openrouter-chat.js         # OpenRouter chat-completions wrapper
+   ├─ openrouter-embeddings.js   # OpenRouter embeddings wrapper
+   ├─ recital-map-service.js     # Hybrid TF-IDF + embedding recital→article matching
+   ├─ embedding-cache-service.js # On-disk cache for recital maps
+   ├─ scoring.js                 # Relevance scoring helpers
+   ├─ tokenize.js                # Tokeniser shared between TF-IDF and embeddings
    ├─ rate-limit.js
-   ├─ reference-utils.js
+   ├─ reference-utils.js         # Parses legal references (incl. pre-2004 forms)
    └─ reference-utils.test.js
 ```
 
@@ -387,11 +441,23 @@ Current test coverage includes:
 | Variable | Description |
 |----------|-------------|
 | `PORT` | Port for the API server. |
-| `FMX_DIR` | Directory for cached FMX/XML/ZIP downloads. Defaults to `backend/fmx-downloads`. |
-| `RATE_LIMIT_MAX` | Per-IP request cap for the 15-minute window. |
+| `CACHE_DIR` | Directory for cached FMX/XML/ZIP downloads and derived artefacts. Defaults to `backend/law-cache`. |
 | `STORAGE_LIMIT_MB` | Max size of the FMX download cache before eviction starts. Default `500`. |
+| `HTML_CACHE_LIMIT_MB` | Max size of the legacy-HTML fallback cache. Default `200`. |
+| `RATE_LIMIT_MAX` | Per-IP request cap for the 15-minute window. |
 | `TIMEOUT_MS` | HTTP request timeout in ms. Default `30000`. |
 | `SEARCH_CACHE_PATH` | Optional override for the search cache JSON path. |
+| `ANALYTICS_TOKEN` | Optional Plausible/analytics token for the `/api/_stats` endpoint. |
+| `OPENROUTER_API_KEY` | Required for `/api/laws/:celex/ask` and `/api/laws/:celex/recital-map`. |
+| `OPENROUTER_BASE_URL` | Override (default `https://openrouter.ai/api/v1`). |
+| `ARTICLE_QA_MODEL` | Chat model for Q&A. Default `openai/gpt-oss-120b`. |
+| `RECITAL_EMBEDDING_MODEL` | Embedding model for the recital map. Default `openai/text-embedding-3-large`. |
+| `RECITAL_MAP_CACHE_MB` | Size cap for the recital-map cache. Default `100`. |
+| `RECITAL_MAP_ALPHA` | TF-IDF vs embedding blend (0–1). |
+| `RECITAL_MAP_THRESHOLD` | Minimum score for a recital→article match. |
+| `RECITAL_MAP_MAX_SCORE_GAP` | Drop matches whose score falls more than this below the top match. |
+| `EURLEX_COOKIE_MAX_AGE_MS` | How long to reuse an EUR-Lex session cookie. |
+| `PLAYWRIGHT_HEADLESS` / `PLAYWRIGHT_BROWSERS_PATH` / `PLAYWRIGHT_MODULE_PATH` / `LEGALVIZ_PLAYWRIGHT_MODULE_PATH` | Playwright configuration for fetching laws that require rendering. |
 
 ## Notes
 
