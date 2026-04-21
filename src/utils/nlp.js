@@ -187,25 +187,26 @@ export function mapRecitalsToArticles(recitals, articles) {
       .map(([term]) => term);
 
     let bestScore = 0;
-    let bestRawCos = 0;
+    // Gate on raw evidence; choose the article with the monotonicity-weighted score.
+    let strongestRawCos = 0;
     let bestArticleId = null;
     const rPos = recitalIndex / recitalDenominator;
 
     articleVectors.forEach((aVec, articleIndex) => {
       const rawCos = cosineSimilarity(recitalVec, aVec);
+      strongestRawCos = Math.max(strongestRawCos, rawCos);
       const aPos = articleIndex / articleDenominator;
       const positionalPrior = (1 - MONOTONICITY_BETA * Math.abs(rPos - aPos)) ** MONOTONICITY_GAMMA;
       const score = rawCos * positionalPrior;
 
       if (score > bestScore) {
         bestScore = score;
-        bestRawCos = rawCos;
         bestArticleId = aVec.id;
       }
     });
 
     // Apply threshold and assign
-    if (bestRawCos >= RAW_SIMILARITY_FLOOR && bestArticleId) {
+    if (strongestRawCos >= RAW_SIMILARITY_FLOOR && bestArticleId) {
       const list = articleToRecitals.get(bestArticleId);
       if (list) {
         // Store with score and keywords for later processing
