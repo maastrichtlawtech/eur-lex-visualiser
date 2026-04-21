@@ -221,12 +221,12 @@ event: delta
 data: {"text":"must…"}
 
 event: done
-data: {"model":"openai/gpt-oss-120b","usage":{…}}
+data: {"model":"google/gemini-2.5-flash","usage":{…}}
 ```
 
 On failure (incl. 402 insufficient credits, 429 rate-limit, or 401/403 auth errors) an `error` event is emitted instead of `done`, with a user-safe message and a stable `code` (`ai_service_unavailable`, `ai_rate_limited`, `ai_auth_failed`, `planner_empty`, `internal_error`). The upstream raw message is in `detail` for debugging.
 
-Requires `OPENROUTER_API_KEY`. Model selectable via `ARTICLE_QA_MODEL` (default `openai/gpt-oss-120b`). Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then streams the answer back with self-contained citations.
+Requires `OPENROUTER_API_KEY`. Models are selectable via `ARTICLE_QA_PLANNER_MODEL` (default `google/gemini-2.5-flash-lite`) and `ARTICLE_QA_ANSWER_MODEL` (default `google/gemini-2.5-flash`). `ARTICLE_QA_MODEL` remains available as a single override for both stages. Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then streams the answer back with self-contained citations.
 
 ## Using from Python (and other languages)
 
@@ -454,9 +454,12 @@ Current test coverage includes:
 | `TIMEOUT_MS` | HTTP request timeout in ms. Default `30000`. |
 | `SEARCH_CACHE_PATH` | Optional override for the search cache JSON path. |
 | `ANALYTICS_TOKEN` | Optional Plausible/analytics token for the `/api/_stats` endpoint. |
-| `OPENROUTER_API_KEY` | Required for `/api/laws/:celex/ask`. |
+| `OPENROUTER_API_KEY` | Required for `/api/laws/:celex/ask` and AI-generated recital titles. |
 | `OPENROUTER_BASE_URL` | Override (default `https://openrouter.ai/api/v1`). |
-| `ARTICLE_QA_MODEL` | Chat model for Q&A. Default `openai/gpt-oss-120b`. |
+| `ARTICLE_QA_MODEL` | Optional single chat model override for both Q&A stages. |
+| `ARTICLE_QA_PLANNER_MODEL` | Planner model for article selection. Default `google/gemini-2.5-flash-lite`. |
+| `ARTICLE_QA_ANSWER_MODEL` | Answer model for legal analysis. Default `google/gemini-2.5-flash`. |
+| `RECITAL_TITLE_MODEL` | Model for cached AI-generated recital titles. Default `google/gemini-2.5-flash-lite`. |
 | `EURLEX_COOKIE_MAX_AGE_MS` | How long to reuse an EUR-Lex session cookie. |
 | `PLAYWRIGHT_HEADLESS` / `PLAYWRIGHT_BROWSERS_PATH` / `PLAYWRIGHT_MODULE_PATH` / `LEGALVIZ_PLAYWRIGHT_MODULE_PATH` | Playwright configuration for fetching laws that require rendering. |
 

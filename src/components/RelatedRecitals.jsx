@@ -64,33 +64,21 @@ export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
                 className="group relative flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-5 transition hover:border-blue-300 hover:shadow-md cursor-pointer dark:bg-gray-800 dark:border-gray-700 dark:hover:border-blue-500 dark:hover:shadow-blue-900/20"
                 onClick={() => onSelectRecital(fullRecital)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-serif font-bold text-gray-900 dark:text-gray-100">
-                      {t("common.recital")} {r.recital_number}
-                    </span>
-                    {r.relevanceScore && (
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getScoreColor(r.relevanceScore)}`}>
-                        {t("relatedRecitals.match", { score: formatScore(r.relevanceScore) })}
-                      </span>
-                    )}
-                  </div>
-                  <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs text-blue-600 font-medium dark:text-blue-400">
-                    {t("relatedRecitals.read")}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1.5">
+                  <span className="font-serif font-bold text-gray-900 dark:text-gray-100">
+                    {t("common.recital")} {r.recital_number}
                   </span>
+                  {r.relevanceScore ? (
+                    <span className={`justify-self-end text-xs px-2 py-0.5 rounded-full font-medium ${getScoreColor(r.relevanceScore)}`}>
+                      {t("relatedRecitals.match", { score: formatScore(r.relevanceScore) })}
+                    </span>
+                  ) : null}
+                  {fullRecital.recital_title ? (
+                    <div className="col-span-2 line-clamp-2 text-sm font-semibold leading-5 text-gray-700 dark:text-gray-200">
+                      {fullRecital.recital_title}
+                    </div>
+                  ) : null}
                 </div>
-                {r.keywords && r.keywords.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {r.keywords.map((keyword, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-medium dark:bg-purple-900/30 dark:text-purple-300"
-                      >
-                        {keyword}
-                      </span>
-                    ))}
-                  </div>
-                )}
                 <div
                   className="text-sm text-gray-600 line-clamp-3 font-serif dark:text-gray-300"
                   dangerouslySetInnerHTML={{ __html: recitalHtml }}
@@ -162,6 +150,11 @@ export function GeneralRecitals({ recitalNumbers, allRecitals, onSelectRecital }
             >
               <span className="block font-serif font-bold text-gray-900 dark:text-gray-100">
                 {t("common.recital")} {recital.recital_number}
+                {recital.recital_title ? (
+                  <span className="font-sans text-sm font-medium text-gray-600 dark:text-gray-300">
+                    {" "}— {recital.recital_title}
+                  </span>
+                ) : null}
               </span>
               <span
                 className="mt-1 block line-clamp-2 font-serif text-sm text-gray-600 dark:text-gray-300"

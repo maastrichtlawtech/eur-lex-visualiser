@@ -576,6 +576,18 @@ export async function fetchCaseLaw(celex) {
   return res.json();
 }
 
+export async function fetchRecitalTitles(celex, lang = "EN", { signal } = {}) {
+  const apiLang = toApiLang(lang);
+  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/recital-titles?lang=${apiLang}`;
+  const res = await fetch(url, { signal });
+
+  if (!res.ok) {
+    await readApiError(res, `Recital title fetch failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
 /**
  * Streams a whole-law Q&A response via SSE. Dispatches named events through
  * the `handlers` object as they arrive:

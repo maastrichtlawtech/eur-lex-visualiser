@@ -7,8 +7,11 @@ const { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw } = requ
 const { buildLawBundle } = require("../shared/article-bundle");
 const { planArticles, streamLawAnswer } = require("../shared/article-qa-service");
 const { ChatProviderError } = require("../shared/openrouter-chat");
+const { ensureRecitalTitles } = require("../shared/recital-title-service");
 
-const DEFAULT_QA_MODEL = process.env.ARTICLE_QA_MODEL || 'openai/gpt-oss-120b';
+const DEFAULT_QA_PLANNER_MODEL = process.env.ARTICLE_QA_PLANNER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash-lite';
+const DEFAULT_QA_ANSWER_MODEL = process.env.ARTICLE_QA_ANSWER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash';
+const DEFAULT_RECITAL_TITLE_MODEL = process.env.RECITAL_TITLE_MODEL || process.env.ARTICLE_QA_PLANNER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash-lite';
 const MAX_QUESTION_CHARS = 800;
 
 /**
@@ -357,6 +360,50 @@ function registerApiRoutes(app, deps) {
     }
   });
 
+  app.get('/api/laws/:celex/recital-titles', rateLimitMiddleware, async (req, res) => {
+    try {
+      const { celex } = req.params;
+      const rawLang = req.query.lang || 'ENG';
+
+      if (!validateCelex(celex)) {
+        return res.status(400).json({ error: 'Invalid CELEX format' });
+      }
+      const lang = validateLang(rawLang);
+      if (!lang) {
+        return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+      }
+
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
+      }
+
+      const parsed = await resolveParsedLaw(celex, lang, { skipFmxProbe: req.query.skipFmxProbe === '1' });
+      const result = await ensureRecitalTitles({
+        celex,
+        lang,
+        recitals: parsed.recitals || [],
+        cacheDir: FMX_DIR,
+        apiKey,
+        model: DEFAULT_RECITAL_TITLE_MODEL,
+      });
+
+      res.json({
+        celex,
+        lang,
+        model: result.model,
+        cached: result.cached,
+        titles: result.titles,
+      });
+    } catch (err) {
+      if (err instanceof ChatProviderError) {
+        const mapped = mapChatError(err);
+        return res.status(mapped.status).json({ code: mapped.code, message: mapped.message, detail: mapped.detail });
+      }
+      safeErrorResponse(res, err, 'Failed to generate recital titles');
+    }
+  });
+
   app.post('/api/laws/:celex/ask', rateLimitMiddleware, async (req, res) => {
     // Validate up-front so we can still return a JSON error pre-stream.
     const { celex } = req.params;
@@ -408,7 +455,7 @@ function registerApiRoutes(app, deps) {
       const parsed = await resolveParsedLaw(celex, lang);
 
       send('stage', { stage: 'planning' });
-      const plan = await planArticles({ parsedLaw: parsed, question, apiKey, model: DEFAULT_QA_MODEL });
+      const plan = await planArticles({ parsedLaw: parsed, question, apiKey, model: DEFAULT_QA_PLANNER_MODEL });
       if (plan.articles.length === 0) {
         send('error', {
           code: 'planner_empty',
@@ -450,9 +497,9 @@ function registerApiRoutes(app, deps) {
       });
 
       send('stage', { stage: 'answering' });
-      const stream = streamLawAnswer({ bundle, question, apiKey, model: DEFAULT_QA_MODEL, signal: abort.signal });
+      const stream = streamLawAnswer({ bundle, question, apiKey, model: DEFAULT_QA_ANSWER_MODEL, signal: abort.signal });
       let answerUsage = null;
-      let answerModel = DEFAULT_QA_MODEL;
+      let answerModel = DEFAULT_QA_ANSWER_MODEL;
       for await (const chunk of stream) {
         if (chunk.type === 'delta' && chunk.text) {
           send('delta', { text: chunk.text });
@@ -550,6 +597,7 @@ function registerApiRoutes(app, deps) {
         'GET /api/laws/:celex/info': 'Get metadata only',
         'GET /api/laws/by-reference?actType=directive&year=2018&number=1972&lang=ENG': 'Resolve an official reference and fetch the matching FMX',
         'GET /api/laws/:celex/case-law': 'List CJEU judgments that interpret this law',
+        'GET /api/laws/:celex/recital-titles?lang=ENG': 'Get cached AI-generated short titles for recitals',
         'POST /api/laws/:celex/articles/:n/ask': 'Answer a question about one article, grounded in the law and CJEU case law (body: { question })',
         'POST /api/laws/:celex/ask': 'Whole-law Q&A: planner picks relevant articles, then answers grounded in them + their recitals + case law (body: { question })',
         'GET /api/search?q=keyword&limit=10': 'Search cached primary-law metadata',

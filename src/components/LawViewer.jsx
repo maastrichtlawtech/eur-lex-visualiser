@@ -19,7 +19,6 @@ import { PrintModal } from "./PrintModal.jsx";
 import { SEO } from "./SEO.jsx";
 import { GeneralRecitals, RelatedRecitals } from "./RelatedRecitals.jsx";
 import { RelatedCaseLaw } from "./RelatedCaseLaw.jsx";
-import { LawAskPanel } from "./LawAskPanel.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { useLandingLibrary } from "../hooks/useLandingLibrary.js";
@@ -115,9 +114,14 @@ export function LawViewer() {
     currentLaw: source.currentLaw,
     formexLang: preferences.formexLang,
   });
+  const primarySelectedEntry = useMemo(
+    () => getSelectedEntry(primaryDocument.data, selection.selected),
+    [primaryDocument.data, selection.selected]
+  );
   const processedHtml = useProcessedLawHtml({
     data: primaryDocument.data,
     selected: selection.selected,
+    selectedEntry: primarySelectedEntry,
   });
   const showArticleNavigationHint = shouldShowArticleNavigationHint({
     selected: selection.selected,
@@ -246,14 +250,6 @@ export function LawViewer() {
 
         <main className="mx-auto flex w-full max-w-[1600px] flex-col justify-center gap-4 px-4 py-4 md:flex-row md:gap-6 md:px-6 md:py-6">
           <div className="order-2 w-full min-w-0 max-w-4xl md:order-1 transition-all duration-300">
-            {derived.hasCelex && primaryDocument.data ? (
-              <LawAskPanel
-                celex={source.effectiveCelex}
-                lawTitle={primaryDocument.data.title || primaryDocument.data.doc_title}
-                lang={displayedFormexLang}
-                onArticleClick={(n) => interactions.onCrossRefArticle?.(n)}
-              />
-            ) : null}
             <section className="min-h-[50vh] rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-12">
               {derived.activeLoading ? (
                 <LawViewerLoadingState message={derived.loadingMessage} t={t} />
@@ -352,15 +348,15 @@ export function LawViewer() {
                   allRecitals={primaryDocument.data.recitals}
                   onSelectRecital={selection.onClickRecital}
                 />
-                <RelatedCaseLaw
-                  celex={source.effectiveCelex}
-                  articleNumber={selection.selected.id}
-                  currentLang={displayedFormexLang}
-                />
                 <GeneralRecitals
                   recitalNumbers={recitalMap.orphanRecitalNumbers || []}
                   allRecitals={primaryDocument.data.recitals}
                   onSelectRecital={selection.onClickRecital}
+                />
+                <RelatedCaseLaw
+                  celex={source.effectiveCelex}
+                  articleNumber={selection.selected.id}
+                  currentLang={displayedFormexLang}
                 />
               </>
             ) : null}
@@ -411,6 +407,8 @@ export function LawViewer() {
             isExternalReferencePending={interactions.isExternalReferencePending}
             effectiveCelex={source.effectiveCelex}
             formexLang={displayedFormexLang}
+            lawTitle={primaryDocument.data.title || primaryDocument.data.doc_title}
+            onAskArticleClick={(n) => interactions.onCrossRefArticle?.(n)}
             t={t}
           />
         </main>

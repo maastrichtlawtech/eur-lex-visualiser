@@ -1,13 +1,29 @@
 import { useMemo } from "react";
 import { injectDefinitionTooltips } from "../../utils/definitions.js";
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function useProcessedLawHtml({ data, selected, selectedEntry = null }) {
   return useMemo(() => {
-    const selectedHtml = selectedEntry
+    let selectedHtml = selectedEntry
       ? selectedEntry.article_html || selectedEntry.recital_html || selectedEntry.annex_html || ""
       : selected.html;
 
     if (!selectedHtml) return "";
+
+    const recitalTitle = selected.kind === "recital"
+      ? String(selectedEntry?.recital_title || "").trim()
+      : "";
+    if (recitalTitle && !/<p[^>]*class="[^"]*oj-sti-art[^"]*"[^>]*>/i.test(selectedHtml)) {
+      selectedHtml = `<p class="oj-sti-art">${escapeHtml(recitalTitle)}</p>${selectedHtml}`;
+    }
 
     const definitionEntry = selected.kind === "article"
       ? selectedEntry || data.articles.find((article) => article.article_number === selected.id)

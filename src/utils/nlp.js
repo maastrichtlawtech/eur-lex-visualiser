@@ -287,9 +287,9 @@ export function buildSearchIndex(data) {
       docs.push({
         type: 'recital',
         id: r.recital_number,
-        title: `Recital ${r.recital_number}`,
+        title: r.recital_title ? `Recital ${r.recital_number} - ${r.recital_title}` : `Recital ${r.recital_number}`,
         text: text,
-        tokens: tokenize(text + " Recital " + r.recital_number, langCode),
+        tokens: tokenize(text + " " + (r.recital_title || "") + " Recital " + r.recital_number, langCode),
         preview: text.substring(0, 150) + "...",
         law_label: r.law_label,
         law_key: r.law_key,

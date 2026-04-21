@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, Loader2, Send, BookOpen, ShieldAlert, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -68,8 +69,8 @@ function renderAnswer(text) {
   );
 }
 
-export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
-  const [open, setOpen] = useState(false);
+export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick, defaultOpen = false, embedded = false, onClose = null }) {
+  const [open, setOpen] = useState(defaultOpen);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [stage, setStage] = useState(null);
@@ -95,6 +96,7 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
     setLoading(false);
     setStage(null);
     setOpen(false);
+    onClose?.();
   };
 
   useEffect(() => {
@@ -102,6 +104,12 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
     setQuestion("");
     if (abortRef.current) abortRef.current.abort();
   }, [celex]);
+
+  useEffect(() => {
+    return () => {
+      if (abortRef.current) abortRef.current.abort();
+    };
+  }, []);
 
   const disabled = loading || !celex;
 
@@ -139,10 +147,7 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
 
   if (!celex) return null;
 
-  return (
-    <div className="mb-6">
-      <div className="px-6 md:px-12">
-        {!open ? (
+  const panel = !open ? (
           <button
             type="button"
             onClick={() => setOpen(true)}
@@ -153,7 +158,7 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
             <span className="rounded bg-purple-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:bg-purple-800 dark:text-purple-200">beta</span>
           </button>
         ) : (
-          <div className="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm dark:bg-gray-800 dark:border-purple-800">
+          <div className={`${embedded ? "" : "rounded-2xl border border-purple-200 bg-white p-5 shadow-sm dark:bg-gray-800 dark:border-purple-800"}`}>
             <div className="mb-3 flex items-center justify-between gap-3 text-purple-900 dark:text-purple-300">
               <div className="flex min-w-0 items-center gap-2">
                 <BookOpen size={18} className="shrink-0" />
@@ -283,8 +288,85 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
               </div>
             )}
           </div>
-        )}
+        );
+
+  if (embedded) return panel;
+
+  return (
+    <div className="mb-6">
+      <div className="px-6 md:px-12">
+        {panel}
       </div>
     </div>
+  );
+}
+
+export function LawAskModal({ isOpen, onClose, celex, lawTitle, lang = "ENG", onArticleClick }) {
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-start justify-center p-4 sm:items-center">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+      <div className="relative flex w-full max-w-3xl max-h-[85vh] flex-col overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl animate-in zoom-in-95 duration-200 dark:bg-gray-900 dark:border dark:border-gray-700">
+        <LawAskPanel
+          celex={celex}
+          lawTitle={lawTitle}
+          lang={lang}
+          onArticleClick={onArticleClick}
+          defaultOpen
+          embedded
+          onClose={onClose}
+        />
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+export function LawAskButton({ celex, lawTitle, lang = "ENG", onArticleClick }) {
+  const [modalOpen, setModalOpen] = useState(false);
+  if (!celex) return null;
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        className="flex w-full items-center justify-between rounded-xl border border-purple-200 bg-purple-50 px-3 py-2.5 text-sm font-medium text-purple-900 transition hover:border-purple-300 hover:bg-purple-100 dark:border-purple-800 dark:bg-purple-950/40 dark:text-purple-100 dark:hover:border-purple-700 dark:hover:bg-purple-950/70"
+      >
+        <span className="flex items-center gap-2">
+          <BookOpen size={16} />
+          Ask about this law
+          <span className="rounded bg-purple-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:bg-purple-800 dark:text-purple-200">beta</span>
+        </span>
+      </button>
+      <LawAskModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        celex={celex}
+        lawTitle={lawTitle}
+        lang={lang}
+        onArticleClick={onArticleClick}
+      />
+    </>
   );
 }
