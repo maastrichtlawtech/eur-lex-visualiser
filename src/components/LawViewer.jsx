@@ -19,6 +19,8 @@ import { PrintModal } from "./PrintModal.jsx";
 import { SEO } from "./SEO.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
 import { RelatedCaseLaw } from "./RelatedCaseLaw.jsx";
+import { ArticleAskPanel } from "./ArticleAskPanel.jsx";
+import { LawAskPanel } from "./LawAskPanel.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 import { useI18n } from "../i18n/useI18n.js";
 import { useLandingLibrary } from "../hooks/useLandingLibrary.js";
@@ -245,6 +247,14 @@ export function LawViewer() {
 
         <main className="mx-auto flex w-full max-w-[1600px] flex-col justify-center gap-4 px-4 py-4 md:flex-row md:gap-6 md:px-6 md:py-6">
           <div className="order-2 w-full min-w-0 max-w-4xl md:order-1 transition-all duration-300">
+            {derived.hasCelex && primaryDocument.data ? (
+              <LawAskPanel
+                celex={source.effectiveCelex}
+                lawTitle={primaryDocument.data.title || primaryDocument.data.doc_title}
+                lang={displayedFormexLang}
+                onArticleClick={(n) => interactions.onCrossRefArticle?.(n)}
+              />
+            ) : null}
             <section className="min-h-[50vh] rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:p-12">
               {derived.activeLoading ? (
                 <LawViewerLoadingState message={derived.loadingMessage} t={t} />
@@ -347,6 +357,11 @@ export function LawViewer() {
                   celex={source.effectiveCelex}
                   articleNumber={selection.selected.id}
                   currentLang={displayedFormexLang}
+                />
+                <ArticleAskPanel
+                  celex={source.effectiveCelex}
+                  articleNumber={selection.selected.id}
+                  lang={displayedFormexLang}
                 />
               </>
             ) : null}

@@ -8,8 +8,8 @@
     "parse-fmx": "./bin/parse-fmx.js"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js",
+    "start": "node --env-file-if-exists=../.env --env-file-if-exists=.env server.js",
+    "dev": "node --env-file-if-exists=../.env --env-file-if-exists=.env --watch server.js",
     "build:search-cache": "node search/search-build.js",
     "test": "node --test search/*.test.js shared/*.test.js routes/*.test.js bin/*.test.js",
     "test:search": "node --test search/*.test.js"
