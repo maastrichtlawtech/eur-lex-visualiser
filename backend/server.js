@@ -7,6 +7,9 @@ const { registerApiRoutes } = require('./routes/api-routes');
 const { createFmxService } = require('./shared/fmx-service');
 const { fetchEurlexHtmlLaw, parseEurlexHtmlToCombined, closeSharedPlaywrightBrowser } = require('./shared/eurlex-html-parser');
 const { createHtmlCacheService } = require('./shared/html-cache-service');
+const { createEmbeddingCacheService } = require('./shared/embedding-cache-service');
+const { embedBatch } = require('./shared/openrouter-embeddings');
+const { createRecitalMapService } = require('./shared/recital-map-service');
 const { createRateLimitMiddleware } = require('./shared/rate-limit');
 const {
   createReferenceResolver,
@@ -39,6 +42,13 @@ const RATE_LIMIT_MAX = parseInt(process.env.RATE_LIMIT_MAX) || 100; // requests 
 // === Storage limits (each type evicts independently within the shared dir) ===
 const STORAGE_LIMIT_MB = parseInt(process.env.STORAGE_LIMIT_MB) || 500; // FMX files
 const HTML_CACHE_LIMIT_MB = parseInt(process.env.HTML_CACHE_LIMIT_MB) || 200; // parsed HTML
+const RECITAL_MAP_CACHE_MB = parseInt(process.env.RECITAL_MAP_CACHE_MB) || 100;
+const RECITAL_MAP_THRESHOLD = process.env.RECITAL_MAP_THRESHOLD ? Number.parseFloat(process.env.RECITAL_MAP_THRESHOLD) : 0.6;
+const RECITAL_MAP_ALPHA = process.env.RECITAL_MAP_ALPHA ? Number.parseFloat(process.env.RECITAL_MAP_ALPHA) : 0.03;
+const RECITAL_MAP_MAX_SCORE_GAP = process.env.RECITAL_MAP_MAX_SCORE_GAP ? Number.parseFloat(process.env.RECITAL_MAP_MAX_SCORE_GAP) : 0.02;
+const RECITAL_EMBEDDING_MODEL = process.env.RECITAL_EMBEDDING_MODEL || 'openai/text-embedding-3-large';
+const OPENROUTER_BASE_URL = process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 
 const resolutionCache = new Map(); // key -> { expiresAt, value }
 const RESOLUTION_CACHE_MS = 24 * 60 * 60 * 1000;
@@ -70,6 +80,20 @@ const { findDownloadUrls, findFmx4Uri, prepareLawPayload, sendLawResponse } = cr
 const htmlCache = createHtmlCacheService({
   CACHE_DIR,
   STORAGE_LIMIT_MB: HTML_CACHE_LIMIT_MB,
+});
+const embeddingCache = createEmbeddingCacheService({
+  CACHE_DIR,
+  STORAGE_LIMIT_MB: RECITAL_MAP_CACHE_MB,
+});
+const recitalMapService = createRecitalMapService({
+  embeddingCache,
+  embedBatch,
+  model: RECITAL_EMBEDDING_MODEL,
+  threshold: RECITAL_MAP_THRESHOLD,
+  alpha: RECITAL_MAP_ALPHA,
+  maxScoreGapFromBest: RECITAL_MAP_MAX_SCORE_GAP,
+  baseUrl: OPENROUTER_BASE_URL,
+  apiKey: OPENROUTER_API_KEY,
 });
 
 const { resolveEurlexUrl, resolveReference, resolveReferenceViaCellar, runSparqlQuery } = createReferenceResolver({
@@ -180,6 +204,7 @@ registerApiRoutes(app, {
   findDownloadUrls,
   findFmx4Uri,
   fetchAndParseHtmlLaw: fetchAndParseHtmlLawCached,
+  recitalMapService,
   legalCacheStore,
   parseReferenceText,
   parseStructuredReference,
@@ -199,6 +224,7 @@ registerApiRoutes(app, {
 const server = app.listen(PORT, () => {
   console.log(`EUR-Lex FMX API running on port ${PORT}`);
   console.log(`Cache directory: ${CACHE_DIR} (FMX: ${STORAGE_LIMIT_MB} MB, HTML: ${HTML_CACHE_LIMIT_MB} MB)`);
+  console.log(`Recital map cache: ${RECITAL_MAP_CACHE_MB} MB (${RECITAL_EMBEDDING_MODEL})`);
   console.log(`Rate limit: ${RATE_LIMIT_MAX} req/15min per IP`);
   console.log(`Search cache: ${legalCacheStore.getStatus().ready ? 'loaded' : 'not loaded'} (${legalCacheStore.cachePath})`);
 });

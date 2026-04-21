@@ -1,5 +1,6 @@
 // NLP Algorithm Version - bump this when algorithm changes to invalidate cache
 export const NLP_VERSION = 11;
+export const RECITAL_MAP_VERSION = 4;
 
 import { getStopWords } from "./languages.js";
 
