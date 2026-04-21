@@ -18,6 +18,9 @@ function createAppRecorder() {
     get(routePath, ...handlers) {
       routes.set(routePath, handlers[handlers.length - 1]);
     },
+    post(routePath, ...handlers) {
+      routes.set(`POST ${routePath}`, handlers[handlers.length - 1]);
+    },
   };
 }
 

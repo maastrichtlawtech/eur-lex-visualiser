@@ -1,42 +1,35 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { Loader2, ChevronDown, ExternalLink, Scale } from "lucide-react";
-import { fetchLawMetadata, fetchAmendments, fetchImplementingActs, fetchCaseLaw } from "../utils/formexApi.js";
+import { fetchLawMetadata, fetchAmendments, fetchImplementingActs } from "../utils/formexApi.js";
 import { buildEurlexCelexUrl } from "../utils/url.js";
 import { Accordion } from "./Accordion.jsx";
 import { CaseLawModal } from "./CaseLawModal.jsx";
 import { useI18n } from "../i18n/useI18n.js";
+import { useCaseLaw } from "../hooks/law-viewer/useCaseLaw.js";
 
 /**
  * Prominent case law button + modal. Designed to be placed at the top of the sidebar.
  */
 export function CaseLawButton({ celex, currentLang = "EN" }) {
   const { t } = useI18n();
-  const [cases, setCases] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [loaded, setLoaded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [autoOpenOnLoad, setAutoOpenOnLoad] = useState(false);
+  const { cases, loading, loaded, trigger } = useCaseLaw(celex, { autoLoad: false });
 
-  // Reset when law changes
+  useEffect(() => { setAutoOpenOnLoad(false); }, [celex]);
+
   useEffect(() => {
-    setCases(null);
-    setLoaded(false);
-  }, [celex]);
-
-  const load = useCallback(async () => {
-    if (!celex || loaded) return;
-    setLoading(true);
-    try {
-      const result = await fetchCaseLaw(celex);
-      const list = result.cases || [];
-      setCases(list);
-      if (list.length > 0) setModalOpen(true);
-    } catch {
-      setCases([]);
-    } finally {
-      setLoading(false);
-      setLoaded(true);
+    if (loaded && autoOpenOnLoad && cases && cases.length > 0) {
+      setModalOpen(true);
+      setAutoOpenOnLoad(false);
     }
-  }, [celex, loaded]);
+  }, [loaded, autoOpenOnLoad, cases]);
+
+  const load = useCallback(() => {
+    if (!celex || loaded || loading) return;
+    setAutoOpenOnLoad(true);
+    trigger();
+  }, [celex, loaded, loading, trigger]);
 
   if (!celex) return null;
 

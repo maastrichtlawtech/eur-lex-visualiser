@@ -261,6 +261,7 @@ LIMIT 200`;
       name: cached?.name || null,
       declarations: cached?.declarations || [],
       articlesCited: cached?.articlesCited || [],
+      articleRefs: cached?.articleRefs || [],
     };
   }).filter((c) => c.celex);
 
@@ -296,16 +297,35 @@ LIMIT 200`;
 }
 
 // ---------------------------------------------------------------------------
-// Case law cache: { caseCelex: { name, declarations, articlesCited } }
+// Case law cache: { caseCelex: { name, declarations, articlesCited, articleRefs } }
 // ---------------------------------------------------------------------------
 
-const CASE_LAW_CACHE_FILE = 'case-law-cache-v3.json';
+const CASE_LAW_CACHE_FILE = 'case-law-cache-v4.json';
+const CASE_LAW_CACHE_FILE_LEGACY = 'case-law-cache-v3.json';
 
 function loadCaseLawCache(cacheDir) {
   try {
     const filePath = path.join(cacheDir, CASE_LAW_CACHE_FILE);
-    if (!fs.existsSync(filePath)) return {};
-    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (fs.existsSync(filePath)) {
+      return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    }
+    const legacyPath = path.join(cacheDir, CASE_LAW_CACHE_FILE_LEGACY);
+    if (fs.existsSync(legacyPath)) {
+      const legacy = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
+      const migrated = {};
+      for (const [k, v] of Object.entries(legacy)) {
+        migrated[k] = v && typeof v === 'object'
+          ? { ...v, articleRefs: v.articleRefs || parseCitationsToRefs(v.articlesCited) }
+          : v;
+      }
+      try {
+        fs.writeFileSync(filePath, JSON.stringify(migrated, null, 2), 'utf8');
+      } catch {
+        // best-effort; we'll re-migrate next load
+      }
+      return migrated;
+    }
+    return {};
   } catch {
     return {};
   }
@@ -573,6 +593,94 @@ function extractArticleCitations(document) {
   return citations;
 }
 
+// Map of known act shorthands/year-numbers to their CELEX.
+// Year/number acts (e.g. "95/46") are included where the CELEX is
+// unambiguous; acts with multiple instrument types sharing the same
+// year/number are left null and downstream code filters by `act` string.
+const ACT_CELEX_MAP = {
+  // Regulation (EU) 2016/679 — General Data Protection Regulation
+  'GDPR':     '32016R0679',
+  '2016/679': '32016R0679',
+  // Directive 95/46/EC — Data Protection Directive (predecessor to GDPR)
+  '95/46':    '31995L0046',
+  // Directive 2002/58/EC — ePrivacy Directive
+  '2002/58':  '32002L0058',
+  // Directive (EU) 2016/680 — Law Enforcement Directive
+  '2016/680': '32016L0680',
+  // Regulation (EU) 2022/2065 — Digital Services Act
+  '2022/2065': '32022R2065',
+  // Regulation (EU) 2022/1925 — Digital Markets Act
+  '2022/1925': '32022R1925',
+  // Regulation (EU) 2024/1689 — AI Act
+  '2024/1689': '32024R1689',
+  // Charter of Fundamental Rights of the EU (2012 consolidated)
+  'Charter':  '12012P',
+  // Treaty on the Functioning of the EU (2012 consolidated)
+  'TFEU':     '12012E',
+  // Treaty on European Union (2012 consolidated)
+  'TEU':      '12012M',
+};
+
+/**
+ * Parse an array of compact article-citation strings (the output of
+ * extractArticleCitations, e.g. "Art. 6(1)(a) GDPR", "Art. 5, 6 and 10 GDPR")
+ * into structured references suitable for per-article filtering.
+ *
+ * Returns one ref per (act, article) pair. Composite strings like
+ * "Art. 5, 6 and 10 GDPR" yield 3 refs; each ref carries its own
+ * article/paragraph/point and a back-link to the original `raw` string.
+ */
+function parseCitationsToRefs(citationStrings) {
+  const refs = [];
+  const seen = new Set();
+  for (const s of citationStrings || []) {
+    if (typeof s !== 'string') continue;
+    // "Art. <tokens> <act>" where <act> is an uppercase shorthand
+    // (GDPR, Charter, TFEU, TEU, ECHR) or a year/number (95/46, 2016/680).
+    const m = s.match(/^Art\.?\s+(.+?)\s+([A-Za-z]+|\d{2,4}\/\d+)\s*$/);
+    if (!m) continue;
+    const act = m[2];
+    const actCelex = ACT_CELEX_MAP[act] || null;
+    // Normalise "N and M" -> "N, M" then split on commas at the top level.
+    const tokens = m[1].replace(/\s+and\s+/gi, ', ').split(',');
+    for (const rawTok of tokens) {
+      const parsed = parseArticleToken(rawTok);
+      if (!parsed) continue;
+      const key = `${act}|${parsed.article}|${parsed.paragraph || ''}|${parsed.point || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      refs.push({
+        raw: s,
+        act,
+        actCelex,
+        article: parsed.article,
+        paragraph: parsed.paragraph,
+        point: parsed.point,
+      });
+    }
+  }
+  return refs;
+}
+
+/**
+ * Parse a single article token (e.g. "6", "6(1)", "6(1)(a)", "2(a)", "6a")
+ * into { article, paragraph, point }. Numeric parenthesized groups are
+ * treated as the paragraph; alphabetic groups as the point. This handles
+ * both GDPR-style "6(1)(a)" and 95/46-style "7(a)".
+ */
+function parseArticleToken(tok) {
+  const m = tok.trim().match(/^(\d+[a-z]?)((?:\([^)]+\))*)$/);
+  if (!m) return null;
+  const article = m[1];
+  let paragraph = null;
+  let point = null;
+  for (const inner of [...m[2].matchAll(/\(([^)]+)\)/g)].map((x) => x[1])) {
+    if (/^\d+[a-z]?$/.test(inner) && paragraph === null) paragraph = inner;
+    else if (/^[a-z]+$/i.test(inner) && point === null) point = inner.toLowerCase();
+  }
+  return { article, paragraph, point };
+}
+
 /**
  * Convert a full citation like "Article 6(1) of Regulation (EU) 2016/679"
  * into a compact pill label like "Art. 6(1) GDPR".
@@ -706,6 +814,7 @@ async function fetchCaseDetails(caseCelex, { cacheDir, stats } = {}) {
         name,
         declarations: operative.declarations,
         articlesCited,
+        articleRefs: parseCitationsToRefs(articlesCited),
       };
     } finally {
       clearTimeout(timeout);
@@ -736,9 +845,11 @@ async function enrichWithCaseDetails(cases, detailsCache, {
       try {
         const details = await detailsFetcher(c.celex, { cacheDir, stats });
         if (details && !isPartialEntry(details)) {
-          detailsCache[c.celex] = details;
+          const articleRefs = details.articleRefs || parseCitationsToRefs(details.articlesCited);
+          detailsCache[c.celex] = { ...details, articleRefs };
           c.declarations = details.declarations;
           c.articlesCited = details.articlesCited;
+          c.articleRefs = articleRefs;
           if (details.name && !c.name) c.name = details.name;
           stats.enriched++;
         } else {
@@ -766,4 +877,10 @@ async function enrichWithCaseDetails(cases, detailsCache, {
   );
 }
 
-module.exports = { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw };
+module.exports = {
+  fetchMetadata,
+  fetchAmendments,
+  fetchImplementing,
+  fetchCaseLaw,
+  parseCitationsToRefs,
+};
