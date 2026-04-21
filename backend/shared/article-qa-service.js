@@ -10,10 +10,13 @@ const LEGAL_REASONING_PRIMER = `EU-law reasoning principles you must apply:
 6. Lex specialis / lex posterior apply within the same rank; they do not let a later directive override a treaty or Charter right.
 7. Do not rely on national law, doctrinal commentary, or your own prior knowledge — only the bundle.`;
 
-const SYSTEM_PROMPT = `You are a legal-research assistant for EU law. You must only answer based on the provided bundle. Every factual claim must be followed by a citation using the bundle IDs in square brackets:
-  - Statute:  [Art. 5(1)(a)]
-  - Recital:  [Recital 39]
-  - Case law: [C-362/14 §1] (use the case number and, if available, the declaration number)
+const SYSTEM_PROMPT = `You are a legal-research assistant for EU law. You must only answer based on the provided bundle. Every factual claim must be followed by a citation using the bundle IDs in square brackets.
+
+Citation format — citations must be SELF-CONTAINED. Never abbreviate as [§2], [para. 3], [that article], or similar — a reader must be able to identify the exact source from the bracket alone. Allowed forms:
+  - Statute paragraph/point:  [Art. 5(1)(a)]  or  [Art. 17(2)]
+  - Recital:                  [Recital 39]
+  - Case-law operative part:  [C-362/14 §1]  (case number + declaration number; if the case has no declaration number use just [C-362/14])
+Multiple sources in one bracket are fine: [Art. 15, Recital 63]. Do NOT invent recitals, articles, or cases that are not in the bundle.
 
 ${LEGAL_REASONING_PRIMER}
 
@@ -52,83 +55,6 @@ function formatRefs(refs) {
     .join(', ');
 }
 
-function formatBundleUser(bundle, question) {
-  const parts = [];
-  parts.push(`[ARTICLE]`);
-  parts.push(`Art. ${bundle.article.number}${bundle.article.title ? ' — ' + bundle.article.title : ''}`);
-  parts.push(bundle.article.text);
-  parts.push('');
-
-  if (bundle.skeleton?.length) {
-    parts.push('[LAW SKELETON]');
-    parts.push(formatSkeleton(bundle.skeleton, bundle.article.number));
-    parts.push('');
-  }
-
-  if (bundle.definitions?.length) {
-    parts.push('[DEFINITIONS USED IN THIS ARTICLE]');
-    for (const d of bundle.definitions) {
-      const src = d.sourceArticle ? ` (Art. ${d.sourceArticle})` : '';
-      parts.push(`"${d.term}"${src}: ${d.text}`);
-    }
-    parts.push('');
-  }
-
-  if (bundle.recitals?.length) {
-    parts.push('[RELATED RECITALS (TF-IDF / embedding match)]');
-    for (const r of bundle.recitals) {
-      parts.push(`Recital ${r.number}: ${r.text}`);
-    }
-    parts.push('');
-  }
-
-  if (bundle.caseLaw?.length) {
-    parts.push('[CJEU CASE LAW (cases citing this specific article)]');
-    for (const c of bundle.caseLaw) {
-      const header = [
-        c.caseNumber || c.celex,
-        c.name ? `— ${c.name}` : null,
-        c.date ? `(${c.date})` : null,
-      ].filter(Boolean).join(' ');
-      parts.push(header);
-      if (c.ecli) parts.push(`  ECLI: ${c.ecli}`);
-      const refs = formatRefs(c.matchingRefs);
-      if (refs) parts.push(`  Matching refs: ${refs}`);
-      if (c.declarations?.length) {
-        parts.push(`  Declarations:`);
-        for (const d of c.declarations) {
-          const text = d.text.length > MAX_DECLARATION_CHARS
-            ? d.text.slice(0, MAX_DECLARATION_CHARS) + '…'
-            : d.text;
-          parts.push(`    ${d.number}. ${text}`);
-        }
-      }
-    }
-    parts.push('');
-  } else {
-    parts.push('[CJEU CASE LAW]');
-    parts.push('No CJEU judgments in the bundle cite this article directly.');
-    parts.push('');
-  }
-
-  parts.push('[QUESTION]');
-  parts.push(question);
-  return parts.join('\n');
-}
-
-async function answerArticleQuestion({ bundle, question, apiKey, model }) {
-  if (!bundle) throw new ChatProviderError('Bundle not available', { status: 404 });
-  const userPrompt = formatBundleUser(bundle, question);
-  return chatComplete({
-    model,
-    apiKey,
-    messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      { role: 'user', content: userPrompt },
-    ],
-  });
-}
-
 // --- Whole-law (two-stage) Q&A ---
 
 const PLANNER_SYSTEM_PROMPT = `You are a retrieval planner for an EU-law Q&A system. Given a question and the article index of a single EU legal act (chapter / section / article titles, plus the list of defined terms), return the article numbers whose full text is most likely needed to answer the question faithfully.
@@ -147,10 +73,8 @@ function formatPlannerUser(parsedLaw, question) {
   parts.push(`[LAW] ${parsedLaw.celex}${parsedLaw.title ? ' — ' + parsedLaw.title : ''}`);
   parts.push('');
   parts.push('[ARTICLE INDEX]');
-  // Reuse the same skeleton format used in per-article bundles
-  const { buildArticleBundle } = require('./article-bundle');
-  const probe = buildArticleBundle(parsedLaw, null, [], (parsedLaw.articles || [])[0]?.article_number);
-  if (probe?.skeleton) parts.push(formatSkeleton(probe.skeleton, null));
+  const { pickSkeleton } = require('./article-bundle');
+  parts.push(formatSkeleton(pickSkeleton(parsedLaw.articles || [], null), null));
   parts.push('');
   if (parsedLaw.definitions?.length) {
     parts.push('[DEFINED TERMS]');
@@ -296,10 +220,8 @@ async function answerLawQuestion({ bundle, question, apiKey, model }) {
 }
 
 module.exports = {
-  answerArticleQuestion,
   answerLawQuestion,
   planArticles,
-  formatBundleUser,
   formatLawBundleUser,
   SYSTEM_PROMPT,
   PLANNER_SYSTEM_PROMPT,

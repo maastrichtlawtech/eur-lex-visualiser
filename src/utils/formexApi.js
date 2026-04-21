@@ -576,21 +576,6 @@ export async function fetchCaseLaw(celex) {
   return res.json();
 }
 
-export async function askArticleQuestion(celex, articleNumber, question, { lang = "EN", signal } = {}) {
-  const apiLang = toApiLang(lang);
-  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/articles/${encodeURIComponent(articleNumber)}/ask?lang=${apiLang}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
-    signal,
-  });
-  if (!res.ok) {
-    await readApiError(res, `Article Q&A failed (${res.status})`);
-  }
-  return res.json();
-}
-
 export async function askLawQuestion(celex, question, { lang = "EN", signal } = {}) {
   const apiLang = toApiLang(lang);
   const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/ask?lang=${apiLang}`;

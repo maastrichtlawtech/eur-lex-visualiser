@@ -19,7 +19,6 @@ import { PrintModal } from "./PrintModal.jsx";
 import { SEO } from "./SEO.jsx";
 import { RelatedRecitals } from "./RelatedRecitals.jsx";
 import { RelatedCaseLaw } from "./RelatedCaseLaw.jsx";
-import { ArticleAskPanel } from "./ArticleAskPanel.jsx";
 import { LawAskPanel } from "./LawAskPanel.jsx";
 import { CrossReferences } from "./CrossReferences.jsx";
 import { useI18n } from "../i18n/useI18n.js";
@@ -357,11 +356,6 @@ export function LawViewer() {
                   celex={source.effectiveCelex}
                   articleNumber={selection.selected.id}
                   currentLang={displayedFormexLang}
-                />
-                <ArticleAskPanel
-                  celex={source.effectiveCelex}
-                  articleNumber={selection.selected.id}
-                  lang={displayedFormexLang}
                 />
               </>
             ) : null}

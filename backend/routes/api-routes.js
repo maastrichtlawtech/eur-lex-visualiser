@@ -5,8 +5,8 @@ const { createSearchHandler } = require("../search/search-route");
 const { parseFmxXml } = require("../shared/fmx-parser-node");
 const { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw } = require("../shared/law-queries");
 const { EmbeddingProviderError, MissingApiKeyError } = require("../shared/openrouter-embeddings");
-const { buildArticleBundle, buildLawBundle } = require("../shared/article-bundle");
-const { answerArticleQuestion, planArticles, answerLawQuestion } = require("../shared/article-qa-service");
+const { buildLawBundle } = require("../shared/article-bundle");
+const { planArticles, answerLawQuestion } = require("../shared/article-qa-service");
 const { ChatProviderError } = require("../shared/openrouter-chat");
 
 const DEFAULT_QA_MODEL = process.env.ARTICLE_QA_MODEL || 'openai/gpt-oss-120b';
@@ -379,93 +379,6 @@ function registerApiRoutes(app, deps) {
       res.json(payload);
     } catch (err) {
       safeErrorResponse(res, err, 'Failed to fetch case law');
-    }
-  });
-
-  app.post('/api/laws/:celex/articles/:articleNumber/ask', rateLimitMiddleware, async (req, res) => {
-    try {
-      const { celex, articleNumber } = req.params;
-      const rawLang = req.query.lang || 'ENG';
-
-      if (!validateCelex(celex)) {
-        return res.status(400).json({ error: 'Invalid CELEX format' });
-      }
-      const lang = validateLang(rawLang);
-      if (!lang) {
-        return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
-      }
-
-      const question = String(req.body?.question || '').trim();
-      if (!question) {
-        return res.status(400).json({ error: 'Body must include a non-empty "question" string' });
-      }
-      if (question.length > MAX_QUESTION_CHARS) {
-        return res.status(400).json({ error: `Question too long (max ${MAX_QUESTION_CHARS} chars)` });
-      }
-
-      const apiKey = process.env.OPENROUTER_API_KEY;
-      if (!apiKey) {
-        return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
-      }
-
-      const parsed = await resolveParsedLaw(celex, lang);
-
-      let recitalMap = null;
-      if (recitalMapService?.getRecitalMap && parsed.recitals?.length && parsed.articles?.length) {
-        try {
-          recitalMap = await recitalMapService.getRecitalMap(celex, lang, {
-            recitals: parsed.recitals,
-            articles: parsed.articles,
-            title: parsed.title,
-            langCode: parsed.langCode,
-          });
-        } catch {
-          recitalMap = null;
-        }
-      }
-
-      let cases = [];
-      try {
-        const caseLawPayload = await fetchCaseLaw(celex, runSparqlQuery, { cacheDir: FMX_DIR });
-        cases = caseLawPayload?.cases || [];
-      } catch {
-        cases = [];
-      }
-
-      const bundle = buildArticleBundle(parsed, recitalMap, cases, articleNumber);
-      if (!bundle) {
-        return res.status(404).json({ error: `Article ${articleNumber} not found in ${celex}` });
-      }
-
-      const result = await answerArticleQuestion({
-        bundle,
-        question,
-        apiKey,
-        model: DEFAULT_QA_MODEL,
-      });
-
-      res.json({
-        answer: result.text,
-        model: result.model,
-        usage: result.usage,
-        bundle: {
-          meta: bundle.meta,
-          article: { number: bundle.article.number, title: bundle.article.title },
-          counts: {
-            definitions: bundle.definitions.length,
-            recitals: bundle.recitals.length,
-            caseLaw: bundle.caseLaw.length,
-          },
-        },
-      });
-    } catch (err) {
-      if (err instanceof ChatProviderError) {
-        return res.status(err.status || 502).json({
-          error: err.message,
-          code: err.code || 'chat_upstream_failed',
-        });
-      }
-      safeErrorResponse(res, err, 'Failed to answer article question');
     }
   });
 

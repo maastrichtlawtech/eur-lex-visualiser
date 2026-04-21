@@ -61,84 +61,6 @@ function definitionsUsedIn(articleText, definitions) {
     }));
 }
 
-function recitalsFromMap(recitalMap, focusNumber, allRecitals) {
-  const lookup = new Map();
-  for (const r of allRecitals || []) {
-    lookup.set(String(r.recital_number), r);
-  }
-  const entries = recitalMap?.byArticle?.[String(focusNumber)] || [];
-  return entries.slice(0, MAX_RECITALS_PER_ARTICLE).map((e) => {
-    const full = lookup.get(String(e.recital_number)) || {};
-    return {
-      number: e.recital_number,
-      text: stripTags(full.recital_html || full.recital_text || ''),
-      matchScore: e.relevanceScore || null,
-    };
-  });
-}
-
-function caseLawForArticle(cases, celex, focusNumber) {
-  if (!cases?.length) return [];
-  const matches = [];
-  for (const c of cases) {
-    const refs = (c.articleRefs || []).filter(
-      (r) => r.actCelex === celex && String(r.article) === String(focusNumber)
-    );
-    if (refs.length === 0) continue;
-    matches.push({
-      ecli: c.ecli || null,
-      caseNumber: c.caseNumber || null,
-      celex: c.celex,
-      date: c.date || null,
-      name: c.name || null,
-      declarations: c.declarations || [],
-      matchingRefs: refs.map((r) => ({
-        article: r.article,
-        paragraph: r.paragraph,
-        point: r.point,
-      })),
-    });
-  }
-  matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  return matches;
-}
-
-/**
- * Assemble an article bundle from already-cached sources.
- *
- * @param {object} parsedLaw - parsed law object (articles, recitals, definitions)
- * @param {object} recitalMap - recital-map payload ({ byArticle: {...} }), optional
- * @param {Array} cases - case-law list with articleRefs, optional
- * @param {string} articleNumber - focus article number (string)
- * @returns {object|null} the bundle, or null if the article is not found
- */
-function buildArticleBundle(parsedLaw, recitalMap, cases, articleNumber) {
-  if (!parsedLaw || !articleNumber) return null;
-  const article = (parsedLaw.articles || []).find(
-    (a) => String(a.article_number) === String(articleNumber)
-  );
-  if (!article) return null;
-
-  const articleText = stripTags(article.article_html || '');
-
-  return {
-    article: {
-      number: article.article_number,
-      title: article.article_title || null,
-      text: articleText,
-    },
-    skeleton: pickSkeleton(parsedLaw.articles, articleNumber),
-    definitions: definitionsUsedIn(articleText, parsedLaw.definitions || []),
-    recitals: recitalsFromMap(recitalMap, articleNumber, parsedLaw.recitals),
-    caseLaw: caseLawForArticle(cases, parsedLaw.celex, articleNumber),
-    meta: {
-      celex: parsedLaw.celex,
-      lang: parsedLaw.lang,
-      generatedAt: new Date().toISOString(),
-    },
-  };
-}
-
 /**
  * Assemble a multi-article bundle — used for whole-law questions after
  * the planner has picked which articles are relevant. Recitals and case
@@ -233,4 +155,4 @@ function buildLawBundle(parsedLaw, recitalMap, cases, articleNumbers) {
   };
 }
 
-module.exports = { buildArticleBundle, buildLawBundle };
+module.exports = { buildLawBundle, pickSkeleton };
