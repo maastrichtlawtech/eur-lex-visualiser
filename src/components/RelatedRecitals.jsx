@@ -1,11 +1,8 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useI18n } from "../i18n/useI18n.js";
 
-export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
-  const { t } = useI18n();
-
-  // Create a lookup map for full recital data (including HTML)
-  const recitalLookup = useMemo(() => {
+function useRecitalLookup(allRecitals) {
+  return useMemo(() => {
     const map = new Map();
     if (allRecitals) {
       for (const r of allRecitals) {
@@ -14,6 +11,12 @@ export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
     }
     return map;
   }, [allRecitals]);
+}
+
+export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
+  const { t } = useI18n();
+
+  const recitalLookup = useRecitalLookup(allRecitals);
 
   if (!recitals || recitals.length === 0) return null;
 
@@ -99,6 +102,75 @@ export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
 
 
       </div>
+    </div>
+  );
+}
+
+export function GeneralRecitals({ recitalNumbers, allRecitals, onSelectRecital }) {
+  const { t } = useI18n();
+  const [isOpen, setIsOpen] = useState(false);
+  const recitalLookup = useRecitalLookup(allRecitals);
+  const recitals = useMemo(
+    () => (recitalNumbers || [])
+      .map((recitalNumber) => recitalLookup.get(recitalNumber))
+      .filter(Boolean),
+    [recitalLookup, recitalNumbers]
+  );
+
+  if (recitals.length === 0) return null;
+
+  const handleRecitalKeyDown = (event, recital) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelectRecital(recital);
+  };
+
+  return (
+    <div className="mt-6 px-6 md:px-12">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 border-y border-gray-200 py-3 text-left transition hover:border-blue-200 dark:border-gray-800 dark:hover:border-blue-900/70"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="font-semibold text-gray-900 dark:text-gray-100">
+            {t("relatedRecitals.generalTitle")}
+          </span>
+          <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-sm font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            {recitals.length}
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-sm text-gray-500 transition-transform dark:text-gray-400 ${isOpen ? "rotate-90" : ""}`}
+        >
+          &gt;
+        </span>
+      </button>
+
+      {isOpen ? (
+        <div className="divide-y divide-gray-100 border-b border-gray-200 dark:divide-gray-800 dark:border-gray-800">
+          {recitals.map((recital) => (
+            <div
+              key={recital.recital_number}
+              role="button"
+              tabIndex={0}
+              className="block w-full cursor-pointer py-3 text-left transition hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:hover:bg-gray-900/70 dark:focus:ring-offset-gray-950"
+              onClick={() => onSelectRecital(recital)}
+              onKeyDown={(event) => handleRecitalKeyDown(event, recital)}
+            >
+              <span className="block font-serif font-bold text-gray-900 dark:text-gray-100">
+                {t("common.recital")} {recital.recital_number}
+              </span>
+              <span
+                className="mt-1 block line-clamp-2 font-serif text-sm text-gray-600 dark:text-gray-300"
+                dangerouslySetInnerHTML={{ __html: recital.recital_html || "" }}
+              />
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
