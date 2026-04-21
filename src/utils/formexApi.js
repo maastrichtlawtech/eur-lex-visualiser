@@ -22,6 +22,7 @@ export const API_BASE = (() => {
 
 // Cache version — bump to invalidate all cached entries
 const CACHE_VERSION = 2;
+const RECITAL_TITLE_CACHE_VERSION = 1;
 const DB_NAME = "formex-cache";
 const STORE_NAME = "laws";
 const META_STORE_NAME = "lawMeta";
@@ -71,6 +72,10 @@ function makeCacheKey(celex, lang = "EN") {
   return `${celex}_${toApiLang(lang)}`;
 }
 
+function makeRecitalTitleCacheKey(celex, lang = "EN") {
+  return `${makeCacheKey(celex, lang)}_recital_titles`;
+}
+
 function getInFlightRequest(key, factory) {
   if (IN_FLIGHT_LAW_REQUESTS.has(key)) {
     return IN_FLIGHT_LAW_REQUESTS.get(key);
@@ -102,6 +107,24 @@ function isCombinedLawEnvelope(value) {
 function createCombinedLawEnvelope(payload) {
   return {
     format: "combined-v1",
+    payload,
+  };
+}
+
+function isRecitalTitleEnvelope(value) {
+  return !!value
+    && typeof value === "object"
+    && value.format === "recital-titles-v1"
+    && value.version === RECITAL_TITLE_CACHE_VERSION
+    && value.payload
+    && typeof value.payload === "object";
+}
+
+function createRecitalTitleEnvelope(payload) {
+  return {
+    format: "recital-titles-v1",
+    version: RECITAL_TITLE_CACHE_VERSION,
+    cachedAt: Date.now(),
     payload,
   };
 }
@@ -578,14 +601,29 @@ export async function fetchCaseLaw(celex) {
 
 export async function fetchRecitalTitles(celex, lang = "EN", { signal } = {}) {
   const apiLang = toApiLang(lang);
-  const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/recital-titles?lang=${apiLang}`;
-  const res = await fetch(url, { signal });
+  const cacheKey = makeRecitalTitleCacheKey(celex, lang);
+  return getInFlightRequest(`recital-titles:${cacheKey}`, async () => {
+    const cached = await cacheGet(cacheKey);
+    if (isRecitalTitleEnvelope(cached)) {
+      console.log(`[FormexAPI] Recital title cache hit: ${cacheKey}`);
+      return {
+        ...cached.payload,
+        cached: true,
+        localCached: true,
+      };
+    }
 
-  if (!res.ok) {
-    await readApiError(res, `Recital title fetch failed (${res.status})`);
-  }
+    const url = `${API_BASE}/api/laws/${encodeURIComponent(celex)}/recital-titles?lang=${apiLang}`;
+    const res = await fetch(url, { signal });
 
-  return res.json();
+    if (!res.ok) {
+      await readApiError(res, `Recital title fetch failed (${res.status})`);
+    }
+
+    const payload = await res.json();
+    await cacheSet(cacheKey, createRecitalTitleEnvelope(payload));
+    return payload;
+  });
 }
 
 /**

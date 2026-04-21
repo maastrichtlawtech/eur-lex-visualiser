@@ -185,6 +185,9 @@
     "match": "{score}% match",
     "read": "Read →"
   },
+  "relatedCaseLaw": {
+    "title": "Related case law"
+  },
   "crossReferences": {
     "title": "Cross-References",
     "references": "This {itemLabel} references:",

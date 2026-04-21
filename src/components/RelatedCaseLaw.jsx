@@ -98,6 +98,8 @@ function CaseCard({ c, currentLang }) {
 
 export function RelatedCaseLaw({ celex, articleNumber, currentLang = "EN" }) {
   const { t } = useI18n();
+  const [isOpen, setIsOpen] = useState(false);
+  const title = t("relatedCaseLaw.title");
   const { cases, loading, loaded } = useCaseLaw(celex, { autoLoad: true });
 
   const matching = useMemo(() => {
@@ -111,15 +113,17 @@ export function RelatedCaseLaw({ celex, articleNumber, currentLang = "EN" }) {
 
   if (loading && !loaded) {
     return (
-      <div className="mt-8 px-6 md:px-12">
-        <div className="flex items-center gap-2 text-teal-900 dark:text-teal-300 mb-4">
-          <Scale size={18} />
-          <span className="font-semibold text-xl">{t("metadata.caseLaw")}</span>
-          <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <Loader2 size={14} className="animate-spin" />
-          Loading CJEU judgments…
+      <div className="mt-6 px-6 md:px-12">
+        <div className="flex items-center justify-between gap-3 border-y border-gray-200 py-3 dark:border-gray-800">
+          <span className="flex min-w-0 items-center gap-2">
+            <Scale size={16} className="shrink-0 text-teal-700 dark:text-teal-300" />
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+            <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
+          </span>
+          <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <Loader2 size={14} className="animate-spin" />
+            Loading
+          </span>
         </div>
       </div>
     );
@@ -128,20 +132,35 @@ export function RelatedCaseLaw({ celex, articleNumber, currentLang = "EN" }) {
   if (!loaded || matching.length === 0) return null;
 
   return (
-    <div className="mt-8">
-      <div className="flex items-center gap-2 text-teal-900 mb-4 px-6 md:px-12 dark:text-teal-300">
-        <Scale size={18} />
-        <span className="font-semibold text-xl">{t("metadata.caseLaw")}</span>
-        <span className="bg-teal-100 text-teal-800 text-sm px-2.5 py-0.5 rounded-full font-medium dark:bg-teal-900/40 dark:text-teal-200">
-          {matching.length}
+    <div className="mt-6 px-6 md:px-12">
+      <button
+        type="button"
+        className="flex w-full items-center justify-between gap-3 border-y border-gray-200 py-3 text-left transition hover:border-teal-200 dark:border-gray-800 dark:hover:border-teal-900/70"
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((current) => !current)}
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <Scale size={16} className="shrink-0 text-teal-700 dark:text-teal-300" />
+          <span className="font-semibold text-gray-900 dark:text-gray-100">{title}</span>
+          <span className="rounded-full bg-teal-100 px-2.5 py-0.5 text-sm font-medium text-teal-800 dark:bg-teal-900/40 dark:text-teal-200">
+            {matching.length}
+          </span>
+          <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
         </span>
-        <span className="rounded bg-teal-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-teal-800 dark:bg-teal-800 dark:text-teal-200">beta</span>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 px-6 md:px-12">
-        {matching.map((c) => (
-          <CaseCard key={c.celex} c={c} currentLang={currentLang} />
-        ))}
-      </div>
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-sm text-gray-500 transition-transform dark:text-gray-400 ${isOpen ? "rotate-90" : ""}`}
+        >
+          &gt;
+        </span>
+      </button>
+      {isOpen ? (
+        <div className="grid gap-4 border-b border-gray-200 py-4 dark:border-gray-800 sm:grid-cols-2">
+          {matching.map((c) => (
+            <CaseCard key={c.celex} c={c} currentLang={currentLang} />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

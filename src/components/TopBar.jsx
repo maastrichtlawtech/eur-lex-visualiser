@@ -774,8 +774,8 @@ export function SearchBox({
                           key={`${item.search_kind || item.type}-${item.id}-${idx}`}
                           onClick={() => handleSelect(item)}
                           className={`group flex flex-col gap-1 p-3 text-left rounded-xl transition-all w-full ${idx === selectedIndex
-                            ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm dark:bg-blue-900/30 dark:ring-blue-700"
-                            : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent dark:bg-gray-800 md:dark:bg-transparent dark:hover:ring-blue-800 dark:hover:bg-blue-900/20"
+                            ? "bg-blue-50 ring-1 ring-blue-200 shadow-sm dark:bg-blue-950/70 dark:ring-blue-500"
+                            : "hover:bg-blue-50/50 hover:ring-1 hover:ring-blue-200 bg-white md:bg-transparent dark:bg-gray-800 md:dark:bg-transparent dark:hover:ring-blue-800 dark:hover:bg-blue-950/50"
                             }`}
                         >
                           <div className="flex items-center gap-2.5 w-full min-w-0">
@@ -789,11 +789,15 @@ export function SearchBox({
                               }`}>
                               {item.search_kind === "law" ? t("search.lawResultType") : item.type}
                             </span>
-                            <span className="font-semibold text-gray-900 text-base truncate flex-1 min-w-0 group-hover:text-blue-700">
+                            <span className={`font-semibold text-base truncate flex-1 min-w-0 ${
+                              idx === selectedIndex
+                                ? "text-gray-900 group-hover:text-blue-700 dark:text-blue-100 dark:group-hover:text-blue-100"
+                                : "text-gray-900 group-hover:text-blue-700 dark:text-gray-100 dark:group-hover:text-blue-200"
+                            }`}>
                               {lawDisplay?.primaryTitle || item.title}
                             </span>
                             {item.search_kind !== "law" && item.score > 100 && (
-                              <span className="flex-shrink-0 text-[10px] bg-green-100 text-green-700 px-1.5 rounded-full font-medium">{t("search.bestMatch")}</span>
+                              <span className="flex-shrink-0 text-[10px] bg-green-100 text-green-700 px-1.5 rounded-full font-medium dark:bg-green-900/50 dark:text-green-200">{t("search.bestMatch")}</span>
                             )}
                             {item.law_label && (
                               <span className="flex-shrink-0 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium dark:bg-gray-800 dark:text-gray-400">
@@ -804,18 +808,18 @@ export function SearchBox({
                           {item.search_kind === "law" ? (
                             <>
                               {lawDisplay?.secondaryTitle ? (
-                                <p className="pl-1 text-sm leading-relaxed text-gray-500 line-clamp-2">
+                                <p className="pl-1 text-sm leading-relaxed text-gray-500 line-clamp-2 dark:text-gray-300">
                                   {lawDisplay.secondaryTitle}
                                 </p>
                               ) : null}
                               {lawDisplay?.metaLine ? (
-                                <p className="pl-1 text-sm leading-relaxed text-gray-500">
+                                <p className="pl-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                                   {lawDisplay.metaLine}
                                 </p>
                               ) : null}
                             </>
                           ) : (
-                            <p className="text-sm text-gray-500 line-clamp-2 pl-1 leading-relaxed">
+                            <p className="text-sm text-gray-500 line-clamp-2 pl-1 leading-relaxed dark:text-gray-300">
                               <span className="opacity-70">...</span>
                               {item.preview}
                               <span className="opacity-70">...</span>

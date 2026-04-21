@@ -334,15 +334,6 @@ export function LawViewer() {
 
             {selection.selected.kind === "article" ? (
               <>
-                <CrossReferences
-                  articleNumber={selection.selected.id}
-                  crossReferences={primaryDocument.data.crossReferences}
-                  articles={primaryDocument.data.articles}
-                  onSelectArticle={interactions.onCrossRefArticle}
-                  currentLang={displayedFormexLang}
-                  onOpenExternalReference={interactions.handleOpenExternalLaw}
-                  isExternalReferencePending={interactions.isExternalReferencePending}
-                />
                 <RelatedRecitals
                   recitals={recitalMap.get(selection.selected.id) || []}
                   allRecitals={primaryDocument.data.recitals}
@@ -357,6 +348,15 @@ export function LawViewer() {
                   celex={source.effectiveCelex}
                   articleNumber={selection.selected.id}
                   currentLang={displayedFormexLang}
+                />
+                <CrossReferences
+                  articleNumber={selection.selected.id}
+                  crossReferences={primaryDocument.data.crossReferences}
+                  articles={primaryDocument.data.articles}
+                  onSelectArticle={interactions.onCrossRefArticle}
+                  currentLang={displayedFormexLang}
+                  onOpenExternalReference={interactions.handleOpenExternalLaw}
+                  isExternalReferencePending={interactions.isExternalReferencePending}
                 />
               </>
             ) : null}

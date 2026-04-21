@@ -143,7 +143,7 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick, def
     }
   };
 
-  const label = useMemo(() => `Ask about this law`, []);
+  const label = useMemo(() => `Ask AI about this law`, []);
 
   if (!celex) return null;
 
@@ -355,7 +355,7 @@ export function LawAskButton({ celex, lawTitle, lang = "ENG", onArticleClick }) 
       >
         <span className="flex items-center gap-2">
           <BookOpen size={16} />
-          Ask about this law
+          Ask AI about this law
           <span className="rounded bg-purple-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:bg-purple-800 dark:text-purple-200">beta</span>
         </span>
       </button>

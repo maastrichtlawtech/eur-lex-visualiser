@@ -49,14 +49,6 @@ export function LawViewerSidebar({
       </div>
 
       <div className={`space-y-4 ${mobileMenuOpen ? "block" : "hidden md:block"}`}>
-        <LawAskButton
-          celex={effectiveCelex}
-          lawTitle={lawTitle}
-          lang={formexLang}
-          onArticleClick={onAskArticleClick}
-        />
-        <CaseLawButton celex={effectiveCelex} currentLang={formexLang} />
-
         <LawViewerQuickNavigation
           selected={selected}
           lists={{ articles: data.articles, recitals: data.recitals, annexes: data.annexes }}
@@ -67,6 +59,16 @@ export function LawViewerSidebar({
           closeMobileMenu={selection.closeMobileMenu}
           t={t}
         />
+
+        <div className="space-y-2">
+          <LawAskButton
+            celex={effectiveCelex}
+            lawTitle={lawTitle}
+            lang={formexLang}
+            onArticleClick={onAskArticleClick}
+          />
+          <CaseLawButton celex={effectiveCelex} currentLang={formexLang} />
+        </div>
 
         <div className="pt-2">
           <div className="px-1 mb-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
