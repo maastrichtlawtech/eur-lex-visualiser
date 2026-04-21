@@ -2,7 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, Loader2, Send, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { askLawQuestion } from "../utils/formexApi.js";
+import { askLawQuestionStream } from "../utils/formexApi.js";
+
+const STAGE_LABELS = {
+  loading_law: "Loading the law…",
+  planning: "Identifying relevant articles…",
+  assembling_bundle: "Gathering recitals and case law…",
+  answering: "Answering…",
+};
 
 const PRESETS = [
   { id: "overview", label: "What does this law cover?", q: "What does this law cover at a high level? Summarise its scope and the main obligations it creates." },
@@ -65,13 +72,25 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
   const [open, setOpen] = useState(false);
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
+  const [stage, setStage] = useState(null);
+  const [plan, setPlan] = useState(null);
+  const [bundle, setBundle] = useState(null);
+  const [answer, setAnswer] = useState("");
+  const [meta, setMeta] = useState(null);
   const [error, setError] = useState(null);
   const abortRef = useRef(null);
 
-  useEffect(() => {
-    setResult(null);
+  const resetResult = () => {
+    setStage(null);
+    setPlan(null);
+    setBundle(null);
+    setAnswer("");
+    setMeta(null);
     setError(null);
+  };
+
+  useEffect(() => {
+    resetResult();
     setQuestion("");
     if (abortRef.current) abortRef.current.abort();
   }, [celex]);
@@ -82,19 +101,29 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
     const trimmed = String(q || "").trim();
     if (!trimmed || disabled) return;
     setLoading(true);
-    setError(null);
-    setResult(null);
+    resetResult();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     try {
-      const res = await askLawQuestion(celex, trimmed, { lang, signal: ctrl.signal });
-      setResult(res);
+      await askLawQuestionStream(celex, trimmed, {
+        lang,
+        signal: ctrl.signal,
+        handlers: {
+          onStage: ({ stage }) => setStage(stage),
+          onPlan: (p) => setPlan(p),
+          onBundle: (b) => setBundle(b),
+          onDelta: ({ text }) => setAnswer((prev) => prev + text),
+          onDone: (m) => setMeta(m),
+          onError: (e) => setError(e.message || e.code || "Request failed"),
+        },
+      });
     } catch (err) {
       if (err.name !== "AbortError") {
         setError(err.message || "Request failed");
       }
     } finally {
       setLoading(false);
+      setStage(null);
     }
   };
 
@@ -163,29 +192,29 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
               </button>
             </form>
 
-            {loading && (
+            {loading && stage && !answer && (
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                 <Loader2 size={14} className="animate-spin" />
-                Planning relevant articles, assembling bundle, consulting the model…
+                {STAGE_LABELS[stage] || "Working…"}
               </div>
             )}
 
-            {error && !loading && (
+            {error && (
               <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
                 {error}
               </div>
             )}
 
-            {result && !loading && (
+            {(plan || answer || meta) && (
               <div className="space-y-3">
-                {result.plan?.articles?.length > 0 && (
+                {plan?.articles?.length > 0 && (
                   <div className="rounded-xl border border-purple-100 bg-purple-50/60 p-3 dark:border-purple-900 dark:bg-purple-950/20">
                     <div className="flex items-center gap-2 text-xs font-semibold text-purple-900 dark:text-purple-300 mb-1.5">
                       <Sparkles size={12} />
                       Articles consulted
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-2">
-                      {result.plan.articles.map((n) => (
+                      {plan.articles.map((n) => (
                         <button
                           key={n}
                           type="button"
@@ -196,26 +225,35 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
                         </button>
                       ))}
                     </div>
-                    {result.plan.rationale && (
+                    {plan.rationale && (
                       <div className="text-xs italic text-gray-600 dark:text-gray-400">
-                        {result.plan.rationale}
+                        {plan.rationale}
                       </div>
                     )}
                   </div>
                 )}
 
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
-                  {renderAnswer(result.answer)}
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
-                    {result.model && <span>Model: <span className="font-mono">{result.model}</span></span>}
-                    {result.bundle?.counts && (
-                      <span>
-                        Bundle: {result.bundle.counts.articles} articles · {result.bundle.counts.definitions} defs · {result.bundle.counts.recitals} recitals · {result.bundle.counts.caseLaw} cases
-                      </span>
+                {(answer || loading) && (
+                  <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+                    {answer ? renderAnswer(answer) : (
+                      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Loader2 size={14} className="animate-spin" />
+                        {STAGE_LABELS[stage] || "Working…"}
+                      </div>
                     )}
-                    <span className="italic">Verify citations before relying on this answer.</span>
+                    {(meta || bundle) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-3 text-[11px] text-gray-400 dark:text-gray-500">
+                        {meta?.model && <span>Model: <span className="font-mono">{meta.model}</span></span>}
+                        {bundle?.counts && (
+                          <span>
+                            Bundle: {bundle.counts.articles} articles · {bundle.counts.definitions} defs · {bundle.counts.recitals} recitals · {bundle.counts.caseLaw} cases
+                          </span>
+                        )}
+                        <span className="italic">Verify citations before relying on this answer.</span>
+                      </div>
+                    )}
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

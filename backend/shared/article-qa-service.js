@@ -1,4 +1,4 @@
-const { chatComplete, ChatProviderError } = require('./openrouter-chat');
+const { chatComplete, chatStream, ChatProviderError } = require('./openrouter-chat');
 
 const LEGAL_REASONING_PRIMER = `EU-law reasoning principles you must apply:
 
@@ -219,8 +219,24 @@ async function answerLawQuestion({ bundle, question, apiKey, model }) {
   });
 }
 
+function streamLawAnswer({ bundle, question, apiKey, model, signal }) {
+  if (!bundle) throw new ChatProviderError('Bundle not available', { status: 404 });
+  const userPrompt = formatLawBundleUser(bundle, question);
+  return chatStream({
+    model,
+    apiKey,
+    maxTokens: 2500,
+    signal,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: userPrompt },
+    ],
+  });
+}
+
 module.exports = {
   answerLawQuestion,
+  streamLawAnswer,
   planArticles,
   formatLawBundleUser,
   SYSTEM_PROMPT,

@@ -170,7 +170,7 @@ cat input.xml | parse-fmx > output.json
 | `GET` | `/api/laws/:celex/implementing` | Implementing and delegated acts |
 | `GET` | `/api/laws/:celex/case-law?lang=ENG` | CJEU judgments citing this act, with operative parts and structured `articleRefs` |
 | `GET` | `/api/laws/:celex/recital-map?lang=ENG` | Embedding-based recital→article relevance map (requires `OPENROUTER_API_KEY`) |
-| `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Runs a two-stage planner → answerer pipeline and returns a grounded markdown answer with bundle + token usage (requires `OPENROUTER_API_KEY`) |
+| `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Streams a grounded markdown answer over Server-Sent Events: `stage` (lifecycle), `plan` (articles the planner picked), `bundle` (counts), `delta` (answer chunks), `done` (final usage), or `error`. Requires `OPENROUTER_API_KEY`. |
 | `GET` | `/api/laws/by-reference?actType=...&year=...&number=...` | Fetch law by official reference |
 | `GET` | `/api/search?q=keyword&limit=10` | Search law metadata |
 | `GET` | `/api/resolve-reference?actType=...&year=...&number=...` | Resolve legal reference to CELEX |
@@ -203,19 +203,31 @@ The parser handles post-2004 EUR-Lex Formex, pre-2004 OJ HTML, and older Curia H
 
 ### Q&A endpoint
 
-`POST /api/laws/:celex/ask` body: `{ "question": "..." }`. Returns:
+`POST /api/laws/:celex/ask` body: `{ "question": "..." }`. Streams Server-Sent Events:
 
-```json
-{
-  "answer": "markdown text with [Art. 5(1)(a)] citations …",
-  "model": "openai/gpt-oss-120b",
-  "plan": { "articles": ["15","17","21"], "rationale": "…", "model": "…" },
-  "bundle": { "meta": { "…": "…" }, "counts": { "articles": 3, "definitions": 8, "recitals": 11, "caseLaw": 14 } },
-  "usage": { "planner": { "…": "…" }, "answer": { "…": "…" } }
-}
+```
+event: stage
+data: {"stage":"planning"}
+
+event: plan
+data: {"articles":["15","17","21"],"rationale":"…","model":"…","usage":{…}}
+
+event: bundle
+data: {"meta":{…},"articles":[…],"counts":{"articles":3,"definitions":8,"recitals":11,"caseLaw":14}}
+
+event: delta
+data: {"text":"Under the GDPR the controller "}
+
+event: delta
+data: {"text":"must…"}
+
+event: done
+data: {"model":"openai/gpt-oss-120b","usage":{…}}
 ```
 
-Requires `OPENROUTER_API_KEY`. Model selectable via `ARTICLE_QA_MODEL` (default `openai/gpt-oss-120b`). Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then asks the model to answer with self-contained citations.
+On failure (incl. 402 insufficient credits, 429 rate-limit, or 401/403 auth errors) an `error` event is emitted instead of `done`, with a user-safe message and a stable `code` (`ai_service_unavailable`, `ai_rate_limited`, `ai_auth_failed`, `planner_empty`, `internal_error`). The upstream raw message is in `detail` for debugging.
+
+Requires `OPENROUTER_API_KEY`. Model selectable via `ARTICLE_QA_MODEL` (default `openai/gpt-oss-120b`). Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then streams the answer back with self-contained citations.
 
 ## Using from Python (and other languages)
 

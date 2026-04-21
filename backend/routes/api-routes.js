@@ -6,11 +6,51 @@ const { parseFmxXml } = require("../shared/fmx-parser-node");
 const { fetchMetadata, fetchAmendments, fetchImplementing, fetchCaseLaw } = require("../shared/law-queries");
 const { EmbeddingProviderError, MissingApiKeyError } = require("../shared/openrouter-embeddings");
 const { buildLawBundle } = require("../shared/article-bundle");
-const { planArticles, answerLawQuestion } = require("../shared/article-qa-service");
+const { planArticles, streamLawAnswer } = require("../shared/article-qa-service");
 const { ChatProviderError } = require("../shared/openrouter-chat");
 
 const DEFAULT_QA_MODEL = process.env.ARTICLE_QA_MODEL || 'openai/gpt-oss-120b';
 const MAX_QUESTION_CHARS = 800;
+
+/**
+ * Normalise an upstream chat error into a user-facing message + stable code.
+ * Maps OpenRouter's 402/429 into friendlier text while still exposing the raw
+ * upstream detail for debugging.
+ */
+function mapChatError(err) {
+  const status = err?.status || 502;
+  const rawMessage = err?.message || 'Upstream chat request failed';
+  if (status === 402) {
+    return {
+      status: 503,
+      code: 'ai_service_unavailable',
+      message: 'The AI service is temporarily unavailable (out of credits). Please try again later or contact the administrator.',
+      detail: rawMessage,
+    };
+  }
+  if (status === 429) {
+    return {
+      status: 429,
+      code: 'ai_rate_limited',
+      message: 'The AI service is rate-limiting requests — please wait a moment and try again.',
+      detail: rawMessage,
+    };
+  }
+  if (status === 401 || status === 403) {
+    return {
+      status: 503,
+      code: 'ai_auth_failed',
+      message: 'The AI service rejected our credentials — please contact the administrator.',
+      detail: rawMessage,
+    };
+  }
+  return {
+    status,
+    code: err?.code || 'chat_upstream_failed',
+    message: rawMessage,
+    detail: rawMessage,
+  };
+}
 
 const CASE_LAW_ROUTE_CACHE_MS = 5 * 60 * 1000;
 
@@ -383,44 +423,73 @@ function registerApiRoutes(app, deps) {
   });
 
   app.post('/api/laws/:celex/ask', rateLimitMiddleware, async (req, res) => {
+    // Validate up-front so we can still return a JSON error pre-stream.
+    const { celex } = req.params;
+    const rawLang = req.query.lang || 'ENG';
+
+    if (!validateCelex(celex)) {
+      return res.status(400).json({ error: 'Invalid CELEX format' });
+    }
+    const lang = validateLang(rawLang);
+    if (!lang) {
+      return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
+    }
+
+    const question = String(req.body?.question || '').trim();
+    if (!question) {
+      return res.status(400).json({ error: 'Body must include a non-empty "question" string' });
+    }
+    if (question.length > MAX_QUESTION_CHARS) {
+      return res.status(400).json({ error: `Question too long (max ${MAX_QUESTION_CHARS} chars)` });
+    }
+
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
+    }
+
+    // Start SSE stream.
+    res.status(200).set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+    res.flushHeaders?.();
+
+    const send = (event, data) => {
+      res.write(`event: ${event}\n`);
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // If the client disconnects mid-stream, abort upstream work.
+    // Use res.on('close') — fires on the response's underlying socket. If
+    // res.end() has already been called, writableEnded is true so we skip.
+    const abort = new AbortController();
+    res.on('close', () => { if (!res.writableEnded) abort.abort(); });
+
     try {
-      const { celex } = req.params;
-      const rawLang = req.query.lang || 'ENG';
-
-      if (!validateCelex(celex)) {
-        return res.status(400).json({ error: 'Invalid CELEX format' });
-      }
-      const lang = validateLang(rawLang);
-      if (!lang) {
-        return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
-      }
-
-      const question = String(req.body?.question || '').trim();
-      if (!question) {
-        return res.status(400).json({ error: 'Body must include a non-empty "question" string' });
-      }
-      if (question.length > MAX_QUESTION_CHARS) {
-        return res.status(400).json({ error: `Question too long (max ${MAX_QUESTION_CHARS} chars)` });
-      }
-
-      const apiKey = process.env.OPENROUTER_API_KEY;
-      if (!apiKey) {
-        return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
-      }
-
+      send('stage', { stage: 'loading_law' });
       const parsed = await resolveParsedLaw(celex, lang);
 
-      // Stage 1 — pick relevant articles
+      send('stage', { stage: 'planning' });
       const plan = await planArticles({ parsedLaw: parsed, question, apiKey, model: DEFAULT_QA_MODEL });
       if (plan.articles.length === 0) {
-        return res.status(422).json({
-          error: 'Planner could not identify any relevant article for this question.',
+        send('error', {
           code: 'planner_empty',
-          rawPlannerOutput: plan.rawText,
+          message: 'Could not identify any relevant article for this question.',
+          detail: plan.rawText,
         });
+        return res.end();
       }
+      send('plan', {
+        articles: plan.articles,
+        rationale: plan.rationale,
+        model: plan.model,
+        usage: plan.usage,
+      });
 
-      // Recital map (reused by law bundle)
+      send('stage', { stage: 'assembling_bundle' });
       let recitalMap = null;
       if (recitalMapService?.getRecitalMap && parsed.recitals?.length && parsed.articles?.length) {
         try {
@@ -435,7 +504,6 @@ function registerApiRoutes(app, deps) {
         }
       }
 
-      // Case law (all of it — filtering happens in the bundle)
       let cases = [];
       try {
         const caseLawPayload = await fetchCaseLaw(celex, runSparqlQuery, { cacheDir: FMX_DIR });
@@ -446,43 +514,42 @@ function registerApiRoutes(app, deps) {
 
       const bundle = buildLawBundle(parsed, recitalMap, cases, plan.articles);
       if (!bundle) {
-        return res.status(404).json({ error: 'Selected articles not found in law' });
+        send('error', { code: 'bundle_empty', message: 'Selected articles not found in law' });
+        return res.end();
       }
-
-      // Stage 2 — answer
-      const answer = await answerLawQuestion({ bundle, question, apiKey, model: DEFAULT_QA_MODEL });
-
-      res.json({
-        answer: answer.text,
-        model: answer.model,
-        plan: {
-          articles: plan.articles,
-          rationale: plan.rationale,
-          model: plan.model,
-        },
-        bundle: {
-          meta: bundle.meta,
-          articles: bundle.articles.map((a) => ({ number: a.number, title: a.title })),
-          counts: {
-            articles: bundle.articles.length,
-            definitions: bundle.definitions.length,
-            recitals: bundle.recitals.length,
-            caseLaw: bundle.caseLaw.length,
-          },
-        },
-        usage: {
-          planner: plan.usage,
-          answer: answer.usage,
+      send('bundle', {
+        meta: bundle.meta,
+        articles: bundle.articles.map((a) => ({ number: a.number, title: a.title })),
+        counts: {
+          articles: bundle.articles.length,
+          definitions: bundle.definitions.length,
+          recitals: bundle.recitals.length,
+          caseLaw: bundle.caseLaw.length,
         },
       });
+
+      send('stage', { stage: 'answering' });
+      const stream = streamLawAnswer({ bundle, question, apiKey, model: DEFAULT_QA_MODEL, signal: abort.signal });
+      let answerUsage = null;
+      let answerModel = DEFAULT_QA_MODEL;
+      for await (const chunk of stream) {
+        if (chunk.type === 'delta' && chunk.text) {
+          send('delta', { text: chunk.text });
+        } else if (chunk.type === 'done') {
+          answerUsage = chunk.usage;
+          answerModel = chunk.model || answerModel;
+        }
+      }
+      send('done', { model: answerModel, usage: answerUsage });
+      res.end();
     } catch (err) {
       if (err instanceof ChatProviderError) {
-        return res.status(err.status || 502).json({
-          error: err.message,
-          code: err.code || 'chat_upstream_failed',
-        });
+        const mapped = mapChatError(err);
+        send('error', { code: mapped.code, message: mapped.message, detail: mapped.detail, status: mapped.status });
+        return res.end();
       }
-      safeErrorResponse(res, err, 'Failed to answer law question');
+      send('error', { code: 'internal_error', message: err?.message || 'Failed to answer law question' });
+      res.end();
     }
   });
 
