@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { mapRecitalsToArticles, NLP_VERSION } from "../../utils/nlp.js";
 
+function withOrphanRecitals(map) {
+  map.orphanRecitalNumbers = map.get(null) || [];
+  return map;
+}
+
 export function useRecitalMap({ data, currentLaw, formexLang }) {
-  const [recitalMap, setRecitalMap] = useState(new Map());
+  const [recitalMap, setRecitalMap] = useState(() => withOrphanRecitals(new Map()));
 
   useEffect(() => {
     if (data.articles?.length > 0 && data.recitals?.length > 0) {
@@ -30,7 +35,7 @@ export function useRecitalMap({ data, currentLaw, formexLang }) {
         try {
           const cached = localStorage.getItem(cacheKey);
           if (cached) {
-            setRecitalMap(new Map(JSON.parse(cached)));
+            setRecitalMap(withOrphanRecitals(new Map(JSON.parse(cached))));
             return;
           }
         } catch (error) {
@@ -40,7 +45,7 @@ export function useRecitalMap({ data, currentLaw, formexLang }) {
 
       const timer = setTimeout(() => {
         const map = mapRecitalsToArticles(data.recitals, data.articles);
-        setRecitalMap(map);
+        setRecitalMap(withOrphanRecitals(map));
 
         if (!cacheKey) return;
         try {
@@ -53,7 +58,7 @@ export function useRecitalMap({ data, currentLaw, formexLang }) {
       return () => clearTimeout(timer);
     }
 
-    setRecitalMap(new Map());
+    setRecitalMap(withOrphanRecitals(new Map()));
     return undefined;
   }, [currentLaw, data.articles, data.recitals, formexLang]);
 
