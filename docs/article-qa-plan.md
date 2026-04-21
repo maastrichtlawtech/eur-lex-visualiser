@@ -201,14 +201,18 @@ Fix in this branch: emit a parallel structured field on each judgment
 articleRefs: [
   { raw: "Art. 6(1)(a) GDPR", act: "GDPR", actCelex: "32016R0679",
     article: "6", paragraph: "1", point: "a" },
+  { raw: "Art. 5, 6 and 9 2002/58", act: "2002/58", actCelex: "32002L0058",
+    article: "9", paragraph: null, point: null },
   ...
 ]
 ```
 
 - Composite strings (`"Art. 5, 6 and 10 GDPR"`) are split into one ref
   per article.
-- Known act nicknames (GDPR for now) are mapped to CELEX; others keep
-  `actCelex: null` for v1.
+- Composite strings (`"Art. 5, 6 and 10 GDPR"`) are split into one ref
+  per article.
+- `ACT_CELEX_MAP` covers GDPR, 95/46, 2002/58, 2016/680, DSA, DMA,
+  AI Act, Charter, TFEU, and TEU; unknown acts keep `actCelex: null`.
 - Cache bumped `v3 → v4`; on first load, existing v3 entries are
   migrated in-memory by parsing `articlesCited` and written out as v4.
 
@@ -219,11 +223,45 @@ from composite strings.
 
 ---
 
-## 7. Open decisions
+## 7. Cross-law case-law coverage (empirical, April 2026)
+
+Tested against `api.legalviz.eu` for four laws:
+
+| Law | Cases (citing) | Articles reachable | Composite-recall gain |
+|-----|---------------|-------------------|----------------------|
+| GDPR (2016/679) | 70 / 71 | 63 / 99 | Art. 5 +14, Art. 6 +12, Art. 82 +6 |
+| ePrivacy (2002/58) | 21 / 23 | 10 / 21 | **Art. 9 +6**, Art. 6 +2, Art. 5 +1 |
+| 95/46 (old DPD) | 34 / 35 | 27 / 34 | Art. 13 +1 (already dense) |
+| LED (2016/680) | 8 / 9 | 25 / 65 | none (no composites) |
+| DSA (2022/2065) | 0 | — | no CJEU case law yet |
+
+**ePrivacy Art. 9 +6** is the clearest illustration of the value: seven
+foundational data-retention judgments (Quadrature du Net ×2, Privacy
+International, Bonnier, Prokuratuur, G.D., A.G.) all cite the composite
+`"Art. 5, 6 and 9 2002/58"`, so they were entirely invisible to Art. 9
+before the structured parser.
+
+**Implications for target law choice:**
+
+- GDPR and ePrivacy both have enough case law density for a strong v1.
+  ePrivacy is actually a useful *simpler* test (21 articles vs 99) for
+  validating the Q&A pipeline end-to-end before scaling to GDPR.
+- 95/46 is useful as a *companion* to GDPR: the Court often interprets
+  GDPR concepts against their 95/46 origins, so many GDPR article
+  bundles will benefit from 95/46 case law automatically.
+- LED (2016/680) and DSA/DMA/AI Act are viable structurally but have
+  thin or no case law; the panel needs an explicit "no CJEU case law
+  yet for this article" state.
+
+---
+
+## 8. Open decisions
 
 Before building the bundle assembler, LLM integration, and UI:
 
-1. **Target law for v1.** GDPR, AI Act, DSA, DMA, other?
+1. **Target law for v1.** GDPR (recommended); ePrivacy is a faster
+   end-to-end smoke-test. DSA/DMA/AI Act need graceful no-case-law
+   fallback.
 2. **LLM call location.** Backend with a server-held Anthropic key
    (simplest, we pay the bill), or user-supplied key relayed through
    the backend (privacy-friendly, no server cost, but adds BYO-key UX)?
@@ -233,9 +271,9 @@ Before building the bundle assembler, LLM integration, and UI:
 
 ---
 
-## 8. Build order after this branch
+## 9. Build order after this branch
 
-1. ~~Structured `articleRefs` + cache migration~~ (this branch)
+1. ~~Structured `articleRefs` + cache migration + cross-law ACT_CELEX_MAP~~ (this branch)
 2. `buildArticleBundle(celex, articleNumber, lang)` — pure assembler
 3. `POST /api/laws/:celex/articles/:n/ask` — bundle + LLM call
 4. Frontend "Explain / Ask" panel on the article view

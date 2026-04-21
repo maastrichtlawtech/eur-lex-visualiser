@@ -593,12 +593,32 @@ function extractArticleCitations(document) {
   return citations;
 }
 
-// Map of known act shorthands to their CELEX.
-// Kept intentionally small; year/number acts (e.g. "95/46") are left
-// unmapped because we cannot derive CELEX without the act-type letter
-// (R/L/D/P/M/E). Downstream code can still filter by the `act` string.
+// Map of known act shorthands/year-numbers to their CELEX.
+// Year/number acts (e.g. "95/46") are included where the CELEX is
+// unambiguous; acts with multiple instrument types sharing the same
+// year/number are left null and downstream code filters by `act` string.
 const ACT_CELEX_MAP = {
-  GDPR: '32016R0679',
+  // Regulation (EU) 2016/679 — General Data Protection Regulation
+  'GDPR':     '32016R0679',
+  '2016/679': '32016R0679',
+  // Directive 95/46/EC — Data Protection Directive (predecessor to GDPR)
+  '95/46':    '31995L0046',
+  // Directive 2002/58/EC — ePrivacy Directive
+  '2002/58':  '32002L0058',
+  // Directive (EU) 2016/680 — Law Enforcement Directive
+  '2016/680': '32016L0680',
+  // Regulation (EU) 2022/2065 — Digital Services Act
+  '2022/2065': '32022R2065',
+  // Regulation (EU) 2022/1925 — Digital Markets Act
+  '2022/1925': '32022R1925',
+  // Regulation (EU) 2024/1689 — AI Act
+  '2024/1689': '32024R1689',
+  // Charter of Fundamental Rights of the EU (2012 consolidated)
+  'Charter':  '12012P',
+  // Treaty on the Functioning of the EU (2012 consolidated)
+  'TFEU':     '12012E',
+  // Treaty on European Union (2012 consolidated)
+  'TEU':      '12012M',
 };
 
 /**
@@ -617,7 +637,7 @@ function parseCitationsToRefs(citationStrings) {
     if (typeof s !== 'string') continue;
     // "Art. <tokens> <act>" where <act> is an uppercase shorthand
     // (GDPR, Charter, TFEU, TEU, ECHR) or a year/number (95/46, 2016/680).
-    const m = s.match(/^Art\.?\s+(.+?)\s+([A-Z]+|\d{2,4}\/\d+)\s*$/);
+    const m = s.match(/^Art\.?\s+(.+?)\s+([A-Za-z]+|\d{2,4}\/\d+)\s*$/);
     if (!m) continue;
     const act = m[2];
     const actCelex = ACT_CELEX_MAP[act] || null;

@@ -78,9 +78,28 @@ test("parseCitationsToRefs handles plain, paragraph, point, and 95/46-style toke
     { raw: "Art. 6 GDPR", act: "GDPR", actCelex: "32016R0679", article: "6", paragraph: null, point: null },
     { raw: "Art. 6(1) GDPR", act: "GDPR", actCelex: "32016R0679", article: "6", paragraph: "1", point: null },
     { raw: "Art. 6(1)(a) GDPR", act: "GDPR", actCelex: "32016R0679", article: "6", paragraph: "1", point: "a" },
-    { raw: "Art. 7(a) 95/46", act: "95/46", actCelex: null, article: "7", paragraph: null, point: "a" },
-    { raw: "Art. 267 TFEU", act: "TFEU", actCelex: null, article: "267", paragraph: null, point: null },
+    { raw: "Art. 7(a) 95/46", act: "95/46", actCelex: "31995L0046", article: "7", paragraph: null, point: "a" },
+    { raw: "Art. 267 TFEU", act: "TFEU", actCelex: "12012E", article: "267", paragraph: null, point: null },
   ]);
+});
+
+test("parseCitationsToRefs resolves actCelex for all mapped acts", () => {
+  const cases = [
+    ["Art. 5 2002/58",   "32002L0058"],
+    ["Art. 1 2016/680",  "32016L0680"],
+    ["Art. 8 Charter",   "12012P"],
+    ["Art. 5 2016/679",  "32016R0679"],
+    ["Art. 3 TEU",       "12012M"],
+    ["Art. 1 2022/2065", "32022R2065"],
+    ["Art. 1 2022/1925", "32022R1925"],
+    ["Art. 1 2024/1689", "32024R1689"],
+    ["Art. 1 2016/943",  null],   // unmapped — left null
+  ];
+  for (const [str, expectedCelex] of cases) {
+    const refs = parseCitationsToRefs([str]);
+    assert.equal(refs.length, 1, `expected one ref for "${str}"`);
+    assert.equal(refs[0].actCelex, expectedCelex, `actCelex mismatch for "${str}"`);
+  }
 });
 
 test("parseCitationsToRefs splits composite 'N and M' / 'N, M and P' strings", () => {
