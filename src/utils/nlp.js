@@ -1,5 +1,11 @@
 // NLP Algorithm Version - bump this when algorithm changes to invalidate cache
-export const NLP_VERSION = 11;
+export const NLP_VERSION = 13;
+
+const MONOTONICITY_BETA = 0.9;
+const MONOTONICITY_GAMMA = 2;
+const RAW_SIMILARITY_FLOOR = 0.15;
+const SECONDARY_SCORE_RATIO = 0.75;
+const MAX_ARTICLES_PER_RECITAL = 2;
 
 import { getStopWords } from "./languages.js";
 
@@ -115,15 +121,15 @@ const stripTags = (html) => {
 };
 
 /**
- * Map recitals to articles based on TF-IDF Cosine Similarity.
+ * Map recitals to articles based on TF-IDF Cosine Similarity with a positional prior.
  * 
  * @param {Array} recitals - Array of { recital_number, recital_text, ... }
  * @param {Array} articles - Array of { article_number, article_title, article_html, ... }
- * @returns {Map} - Map where key is article_number, value is array of matching recitals
+ * @returns {Map} - Map where key is article_number, value is array of matching recitals.
+ *                  Unmapped recital numbers are exposed under the reserved null key.
  */
 export function mapRecitalsToArticles(recitals, articles) {
   // Configuration
-  const SIMILARITY_THRESHOLD = 0.1; // Minimum cosine similarity to consider a match
   const TITLE_WEIGHT = 3; // How many times to repeat title tokens for weighting
 
   // 1. Prepare Article Documents (Corpus)
@@ -154,9 +160,13 @@ export function mapRecitalsToArticles(recitals, articles) {
 
   const articleToRecitals = new Map();
   articles.forEach(a => articleToRecitals.set(a.article_number, []));
+  articleToRecitals.set(null, []);
+
+  const recitalDenominator = Math.max(recitals.length - 1, 1);
+  const articleDenominator = Math.max(articles.length - 1, 1);
 
   // 4. Process Recitals
-  recitals.forEach(r => {
+  recitals.forEach((r, recitalIndex) => {
     const recitalText = r.recital_text || stripTags(r.recital_html) || "";
     const tokens = tokenize(recitalText);
     const recitalVec = computeTFIDFVector(tokens, idf);
@@ -178,30 +188,48 @@ export function mapRecitalsToArticles(recitals, articles) {
       .slice(0, 3)
       .map(([term]) => term);
 
-    let bestScore = 0;
-    let bestArticleId = null;
+    const scoredArticles = [];
+    // Gate on raw evidence; choose the article with the monotonicity-weighted score.
+    let strongestRawCos = 0;
+    const rPos = recitalIndex / recitalDenominator;
 
-    articleVectors.forEach(aVec => {
-      const score = cosineSimilarity(recitalVec, aVec);
+    articleVectors.forEach((aVec, articleIndex) => {
+      const rawCos = cosineSimilarity(recitalVec, aVec);
+      strongestRawCos = Math.max(strongestRawCos, rawCos);
+      const aPos = articleIndex / articleDenominator;
+      const positionalPrior = (1 - MONOTONICITY_BETA * Math.abs(rPos - aPos)) ** MONOTONICITY_GAMMA;
+      const score = rawCos * positionalPrior;
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestArticleId = aVec.id;
-      }
+      scoredArticles.push({
+        id: aVec.id,
+        score,
+      });
     });
 
     // Apply threshold and assign
-    if (bestScore > SIMILARITY_THRESHOLD && bestArticleId) {
-      const list = articleToRecitals.get(bestArticleId);
-      if (list) {
-        // Store with score and keywords for later processing
-        list.push({ ...r, _score: bestScore, _keywords: keywords });
+    scoredArticles.sort((a, b) => b.score - a.score);
+    const bestScore = scoredArticles[0]?.score || 0;
+
+    if (strongestRawCos >= RAW_SIMILARITY_FLOOR && bestScore > 0) {
+      const selectedArticles = scoredArticles
+        .filter((candidate) => candidate.score >= bestScore * SECONDARY_SCORE_RATIO)
+        .slice(0, MAX_ARTICLES_PER_RECITAL);
+
+      for (const selectedArticle of selectedArticles) {
+        const list = articleToRecitals.get(selectedArticle.id);
+        if (list) {
+          // Store with score and keywords for later processing
+          list.push({ ...r, _score: selectedArticle.score, _keywords: keywords });
+        }
       }
+    } else {
+      articleToRecitals.get(null).push(r.recital_number);
     }
   });
 
   // 5. Sort by score and expose relevance score + keywords
   for (const [articleId, recitalList] of articleToRecitals) {
+    if (articleId === null) continue;
     if (recitalList.length > 0) {
       // Sort by score descending
       recitalList.sort((a, b) => (b._score || 0) - (a._score || 0));

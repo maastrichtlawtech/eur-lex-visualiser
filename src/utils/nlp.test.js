@@ -104,6 +104,75 @@ describe("mapRecitalsToArticles", () => {
       expect(mapped).toHaveProperty("keywords");
     }
   });
+
+  it("uses monotonicity to prefer a nearby article over a higher raw text overlap", () => {
+    const monotonicArticles = [
+      { article_number: "1", article_title: "", article_html: "<p>nearanchor</p>" },
+      { article_number: "2", article_title: "", article_html: "<p>middleanchor2</p>" },
+      { article_number: "3", article_title: "", article_html: "<p>middleanchor3</p>" },
+      { article_number: "4", article_title: "", article_html: "<p>middleanchor4</p>" },
+      { article_number: "5", article_title: "", article_html: "<p>faranchor faranchor faranchor faranchor</p>" },
+    ];
+    const monotonicRecitals = [
+      { recital_number: "1", recital_text: "nearanchor faranchor faranchor faranchor" },
+      { recital_number: "2", recital_text: "middleanchor2" },
+      { recital_number: "3", recital_text: "middleanchor3" },
+      { recital_number: "4", recital_text: "middleanchor4" },
+      { recital_number: "5", recital_text: "nooverlapterm" },
+    ];
+
+    const result = mapRecitalsToArticles(monotonicRecitals, monotonicArticles);
+
+    expect(result.get("1").map((r) => r.recital_number)).toContain("1");
+    expect(result.get("5").map((r) => r.recital_number)).not.toContain("1");
+  });
+
+  it("can attach one recital to a close secondary article", () => {
+    const multiArticles = [
+      { article_number: "1", article_title: "", article_html: "<p>sharedanchor</p>" },
+      { article_number: "2", article_title: "", article_html: "<p>sharedanchor</p>" },
+      { article_number: "3", article_title: "", article_html: "<p>fillerthree</p>" },
+      { article_number: "4", article_title: "", article_html: "<p>fillerfour</p>" },
+      { article_number: "5", article_title: "", article_html: "<p>fillerfive</p>" },
+      { article_number: "6", article_title: "", article_html: "<p>fillersix</p>" },
+      { article_number: "7", article_title: "", article_html: "<p>fillersven</p>" },
+      { article_number: "8", article_title: "", article_html: "<p>fillereight</p>" },
+      { article_number: "9", article_title: "", article_html: "<p>fillernine</p>" },
+      { article_number: "10", article_title: "", article_html: "<p>fillerten</p>" },
+    ];
+    const multiRecitals = [
+      { recital_number: "1", recital_text: "sharedanchor" },
+      { recital_number: "2", recital_text: "fillerthree" },
+      { recital_number: "3", recital_text: "fillerfour" },
+      { recital_number: "4", recital_text: "fillerfive" },
+      { recital_number: "5", recital_text: "fillersix" },
+      { recital_number: "6", recital_text: "fillersven" },
+      { recital_number: "7", recital_text: "fillereight" },
+      { recital_number: "8", recital_text: "fillernine" },
+      { recital_number: "9", recital_text: "fillerten" },
+      { recital_number: "10", recital_text: "unmatchedterm" },
+    ];
+
+    const result = mapRecitalsToArticles(multiRecitals, multiArticles);
+
+    expect(result.get("1").map((r) => r.recital_number)).toContain("1");
+    expect(result.get("2").map((r) => r.recital_number)).toContain("1");
+    expect(result.get("3").map((r) => r.recital_number)).not.toContain("1");
+  });
+
+  it("exposes recitals with no term overlap as orphans", () => {
+    const result = mapRecitalsToArticles(
+      [{ recital_number: "1", recital_text: "nooverlapterm" }],
+      articles
+    );
+
+    expect(result.get(null)).toEqual(["1"]);
+    for (const [articleNumber, mappedRecitals] of result) {
+      if (articleNumber !== null) {
+        expect(mappedRecitals).toHaveLength(0);
+      }
+    }
+  });
 });
 
 describe("buildSearchIndex + searchIndex", () => {

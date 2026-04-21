@@ -10,11 +10,10 @@ export function PrintView({ data, options, uiLocale = "en", labels }) {
     relatedRecitals: includeRelatedRecitals,
   } = options ?? {};
 
-  // Compute related recitals if needed, ensuring each recital is assigned to ONE article max
+  // Compute related recitals if needed.
   const relatedRecitalsMap = useMemo(() => {
     if (!includeRelatedRecitals || !articles || !recitals) return new Map();
-    // Use true as 3rd arg to enforce single assignment
-    return mapRecitalsToArticles(recitals, articles, true);
+    return mapRecitalsToArticles(recitals, articles);
   }, [includeRelatedRecitals, articles, recitals]);
 
   if (!data) return null;
