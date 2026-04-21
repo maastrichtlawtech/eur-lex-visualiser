@@ -1,9 +1,11 @@
 // NLP Algorithm Version - bump this when algorithm changes to invalidate cache
-export const NLP_VERSION = 12;
+export const NLP_VERSION = 13;
 
 const MONOTONICITY_BETA = 0.9;
 const MONOTONICITY_GAMMA = 2;
 const RAW_SIMILARITY_FLOOR = 0.15;
+const SECONDARY_SCORE_RATIO = 0.75;
+const MAX_ARTICLES_PER_RECITAL = 2;
 
 import { getStopWords } from "./languages.js";
 
@@ -186,10 +188,9 @@ export function mapRecitalsToArticles(recitals, articles) {
       .slice(0, 3)
       .map(([term]) => term);
 
-    let bestScore = 0;
+    const scoredArticles = [];
     // Gate on raw evidence; choose the article with the monotonicity-weighted score.
     let strongestRawCos = 0;
-    let bestArticleId = null;
     const rPos = recitalIndex / recitalDenominator;
 
     articleVectors.forEach((aVec, articleIndex) => {
@@ -199,18 +200,27 @@ export function mapRecitalsToArticles(recitals, articles) {
       const positionalPrior = (1 - MONOTONICITY_BETA * Math.abs(rPos - aPos)) ** MONOTONICITY_GAMMA;
       const score = rawCos * positionalPrior;
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestArticleId = aVec.id;
-      }
+      scoredArticles.push({
+        id: aVec.id,
+        score,
+      });
     });
 
     // Apply threshold and assign
-    if (strongestRawCos >= RAW_SIMILARITY_FLOOR && bestArticleId) {
-      const list = articleToRecitals.get(bestArticleId);
-      if (list) {
-        // Store with score and keywords for later processing
-        list.push({ ...r, _score: bestScore, _keywords: keywords });
+    scoredArticles.sort((a, b) => b.score - a.score);
+    const bestScore = scoredArticles[0]?.score || 0;
+
+    if (strongestRawCos >= RAW_SIMILARITY_FLOOR && bestScore > 0) {
+      const selectedArticles = scoredArticles
+        .filter((candidate) => candidate.score >= bestScore * SECONDARY_SCORE_RATIO)
+        .slice(0, MAX_ARTICLES_PER_RECITAL);
+
+      for (const selectedArticle of selectedArticles) {
+        const list = articleToRecitals.get(selectedArticle.id);
+        if (list) {
+          // Store with score and keywords for later processing
+          list.push({ ...r, _score: selectedArticle.score, _keywords: keywords });
+        }
       }
     } else {
       articleToRecitals.get(null).push(r.recital_number);
