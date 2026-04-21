@@ -104,6 +104,42 @@ describe("mapRecitalsToArticles", () => {
       expect(mapped).toHaveProperty("keywords");
     }
   });
+
+  it("uses monotonicity to prefer a nearby article over a higher raw text overlap", () => {
+    const monotonicArticles = [
+      { article_number: "1", article_title: "", article_html: "<p>nearanchor</p>" },
+      { article_number: "2", article_title: "", article_html: "<p>middleanchor2</p>" },
+      { article_number: "3", article_title: "", article_html: "<p>middleanchor3</p>" },
+      { article_number: "4", article_title: "", article_html: "<p>middleanchor4</p>" },
+      { article_number: "5", article_title: "", article_html: "<p>faranchor faranchor faranchor faranchor</p>" },
+    ];
+    const monotonicRecitals = [
+      { recital_number: "1", recital_text: "nearanchor faranchor faranchor faranchor" },
+      { recital_number: "2", recital_text: "middleanchor2" },
+      { recital_number: "3", recital_text: "middleanchor3" },
+      { recital_number: "4", recital_text: "middleanchor4" },
+      { recital_number: "5", recital_text: "nooverlapterm" },
+    ];
+
+    const result = mapRecitalsToArticles(monotonicRecitals, monotonicArticles);
+
+    expect(result.get("1").map((r) => r.recital_number)).toContain("1");
+    expect(result.get("5").map((r) => r.recital_number)).not.toContain("1");
+  });
+
+  it("exposes recitals with no term overlap as orphans", () => {
+    const result = mapRecitalsToArticles(
+      [{ recital_number: "1", recital_text: "nooverlapterm" }],
+      articles
+    );
+
+    expect(result.get(null)).toEqual(["1"]);
+    for (const [articleNumber, mappedRecitals] of result) {
+      if (articleNumber !== null) {
+        expect(mappedRecitals).toHaveLength(0);
+      }
+    }
+  });
 });
 
 describe("buildSearchIndex + searchIndex", () => {
