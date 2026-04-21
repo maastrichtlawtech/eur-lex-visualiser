@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Sparkles, Loader2, Send, BookOpen } from "lucide-react";
+import { Sparkles, Loader2, Send, BookOpen, ShieldAlert, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { askLawQuestionStream } from "../utils/formexApi.js";
@@ -89,6 +89,14 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
     setError(null);
   };
 
+  const closePanel = () => {
+    if (abortRef.current) abortRef.current.abort();
+    abortRef.current = null;
+    setLoading(false);
+    setStage(null);
+    setOpen(false);
+  };
+
   useEffect(() => {
     resetResult();
     setQuestion("");
@@ -146,15 +154,33 @@ export function LawAskPanel({ celex, lawTitle, lang = "ENG", onArticleClick }) {
           </button>
         ) : (
           <div className="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm dark:bg-gray-800 dark:border-purple-800">
-            <div className="flex items-center gap-2 mb-3 text-purple-900 dark:text-purple-300">
-              <BookOpen size={18} />
-              <span className="font-semibold text-lg">{label}</span>
-              <span className="rounded bg-purple-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:bg-purple-800 dark:text-purple-200">beta</span>
+            <div className="mb-3 flex items-center justify-between gap-3 text-purple-900 dark:text-purple-300">
+              <div className="flex min-w-0 items-center gap-2">
+                <BookOpen size={18} className="shrink-0" />
+                <span className="truncate text-lg font-semibold">{label}</span>
+                <span className="shrink-0 rounded bg-purple-200 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-purple-800 dark:bg-purple-800 dark:text-purple-200">beta</span>
+              </div>
+              <button
+                type="button"
+                onClick={closePanel}
+                aria-label="Close AI help"
+                title="Close AI help"
+                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-300 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100"
+              >
+                <X size={16} />
+              </button>
             </div>
 
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               A planner first selects the most relevant articles, then an answerer grounds its response in those articles, their recitals, definitions, and any CJEU case law citing them. Every claim cites its source in <span className="font-mono">[brackets]</span>.
             </p>
+
+            <div className="mb-3 flex gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-relaxed text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-200">
+              <ShieldAlert size={14} className="mt-0.5 shrink-0" />
+              <p>
+                Your question and the selected law excerpts are sent to OpenRouter and Google to generate the answer. Do not include confidential or personal information.
+              </p>
+            </div>
 
             <div className="flex flex-wrap gap-2 mb-3">
               {PRESETS.map((p) => (

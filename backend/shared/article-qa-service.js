@@ -20,7 +20,9 @@ Multiple sources in one bracket are fine: [Art. 15, Recital 63]. Do NOT invent r
 
 ${LEGAL_REASONING_PRIMER}
 
-Distinguish clearly between what the article text says and how the CJEU has interpreted it. When citing the CJEU, prefer the most recent ruling on the same question and note when an earlier ruling has been narrowed or refined. If the bundle does not support an answer, reply exactly: "The provided materials do not cover this." Do not speculate. Do not cite anything outside the bundle. Use Markdown (headings, lists, tables) where it helps readability, but keep answers as concise as the question allows.`;
+Distinguish clearly between what the article text says and how the CJEU has interpreted it. When citing the CJEU, prefer the most recent ruling on the same question and note when an earlier ruling has been narrowed or refined. If the bundle does not support an answer, reply exactly: "The provided materials do not cover this." Do not speculate. Do not cite anything outside the bundle.
+
+Be direct and concise. Start with the answer, not background. Write in short, readable paragraphs by default. Use bullet points only when the user asks for a list or the answer naturally has distinct conditions, steps, or exceptions. Do not give a full legal memo unless the user asks for detail. Use tables only when they materially improve clarity.`;
 
 const MAX_DECLARATION_CHARS = 2500;
 
@@ -211,7 +213,7 @@ async function answerLawQuestion({ bundle, question, apiKey, model }) {
   return chatComplete({
     model,
     apiKey,
-    maxTokens: 2500,
+    maxTokens: 1500,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: userPrompt },
@@ -225,7 +227,7 @@ function streamLawAnswer({ bundle, question, apiKey, model, signal }) {
   return chatStream({
     model,
     apiKey,
-    maxTokens: 2500,
+    maxTokens: 1500,
     signal,
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
