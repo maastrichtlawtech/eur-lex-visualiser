@@ -1,3 +1,5 @@
+.env
+
 .npm-cache/
 .pycache/
 experiments/
