@@ -60,6 +60,9 @@ npx eurlex <command> [options]
 | `eurlex metadata <celex>` | Fetch SPARQL metadata (entry-into-force, ELI, etc.) |
 | `eurlex amendments <celex>` | List amendments and corrigenda |
 | `eurlex implementing <celex>` | List implementing/delegated acts |
+| `eurlex case-law <celex>` | List CJEU judgments that cite the law |
+| `eurlex recital-titles <celex>` | Generate or read cached AI titles for recitals |
+| `eurlex ask <celex> <question>` | Ask a grounded AI question about the law |
 | `eurlex search <query>` | Search the local law metadata cache |
 | `eurlex resolve <text>` | Resolve a legal reference to a CELEX number |
 | `eurlex resolve-url <url>` | Resolve a EUR-Lex URL to a CELEX number |
@@ -86,6 +89,11 @@ cat gdpr.xml | eurlex parse | jq '.definitions'
 eurlex metadata 32016R0679
 eurlex amendments 32016R0679
 eurlex implementing 32016R0679
+eurlex case-law 32016R0679
+
+# Optional AI features (requires OPENROUTER_API_KEY)
+eurlex recital-titles 32016R0679
+eurlex ask 32016R0679 "What rights does this law grant to individuals?"
 
 # Search & resolve
 eurlex search "artificial intelligence" --limit 5
@@ -118,6 +126,7 @@ eurlex resolve-url "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
   "recitals": [
     {
       "recital_number": "1",
+      "recital_title": "Protection of natural persons",
       "recital_text": "The protection of natural persons ...",
       "recital_html": "<p>...</p>"
     }
@@ -135,7 +144,7 @@ eurlex resolve-url "https://eur-lex.europa.eu/eli/reg/2016/679/oj"
 }
 ```
 
-Cross-references now include external-act forms (both post-2004 `Regulation (EU) 2016/679` and pre-2004 `Directive 95/46/EC` styles) with their resolved CELEX when available, so the viewer can link across acts.
+Cross-references now include external-act forms (both post-2004 `Regulation (EU) 2016/679` and pre-2004 `Directive 95/46/EC` styles) with their resolved CELEX when available, so the viewer can link across acts. `recital_title` is present when titles have been generated or merged by a client; the `/recital-titles` endpoint returns those titles separately for cacheable enhancement.
 
 ### Global CLI options
 
@@ -169,6 +178,7 @@ cat input.xml | parse-fmx > output.json
 | `GET` | `/api/laws/:celex/amendments` | Amendment and corrigendum history |
 | `GET` | `/api/laws/:celex/implementing` | Implementing and delegated acts |
 | `GET` | `/api/laws/:celex/case-law?lang=ENG` | CJEU judgments citing this act, with operative parts and structured `articleRefs` |
+| `GET` | `/api/laws/:celex/recital-titles?lang=ENG` | Cached AI-generated short titles for recitals. Requires `OPENROUTER_API_KEY` on cache miss. |
 | `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Streams a grounded markdown answer over Server-Sent Events: `stage` (lifecycle), `plan` (articles the planner picked), `bundle` (counts), `delta` (answer chunks), `done` (final usage), or `error`. Requires `OPENROUTER_API_KEY`. |
 | `GET` | `/api/laws/by-reference?actType=...&year=...&number=...` | Fetch law by official reference |
 | `GET` | `/api/search?q=keyword&limit=10` | Search law metadata |
@@ -199,6 +209,25 @@ cat input.xml | parse-fmx > output.json
 ```
 
 The parser handles post-2004 EUR-Lex Formex, pre-2004 OJ HTML, and older Curia HTML shapes.
+
+### Recital titles endpoint
+
+`GET /api/laws/:celex/recital-titles?lang=ENG` returns AI-generated short titles keyed by recital number:
+
+```json
+{
+  "celex": "32016R0679",
+  "lang": "ENG",
+  "model": "google/gemini-2.5-flash-lite",
+  "cached": true,
+  "titles": {
+    "1": "Protection of natural persons",
+    "26": "Definition of personal data"
+  }
+}
+```
+
+The backend stores titles in `recital-title-cache-v1.json` with a cache `version`, source-content hash, model, and generation timestamp. The web app also keeps a versioned IndexedDB copy so repeated browser visits do not call the endpoint again.
 
 ### Q&A endpoint
 
@@ -404,6 +433,7 @@ backend/
    ├─ article-bundle.js          # Assembles law bundles for grounded Q&A
    ├─ article-qa-service.js      # Planner + answerer prompts, legal-reasoning primer
    ├─ openrouter-chat.js         # OpenRouter chat-completions wrapper
+   ├─ recital-title-service.js   # Cached AI-generated short titles for recitals
    ├─ rate-limit.js
    ├─ reference-utils.js         # Parses legal references (incl. pre-2004 forms)
    └─ reference-utils.test.js
@@ -447,7 +477,7 @@ Current test coverage includes:
 | Variable | Description |
 |----------|-------------|
 | `PORT` | Port for the API server. |
-| `CACHE_DIR` | Directory for cached FMX/XML/ZIP downloads and derived artefacts. Defaults to `backend/law-cache`. |
+| `CACHE_DIR` | Directory for cached FMX/XML/ZIP downloads and derived artefacts. Defaults to `backend/law-cache` for the API. The CLI also respects legacy `FMX_DIR`. |
 | `STORAGE_LIMIT_MB` | Max size of the FMX download cache before eviction starts. Default `500`. |
 | `HTML_CACHE_LIMIT_MB` | Max size of the legacy-HTML fallback cache. Default `200`. |
 | `RATE_LIMIT_MAX` | Per-IP request cap for the 15-minute window. |
