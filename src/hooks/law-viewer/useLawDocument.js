@@ -19,6 +19,7 @@ function applyRecitalTitles(data, titles) {
 export function useLawDocument({ celex, lang, t, enabled = true }) {
   const [data, setData] = useState(EMPTY_LAW_DATA);
   const [loading, setLoading] = useState(false);
+  const [recitalTitlesLoading, setRecitalTitlesLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const requestRef = useRef(0);
 
@@ -26,6 +27,7 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
     if (!enabled || !celex) {
       setData(EMPTY_LAW_DATA);
       setLoading(false);
+      setRecitalTitlesLoading(false);
       setLoadError(null);
       return;
     }
@@ -33,6 +35,7 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
     const requestId = requestRef.current + 1;
     requestRef.current = requestId;
     setLoading(true);
+    setRecitalTitlesLoading(false);
     setLoadError(null);
     setData(EMPTY_LAW_DATA);
 
@@ -57,6 +60,7 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
       setData(nextData);
 
       if (nextData.recitals?.length > 0) {
+        setRecitalTitlesLoading(true);
         fetchRecitalTitles(celex, lang)
           .then((payload) => {
             if (requestRef.current !== requestId) return;
@@ -64,12 +68,16 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
           })
           .catch(() => {
             // Recital titles are an enhancement; the law remains usable without them.
+          })
+          .finally(() => {
+            if (requestRef.current === requestId) setRecitalTitlesLoading(false);
           });
       }
     } catch (error) {
       if (requestRef.current !== requestId) return;
       setLoadError(getLoadErrorDetails(error, t));
       setData(EMPTY_LAW_DATA);
+      setRecitalTitlesLoading(false);
     } finally {
       if (requestRef.current === requestId) setLoading(false);
     }
@@ -86,6 +94,7 @@ export function useLawDocument({ celex, lang, t, enabled = true }) {
   return {
     data,
     loading,
+    recitalTitlesLoading,
     loadError,
     reload,
   };

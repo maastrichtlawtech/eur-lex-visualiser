@@ -337,11 +337,13 @@ export function LawViewer() {
                 <RelatedRecitals
                   recitals={recitalMap.get(selection.selected.id) || []}
                   allRecitals={primaryDocument.data.recitals}
+                  recitalTitlesLoading={primaryDocument.recitalTitlesLoading}
                   onSelectRecital={selection.onClickRecital}
                 />
                 <GeneralRecitals
                   recitalNumbers={recitalMap.orphanRecitalNumbers || []}
                   allRecitals={primaryDocument.data.recitals}
+                  recitalTitlesLoading={primaryDocument.recitalTitlesLoading}
                   onSelectRecital={selection.onClickRecital}
                 />
                 <RelatedCaseLaw

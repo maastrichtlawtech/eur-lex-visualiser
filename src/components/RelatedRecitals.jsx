@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { useI18n } from "../i18n/useI18n.js";
 
 function useRecitalLookup(allRecitals) {
@@ -13,12 +14,20 @@ function useRecitalLookup(allRecitals) {
   }, [allRecitals]);
 }
 
+function RecitalTitle({ recital, t }) {
+  const hasTitle = Boolean(String(recital.recital_title || "").trim());
+
+  if (hasTitle) {
+    return recital.recital_title;
+  }
+
+  return `${t("common.recital")} ${recital.recital_number}`;
+}
+
 function RecitalTitleList({ recitals, onSelectRecital, t }) {
   return (
     <p className="font-serif text-sm leading-7 text-gray-700 dark:text-gray-300">
       {recitals.map((recital, index) => {
-        const title = recital.recital_title || `${t("common.recital")} ${recital.recital_number}`;
-
         return (
           <React.Fragment key={recital.recital_number}>
             {index > 0 ? " " : null}
@@ -31,7 +40,7 @@ function RecitalTitleList({ recitals, onSelectRecital, t }) {
               <span className="font-semibold text-gray-900 dark:text-gray-100">
                 ({recital.recital_number})
               </span>{" "}
-              {title}
+              <RecitalTitle recital={recital} t={t} />
             </button>
             {index < recitals.length - 1 ? "," : "."}
           </React.Fragment>
@@ -41,32 +50,46 @@ function RecitalTitleList({ recitals, onSelectRecital, t }) {
   );
 }
 
-export function RelatedRecitals({ recitals, allRecitals, onSelectRecital }) {
+export function RelatedRecitals({ recitals, allRecitals, recitalTitlesLoading = false, onSelectRecital }) {
   const { t } = useI18n();
 
   const recitalLookup = useRecitalLookup(allRecitals);
 
   if (!recitals || recitals.length === 0) return null;
   const linkedRecitals = recitals.map((r) => recitalLookup.get(r.recital_number) || r);
+  const showTitleLoading = recitalTitlesLoading
+    && linkedRecitals.some((recital) => !String(recital.recital_title || "").trim());
 
   return (
     <div className="mt-8 px-6 md:px-12">
       <div className="border-y border-gray-200 py-5 dark:border-gray-800">
-        <div className="mb-4 flex items-center gap-2">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-            {t("relatedRecitals.title")}
-          </h3>
-          <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
-            {recitals.length}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-2">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+              {t("relatedRecitals.title")}
+            </h3>
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-sm font-medium text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+              {recitals.length}
+            </span>
           </span>
+          {showTitleLoading ? (
+            <span className="flex shrink-0 items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 size={14} className="animate-spin" />
+              {t("relatedRecitals.loadingTitles")}
+            </span>
+          ) : null}
         </div>
-        <RecitalTitleList recitals={linkedRecitals} onSelectRecital={onSelectRecital} t={t} />
+        <RecitalTitleList
+          recitals={linkedRecitals}
+          onSelectRecital={onSelectRecital}
+          t={t}
+        />
       </div>
     </div>
   );
 }
 
-export function GeneralRecitals({ recitalNumbers, allRecitals, onSelectRecital }) {
+export function GeneralRecitals({ recitalNumbers, allRecitals, recitalTitlesLoading = false, onSelectRecital }) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
   const recitalLookup = useRecitalLookup(allRecitals);
@@ -76,6 +99,8 @@ export function GeneralRecitals({ recitalNumbers, allRecitals, onSelectRecital }
       .filter(Boolean),
     [recitalLookup, recitalNumbers]
   );
+  const showTitleLoading = recitalTitlesLoading
+    && recitals.some((recital) => !String(recital.recital_title || "").trim());
 
   if (recitals.length === 0) return null;
 
@@ -95,17 +120,29 @@ export function GeneralRecitals({ recitalNumbers, allRecitals, onSelectRecital }
             {recitals.length}
           </span>
         </span>
-        <span
-          aria-hidden="true"
-          className={`shrink-0 text-sm text-gray-500 transition-transform dark:text-gray-400 ${isOpen ? "rotate-90" : ""}`}
-        >
-          &gt;
+        <span className="flex shrink-0 items-center gap-3">
+          {showTitleLoading ? (
+            <span className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+              <Loader2 size={14} className="animate-spin" />
+              {t("relatedRecitals.loadingTitles")}
+            </span>
+          ) : null}
+          <span
+            aria-hidden="true"
+            className={`text-sm text-gray-500 transition-transform dark:text-gray-400 ${isOpen ? "rotate-90" : ""}`}
+          >
+            &gt;
+          </span>
         </span>
       </button>
 
       {isOpen ? (
         <div className="border-b border-gray-200 py-5 dark:border-gray-800">
-          <RecitalTitleList recitals={recitals} onSelectRecital={onSelectRecital} t={t} />
+          <RecitalTitleList
+            recitals={recitals}
+            onSelectRecital={onSelectRecital}
+            t={t}
+          />
         </div>
       ) : null}
     </div>

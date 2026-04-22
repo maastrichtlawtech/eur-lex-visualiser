@@ -19,6 +19,7 @@ function applyRecitalTitles(data, titles) {
 export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
   const [data, setData] = useState(EMPTY_LAW_DATA);
   const [loading, setLoading] = useState(false);
+  const [recitalTitlesLoading, setRecitalTitlesLoading] = useState(false);
   const [loadError, setLoadError] = useState(null);
 
   useEffect(() => {
@@ -26,11 +27,13 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
       setData(EMPTY_LAW_DATA);
       setLoadError(null);
       setLoading(false);
+      setRecitalTitlesLoading(false);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
+    setRecitalTitlesLoading(false);
     setLoadError(null);
     setData(EMPTY_LAW_DATA);
 
@@ -55,6 +58,7 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
         if (!cancelled) setData(nextData);
 
         if (nextData.recitals?.length > 0) {
+          setRecitalTitlesLoading(true);
           fetchRecitalTitles(celex, secondaryLang)
             .then((payload) => {
               if (cancelled) return;
@@ -62,12 +66,16 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
             })
             .catch(() => {
               // Recital titles are an enhancement; side-by-side text remains usable without them.
+            })
+            .finally(() => {
+              if (!cancelled) setRecitalTitlesLoading(false);
             });
         }
       } catch (error) {
         if (cancelled) return;
         setLoadError(getLoadErrorDetails(error, t));
         setData(EMPTY_LAW_DATA);
+        setRecitalTitlesLoading(false);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -84,6 +92,7 @@ export function useSecondaryLawDocument({ celex, secondaryLang, t }) {
   return {
     data,
     loading,
+    recitalTitlesLoading,
     loadError,
   };
 }
