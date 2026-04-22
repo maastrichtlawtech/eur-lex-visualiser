@@ -46,6 +46,31 @@ function createResponseRecorder() {
   };
 }
 
+async function withOpenRouterEnv(env, fn) {
+  const previous = {
+    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    ARTICLE_QA_OPENROUTER_API_KEY: process.env.ARTICLE_QA_OPENROUTER_API_KEY,
+    RECITAL_TITLE_OPENROUTER_API_KEY: process.env.RECITAL_TITLE_OPENROUTER_API_KEY,
+  };
+
+  for (const key of Object.keys(previous)) {
+    delete process.env[key];
+  }
+  Object.assign(process.env, env);
+
+  try {
+    return await fn();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  }
+}
+
 function registerTestRoutes(overrides = {}) {
   const app = createAppRecorder();
   const store = new JsonLegalCacheStore(fixturePath);
@@ -304,6 +329,39 @@ test("GET /api/laws/:celex/case-law uses a short cache ttl", async () => {
   const ttlMs = entry.expiresAt - startedAt;
   assert.ok(ttlMs <= 5 * 60 * 1000 + 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
   assert.ok(ttlMs >= 5 * 60 * 1000 - 1_000, `Expected short cache ttl, got ${ttlMs}ms`);
+});
+
+test("AI routes require their own OpenRouter key or the shared fallback", async () => {
+  await withOpenRouterEnv({ ARTICLE_QA_OPENROUTER_API_KEY: "qa-key" }, async () => {
+    const { app } = registerTestRoutes();
+    const handler = app.routes.get("/api/laws/:celex/recital-titles");
+    const res = createResponseRecorder();
+
+    await handler({
+      params: { celex: "32016R0679" },
+      query: { lang: "ENG" },
+    }, res);
+
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.payload.code, "openrouter_unconfigured");
+    assert.match(res.payload.error, /recital titles/);
+  });
+
+  await withOpenRouterEnv({ RECITAL_TITLE_OPENROUTER_API_KEY: "title-key" }, async () => {
+    const { app } = registerTestRoutes();
+    const handler = app.routes.get("POST /api/laws/:celex/ask");
+    const res = createResponseRecorder();
+
+    await handler({
+      params: { celex: "32016R0679" },
+      query: { lang: "ENG" },
+      body: { question: "What does this law do?" },
+    }, res);
+
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.payload.code, "openrouter_unconfigured");
+    assert.match(res.payload.error, /Q&A/);
+  });
 });
 
 test("GET /api/resolve-url returns cache-backed ELI resolution", async () => {

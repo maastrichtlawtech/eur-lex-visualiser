@@ -24,6 +24,14 @@ const DEFAULT_QA_PLANNER_MODEL = process.env.ARTICLE_QA_PLANNER_MODEL || process
 const DEFAULT_QA_ANSWER_MODEL = process.env.ARTICLE_QA_ANSWER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash';
 const DEFAULT_RECITAL_TITLE_MODEL = process.env.RECITAL_TITLE_MODEL || process.env.ARTICLE_QA_PLANNER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash-lite';
 
+function getQaApiKey() {
+  return process.env.ARTICLE_QA_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+}
+
+function getRecitalTitleApiKey() {
+  return process.env.RECITAL_TITLE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+}
+
 function bootServices() {
   const { JsonLegalCacheStore, DEFAULT_SEARCH_CACHE_PATH } = require('../search/search-index');
   const {
@@ -236,8 +244,8 @@ COMMANDS['recital-titles'] = {
     if (!svc.validateCelex(flags.celex)) die(`Invalid CELEX format: ${flags.celex}`);
     const lang = svc.validateLang(flags.lang || 'ENG');
     if (!lang) die(`Invalid language code: ${flags.lang}`);
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) die('OPENROUTER_API_KEY is required for recital-titles.');
+    const apiKey = getRecitalTitleApiKey();
+    if (!apiKey) die('RECITAL_TITLE_OPENROUTER_API_KEY or OPENROUTER_API_KEY is required for recital-titles.');
 
     const { ensureRecitalTitles } = require('../shared/recital-title-service');
     const parsed = await parseLawByCelex(svc, flags.celex, lang);
@@ -274,8 +282,8 @@ COMMANDS.ask = {
     if (!svc.validateCelex(flags.celex)) die(`Invalid CELEX format: ${flags.celex}`);
     const lang = svc.validateLang(flags.lang || 'ENG');
     if (!lang) die(`Invalid language code: ${flags.lang}`);
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) die('OPENROUTER_API_KEY is required for ask.');
+    const apiKey = getQaApiKey();
+    if (!apiKey) die('ARTICLE_QA_OPENROUTER_API_KEY or OPENROUTER_API_KEY is required for ask.');
 
     const { fetchCaseLaw } = require('../shared/law-queries');
     const { buildLawBundle } = require('../shared/article-bundle');

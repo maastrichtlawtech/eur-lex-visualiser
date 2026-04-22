@@ -14,6 +14,14 @@ const DEFAULT_QA_ANSWER_MODEL = process.env.ARTICLE_QA_ANSWER_MODEL || process.e
 const DEFAULT_RECITAL_TITLE_MODEL = process.env.RECITAL_TITLE_MODEL || process.env.ARTICLE_QA_PLANNER_MODEL || process.env.ARTICLE_QA_MODEL || 'google/gemini-2.5-flash-lite';
 const MAX_QUESTION_CHARS = 800;
 
+function getQaApiKey() {
+  return process.env.ARTICLE_QA_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+}
+
+function getRecitalTitleApiKey() {
+  return process.env.RECITAL_TITLE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY;
+}
+
 /**
  * Normalise an upstream chat error into a user-facing message + stable code.
  * Maps OpenRouter's 402/429 into friendlier text while still exposing the raw
@@ -373,9 +381,9 @@ function registerApiRoutes(app, deps) {
         return res.status(400).json({ error: `Invalid language code: ${rawLang}` });
       }
 
-      const apiKey = process.env.OPENROUTER_API_KEY;
+      const apiKey = getRecitalTitleApiKey();
       if (!apiKey) {
-        return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
+        return res.status(503).json({ error: 'OpenRouter API key is not configured for recital titles', code: 'openrouter_unconfigured' });
       }
 
       const parsed = await resolveParsedLaw(celex, lang, { skipFmxProbe: req.query.skipFmxProbe === '1' });
@@ -425,9 +433,9 @@ function registerApiRoutes(app, deps) {
       return res.status(400).json({ error: `Question too long (max ${MAX_QUESTION_CHARS} chars)` });
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = getQaApiKey();
     if (!apiKey) {
-      return res.status(503).json({ error: 'OpenRouter API key is not configured', code: 'openrouter_unconfigured' });
+      return res.status(503).json({ error: 'OpenRouter API key is not configured for Q&A', code: 'openrouter_unconfigured' });
     }
 
     // Start SSE stream.

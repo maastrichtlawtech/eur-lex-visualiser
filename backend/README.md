@@ -91,7 +91,7 @@ eurlex amendments 32016R0679
 eurlex implementing 32016R0679
 eurlex case-law 32016R0679
 
-# Optional AI features (requires OPENROUTER_API_KEY)
+# Optional AI features (requires OPENROUTER_API_KEY or feature-specific keys)
 eurlex recital-titles 32016R0679
 eurlex ask 32016R0679 "What rights does this law grant to individuals?"
 
@@ -178,8 +178,8 @@ cat input.xml | parse-fmx > output.json
 | `GET` | `/api/laws/:celex/amendments` | Amendment and corrigendum history |
 | `GET` | `/api/laws/:celex/implementing` | Implementing and delegated acts |
 | `GET` | `/api/laws/:celex/case-law?lang=ENG` | CJEU judgments citing this act, with operative parts and structured `articleRefs` |
-| `GET` | `/api/laws/:celex/recital-titles?lang=ENG` | Cached AI-generated short titles for recitals. Requires `OPENROUTER_API_KEY` on cache miss. |
-| `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Streams a grounded markdown answer over Server-Sent Events: `stage` (lifecycle), `plan` (articles the planner picked), `bundle` (counts), `delta` (answer chunks), `done` (final usage), or `error`. Requires `OPENROUTER_API_KEY`. |
+| `GET` | `/api/laws/:celex/recital-titles?lang=ENG` | Cached AI-generated short titles for recitals. Requires `RECITAL_TITLE_OPENROUTER_API_KEY` or `OPENROUTER_API_KEY` on cache miss. |
+| `POST` | `/api/laws/:celex/ask?lang=ENG` | Whole-law Q&A — body `{question}`. Streams a grounded markdown answer over Server-Sent Events: `stage` (lifecycle), `plan` (articles the planner picked), `bundle` (counts), `delta` (answer chunks), `done` (final usage), or `error`. Requires `ARTICLE_QA_OPENROUTER_API_KEY` or `OPENROUTER_API_KEY`. |
 | `GET` | `/api/laws/by-reference?actType=...&year=...&number=...` | Fetch law by official reference |
 | `GET` | `/api/search?q=keyword&limit=10` | Search law metadata |
 | `GET` | `/api/resolve-reference?actType=...&year=...&number=...` | Resolve legal reference to CELEX |
@@ -255,7 +255,7 @@ data: {"model":"google/gemini-2.5-flash","usage":{…}}
 
 On failure (incl. 402 insufficient credits, 429 rate-limit, or 401/403 auth errors) an `error` event is emitted instead of `done`, with a user-safe message and a stable `code` (`ai_service_unavailable`, `ai_rate_limited`, `ai_auth_failed`, `planner_empty`, `internal_error`). The upstream raw message is in `detail` for debugging.
 
-Requires `OPENROUTER_API_KEY`. Models are selectable via `ARTICLE_QA_PLANNER_MODEL` (default `google/gemini-2.5-flash-lite`) and `ARTICLE_QA_ANSWER_MODEL` (default `google/gemini-2.5-flash`). `ARTICLE_QA_MODEL` remains available as a single override for both stages. Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then streams the answer back with self-contained citations.
+Requires `ARTICLE_QA_OPENROUTER_API_KEY` or the fallback `OPENROUTER_API_KEY`. Models are selectable via `ARTICLE_QA_PLANNER_MODEL` (default `google/gemini-2.5-flash-lite`) and `ARTICLE_QA_ANSWER_MODEL` (default `google/gemini-2.5-flash`). `ARTICLE_QA_MODEL` remains available as a single override for both stages. Stage 1 sends only the article skeleton + defined-terms list to a planner that picks up to 10 relevant articles; stage 2 assembles their full text, related recitals, used definitions, and all CJEU cases that cite any of them (deduped by CELEX), then streams the answer back with self-contained citations.
 
 ## Using from Python (and other languages)
 
@@ -484,8 +484,10 @@ Current test coverage includes:
 | `TIMEOUT_MS` | HTTP request timeout in ms. Default `30000`. |
 | `SEARCH_CACHE_PATH` | Optional override for the search cache JSON path. |
 | `ANALYTICS_TOKEN` | Optional Plausible/analytics token for the `/api/_stats` endpoint. |
-| `OPENROUTER_API_KEY` | Required for `/api/laws/:celex/ask` and AI-generated recital titles. |
+| `OPENROUTER_API_KEY` | Fallback OpenRouter key used by Q&A and recital titles when the feature-specific key is not set. |
 | `OPENROUTER_BASE_URL` | Override (default `https://openrouter.ai/api/v1`). |
+| `ARTICLE_QA_OPENROUTER_API_KEY` | Optional OpenRouter key used only for `/api/laws/:celex/ask` and `eurlex ask`. Falls back to `OPENROUTER_API_KEY`. |
+| `RECITAL_TITLE_OPENROUTER_API_KEY` | Optional OpenRouter key used only for recital-title generation and `eurlex recital-titles`. Falls back to `OPENROUTER_API_KEY`. |
 | `ARTICLE_QA_MODEL` | Optional single chat model override for both Q&A stages. |
 | `ARTICLE_QA_PLANNER_MODEL` | Planner model for article selection. Default `google/gemini-2.5-flash-lite`. |
 | `ARTICLE_QA_ANSWER_MODEL` | Answer model for legal analysis. Default `google/gemini-2.5-flash`. |
