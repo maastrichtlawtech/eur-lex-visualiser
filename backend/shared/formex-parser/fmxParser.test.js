@@ -2,7 +2,13 @@ import { beforeAll, describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { dirname, resolve } from "path";
 import { fileURLToPath } from "url";
-import { isFmxDocument, parseFmxToCombined, injectCrossRefLinks } from "./fmxParser.mjs";
+import {
+  isFmxDocument,
+  isConsolidatedFmxDocument,
+  parseFmxToCombined,
+  parseConsolidatedFmx,
+  injectCrossRefLinks,
+} from "./fmxParser.mjs";
 import { getLangConfig } from "./languages.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,6 +20,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DGA_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/dga.fmx.xml"), "utf-8");
 const GDPR_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/gdpr.fmx.xml"), "utf-8");
 const AIA_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/aia.fmx.xml"), "utf-8");
+const EPRIVACY_2006_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/eprivacy-cons-2006.fmx.xml"), "utf-8");
+const EPRIVACY_2009_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/eprivacy-cons-2009.fmx.xml"), "utf-8");
+const GDPR_CONS_XML = readFileSync(resolve(__dirname, "../../../src/__fixtures__/gdpr-cons-2016.fmx.xml"), "utf-8");
 
 // ---------------------------------------------------------------------------
 // isFmxDocument
@@ -379,5 +388,140 @@ describe("injectCrossRefLinks", () => {
     const html = "<p>Siehe Artikel 12 für Details.</p>";
     const result = injectCrossRefLinks(html, deLang);
     expect(result).toContain('data-ref-article="12"');
+  });
+});
+
+
+// ---------------------------------------------------------------------------
+// isConsolidatedFmxDocument
+// ---------------------------------------------------------------------------
+
+describe("isConsolidatedFmxDocument", () => {
+  it("recognises ePrivacy 2006 consolidation", () => {
+    expect(isConsolidatedFmxDocument(EPRIVACY_2006_XML)).toBe(true);
+  });
+  it("recognises ePrivacy 2009 consolidation", () => {
+    expect(isConsolidatedFmxDocument(EPRIVACY_2009_XML)).toBe(true);
+  });
+  it("recognises GDPR 2016 consolidation", () => {
+    expect(isConsolidatedFmxDocument(GDPR_CONS_XML)).toBe(true);
+  });
+  it("rejects an unconsolidated ACT document", () => {
+    expect(isConsolidatedFmxDocument(DGA_XML)).toBe(false);
+    expect(isConsolidatedFmxDocument(GDPR_XML)).toBe(false);
+  });
+  it("rejects an empty string", () => {
+    expect(isConsolidatedFmxDocument("")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseConsolidatedFmx — ePrivacy 2006 consolidation
+// ---------------------------------------------------------------------------
+
+describe("parseConsolidatedFmx — ePrivacy 2006", () => {
+  let result;
+  beforeAll(() => {
+    result = parseConsolidatedFmx(EPRIVACY_2006_XML);
+  });
+
+  it("extracts a non-empty title", () => {
+    expect(result.title).toBeTruthy();
+  });
+
+  it("detects English language", () => {
+    expect(result.langCode).toBe("EN");
+  });
+
+  it("populates meta with the consolidation header", () => {
+    expect(result.meta.baseCelex).toBe("2002L0058");
+    expect(result.meta.consolidationStartDate).toBe("20060503");
+    expect(result.meta.legalValue).toBe("DIR");
+  });
+
+  it("captures the schema version", () => {
+    expect(result.meta.schemaVersion).toMatch(/^\d+\.\d+$/);
+  });
+
+  it("lists the modifying acts", () => {
+    expect(result.meta.modifyingActs.length).toBeGreaterThan(0);
+    expect(result.meta.modifyingActs.some((m) => m.date && m.date.startsWith("2006"))).toBe(true);
+  });
+
+  it("extracts 21 articles with stable identifiers", () => {
+    expect(result.articles).toHaveLength(21);
+    expect(result.articles[0].identifier).toBe("001");
+    expect(result.articles.at(-1).identifier).toBe("021");
+  });
+
+  it("extracts paragraphs with stable identifiers", () => {
+    const art5 = result.articles.find((a) => a.identifier === "005");
+    expect(art5).toBeTruthy();
+    expect(art5.paragraphs.length).toBeGreaterThanOrEqual(2);
+    expect(art5.paragraphs[0].identifier).toBe("005.001");
+  });
+
+  it("extracts all 49 recitals with content", () => {
+    expect(result.recitals).toHaveLength(49);
+    expect(result.recitals[0].recital_text.length).toBeGreaterThan(20);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseConsolidatedFmx — ePrivacy 2009 consolidation
+// ---------------------------------------------------------------------------
+
+describe("parseConsolidatedFmx — ePrivacy 2009", () => {
+  let result;
+  beforeAll(() => {
+    result = parseConsolidatedFmx(EPRIVACY_2009_XML);
+  });
+
+  it("extracts 23 articles, including inserted 14a and 15a", () => {
+    expect(result.articles).toHaveLength(23);
+    const ids = result.articles.map((a) => a.identifier);
+    expect(ids).toContain("014A");
+    expect(ids).toContain("015A");
+  });
+
+  it("the inserted articles carry article_number with the letter suffix", () => {
+    const art14a = result.articles.find((a) => a.identifier === "014A");
+    expect(art14a).toBeTruthy();
+    expect(art14a.article_number.toLowerCase()).toContain("14a");
+  });
+
+  it("captures both 2006 and 2009 modifying acts", () => {
+    const dates = result.meta.modifyingActs.map((m) => m.date).filter(Boolean);
+    expect(dates.some((d) => d.startsWith("2006"))).toBe(true);
+    expect(dates.some((d) => d.startsWith("2009"))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseConsolidatedFmx — GDPR 2016 consolidation (no recitals)
+// ---------------------------------------------------------------------------
+
+describe("parseConsolidatedFmx — GDPR 2016 consolidation", () => {
+  let result;
+  beforeAll(() => {
+    result = parseConsolidatedFmx(GDPR_CONS_XML);
+  });
+
+  it("extracts 99 articles", () => {
+    expect(result.articles).toHaveLength(99);
+  });
+
+  it("strips recitals (newer schema does not include them in consolidations)", () => {
+    expect(result.recitals).toHaveLength(0);
+  });
+
+  it("populates baseCelex and a 2016 consolidation start date", () => {
+    expect(result.meta.baseCelex).toBe("2016R0679");
+    expect(result.meta.consolidationStartDate).toBe("20160504");
+  });
+
+  it("captures applied corrigenda in modifyingActs", () => {
+    const corrig = result.meta.modifyingActs.filter((m) => m.type === "CORRIG");
+    expect(corrig.length).toBeGreaterThan(0);
   });
 });
