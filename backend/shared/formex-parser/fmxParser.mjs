@@ -836,12 +836,21 @@ export function parseFmxToCombined(xmlText) {
     throw new Error("FMX XML parse error: " + parseError.textContent.slice(0, 200));
   }
 
-  const docRoot = doc.documentElement; // <ACT> or <COMBINED.FMX>
+  const docRoot = doc.documentElement; // <ACT>, <CONS.ACT>, or <COMBINED.FMX>
 
-  // For combined documents, the ACT is a child element
+  // For combined documents, the ACT (or CONS.ACT) is a child element
   const root = docRoot.tagName === "COMBINED.FMX"
-    ? docRoot.querySelector("ACT") || docRoot
+    ? docRoot.querySelector("ACT") || docRoot.querySelector("CONS\\.ACT") || docRoot
     : docRoot;
+  const isConsolidated = root.tagName === "CONS.ACT";
+
+  const meta = isConsolidated
+    ? {
+        ...parseConsInfoHeader(root),
+        schemaVersion: parseSchemaVersion(root),
+        modifyingActs: parseModifyingActs(root),
+      }
+    : null;
 
   // --- Language ---
   const lgDoc = root.querySelector("BIB\\.INSTANCE > LG\\.DOC");
@@ -962,6 +971,8 @@ export function parseFmxToCombined(xmlText) {
         articles.push({
           article_number,
           article_title,
+          identifier: idAttr || null,
+          paragraphs: extractConsParagraphs(child),
           division: {
             chapter: { number: currentChapter.number, title: currentChapter.title },
             section: currentSection.number ? { number: currentSection.number, title: currentSection.title } : null,
@@ -1122,11 +1133,11 @@ export function parseFmxToCombined(xmlText) {
     }
   }
 
-  return { title, articles, recitals, annexes, definitions, langCode, crossReferences };
+  return { meta, title, articles, recitals, annexes, definitions, langCode, crossReferences };
 }
 
 // ---------------------------------------------------------------------------
-// Consolidated FMX (<CONS.ACT>) parser
+// Consolidated FMX (<CONS.ACT>) helpers
 // ---------------------------------------------------------------------------
 
 /**
@@ -1191,23 +1202,6 @@ function parseModifyingActs(consActEl) {
   return result;
 }
 
-function pickPrimaryTitle(consActEl) {
-  // The main act's title lives in the first <FAM.COMP> > <BIB.DATA> > <TITLE> > <TI>.
-  // Modifier acts have their own <TITLE> further down inside <GR.MOD.ACT>.
-  const famComp = consActEl.querySelector("FAM\\.COMP");
-  if (famComp) {
-    const ti = famComp.querySelector("BIB\\.DATA > TITLE > TI");
-    if (ti) return ti;
-  }
-  return consActEl.querySelector("TITLE > TI");
-}
-
-function pickPrimaryLangCode(consActEl) {
-  const lgDoc = consActEl.querySelector("BIB\\.INSTANCE > LG\\.DOC")
-    || consActEl.querySelector("LG\\.DOC");
-  return lgDoc ? lgDoc.textContent.trim().toUpperCase() : "EN";
-}
-
 function extractConsParagraphs(articleEl) {
   const paragraphs = [];
   const directParags = Array.from(articleEl.children).filter((c) => c.tagName === "PARAG");
@@ -1237,267 +1231,23 @@ function extractConsParagraphs(articleEl) {
   return paragraphs;
 }
 
-function walkConsDivisions(containerEl, articles, crossReferences, lang, ctx) {
-  for (const child of containerEl.children) {
-    if (child.tagName === "TITLE") continue;
-
-    if (child.tagName === "ARTICLE") {
-      const idAttr = child.getAttribute("IDENTIFIER") || "";
-      const tiArt = child.querySelector("TI\\.ART");
-      const stiArt = child.querySelector("STI\\.ART");
-
-      const artLabel = tiArt ? allText(tiArt) : "";
-      const m = artLabel.match(lang.article);
-      const numberFromId = idAttr.replace(/^0+/, "").toLowerCase() || String(articles.length + 1);
-      const article_number = m ? m[1] : numberFromId;
-      const article_title = stiArt ? allText(stiArt) : "";
-
-      let bodyHtml = renderChildrenWithFootnotes(
-        child,
-        `article-${article_number}`,
-        (node) => node.nodeType === Node.ELEMENT_NODE && node.tagName === "TI.ART"
-      );
-      bodyHtml = injectCrossRefLinks(bodyHtml, lang);
-
-      const paragraphs = extractConsParagraphs(child);
-
-      articles.push({
-        article_number,
-        article_title,
-        identifier: idAttr || null,
-        paragraphs,
-        division: {
-          chapter: { number: ctx.chapter.number, title: ctx.chapter.title },
-          section: ctx.section.number ? { number: ctx.section.number, title: ctx.section.title } : null,
-        },
-        article_html: bodyHtml,
-      });
-
-      const fullText = allText(child);
-      const textRefs = extractCrossRefsFromText(fullText, lang);
-      const ojRefs = extractOjRefsFromElement(child);
-      const allRefs = [...textRefs, ...ojRefs];
-      const seenKeys = new Set();
-      const uniqueRefs = allRefs.filter((r) => {
-        if (r.type === "article" && r.target === article_number) return false;
-        const key = `${r.type}:${r.target}:${r.paragraph || ""}:${r.point || ""}`;
-        if (seenKeys.has(key)) return false;
-        seenKeys.add(key);
-        return true;
-      });
-      if (uniqueRefs.length > 0) {
-        crossReferences[article_number] = uniqueRefs;
-      }
-      continue;
-    }
-
-    if (child.tagName === "DIVISION") {
-      const titleEl = Array.from(child.children).find((c) => c.tagName === "TITLE");
-      const nextChapter = { ...ctx.chapter };
-      const nextSection = { ...ctx.section };
-      if (titleEl) {
-        const ti = titleEl.querySelector("TI");
-        const sti = titleEl.querySelector("STI");
-        const tiText = ti ? allText(ti) : "";
-        const stiText = sti ? allText(sti) : "";
-        const isChapter = lang.chapter.test(tiText) || ctx.depth === 0;
-        if (isChapter) {
-          nextChapter.number = tiText;
-          nextChapter.title = stiText;
-          nextSection.number = "";
-          nextSection.title = "";
-        } else {
-          nextSection.number = tiText;
-          nextSection.title = stiText;
-        }
-      }
-      walkConsDivisions(child, articles, crossReferences, lang, {
-        chapter: nextChapter,
-        section: nextSection,
-        depth: ctx.depth + 1,
-      });
-    }
-  }
-}
-
 /**
- * Parse a consolidated Formex (<CONS.ACT>) document into the same shape used
- * by the rest of the app, plus extra fields needed for cross-version diffing:
+ * Parse a consolidated Formex (<CONS.ACT>) document. Thin wrapper over
+ * `parseFmxToCombined`, which handles both <ACT> and <CONS.ACT> roots —
+ * this entry point exists so callers can be explicit about expecting a
+ * consolidated document and reject anything else early.
  *
- *   - Each article gets `identifier` (e.g. "005", "014A") and `paragraphs`
- *     (each with their own `identifier`, e.g. "005.001"), so that two
- *     consolidations can be diffed by stable structural keys.
- *   - The returned object carries `meta` with `baseCelex`, the consolidation
- *     start date, schema version, and the list of `modifyingActs` extracted
- *     from <GR.MOD.ACT> / <GR.CORRIG>.
+ * Returns the same shape as `parseFmxToCombined`, with the consolidation-
+ * specific extras populated on `meta`:
+ *   - `meta.baseCelex`, `meta.consolidationStartDate`, `meta.schemaVersion`
+ *   - `meta.modifyingActs[]` from <GR.MOD.ACT> / <GR.CORRIG>
  *
- * Recitals are extracted when present (older schemas keep them; FMX v5+
- * consolidations typically drop them) — callers should handle an empty
- * `recitals` array gracefully.
+ * Articles always carry `identifier` and `paragraphs[]` for cross-version
+ * diffing; recitals may be empty when the schema strips them (FMX v5+).
  */
 export function parseConsolidatedFmx(xmlText) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlText, "text/xml");
-
-  const parseError = doc.querySelector("parsererror");
-  if (parseError) {
-    throw new Error("CONS.ACT XML parse error: " + parseError.textContent.slice(0, 200));
-  }
-
-  const docRoot = doc.documentElement;
-  const consAct = docRoot.tagName === "CONS.ACT"
-    ? docRoot
-    : docRoot.querySelector("CONS\\.ACT");
-  if (!consAct) {
+  if (!isConsolidatedFmxDocument(xmlText)) {
     throw new Error("Not a consolidated Formex document: <CONS.ACT> not found");
   }
-
-  const meta = {
-    ...parseConsInfoHeader(consAct),
-    schemaVersion: parseSchemaVersion(consAct),
-    modifyingActs: parseModifyingActs(consAct),
-  };
-
-  const langCode = pickPrimaryLangCode(consAct);
-  const lang = getLangConfig(langCode);
-
-  const titleEl = pickPrimaryTitle(consAct);
-  const titleParts = [];
-  if (titleEl) {
-    for (const p of titleEl.querySelectorAll("P")) {
-      const t = allText(p).trim();
-      if (t) titleParts.push(t);
-    }
-  }
-  const titleText = titleParts.join(" ");
-
-  let shortTitle = "";
-  for (const part of titleParts) {
-    const m = part.match(/\(([^)]{5,80})\)/);
-    if (m && !lang.eea.test(m[1])) {
-      shortTitle = m[1];
-      break;
-    }
-  }
-  let mainTitle = titleText;
-  if (lang.parliamentSplit) {
-    const splitResult = titleText.split(lang.parliamentSplit);
-    if (splitResult.length > 1) mainTitle = splitResult[0].trim();
-  }
-  if (mainTitle === titleText && lang.titleSplit) {
-    mainTitle = titleText.split(lang.titleSplit)[0].trim();
-  }
-  mainTitle = mainTitle.toLowerCase()
-    .replace(/(?:^|\s)\S/g, (a) => a.toUpperCase())
-    .replace(/\b(Eu|Ec|Eec|Euratom)\b/gi, (m) => m.toUpperCase());
-  const title = shortTitle && mainTitle && !mainTitle.includes(shortTitle)
-    ? `${shortTitle} — ${mainTitle}`
-    : shortTitle || mainTitle;
-
-  const recitals = [];
-  for (const consid of consAct.querySelectorAll("GR\\.CONSID > CONSID")) {
-    const noP = consid.querySelector("NP > NO\\.P");
-    const num = noP ? allText(noP).replace(/[()]/g, "").trim() : String(recitals.length + 1);
-    const txtEl = consid.querySelector("NP > TXT") || consid.querySelector("NP");
-    const recitalText = txtEl ? allText(txtEl) : "";
-    const recitalHtmlRaw = txtEl ? renderWithFootnotes(txtEl, `recital-${num}`) : "";
-    recitals.push({
-      recital_number: num,
-      identifier: consid.getAttribute("IDENTIFIER") || null,
-      recital_text: recitalText,
-      recital_html: injectCrossRefLinks(recitalHtmlRaw, lang),
-    });
-  }
-  recitals.sort((a, b) => (parseInt(a.recital_number) || 0) - (parseInt(b.recital_number) || 0));
-
-  const articles = [];
-  const crossReferences = {};
-  const enactingTerms = consAct.querySelector("ENACTING\\.TERMS");
-  if (enactingTerms) {
-    walkConsDivisions(enactingTerms, articles, crossReferences, lang, {
-      chapter: { number: "", title: "" },
-      section: { number: "", title: "" },
-      depth: 0,
-    });
-  }
-
-  for (const r of recitals) {
-    const textRefs = extractCrossRefsFromText(r.recital_text, lang);
-    const seenKeys = new Set();
-    const uniqueRefs = textRefs.filter((ref) => {
-      const key = `${ref.type}:${ref.target}:${ref.paragraph || ""}:${ref.point || ""}`;
-      if (seenKeys.has(key)) return false;
-      seenKeys.add(key);
-      return true;
-    });
-    if (uniqueRefs.length > 0) {
-      crossReferences[`recital_${r.recital_number}`] = uniqueRefs;
-    }
-  }
-
-  const definitions = [];
-  const defArticle = articles.find((a) => a.article_title && lang.definition.test(a.article_title));
-  if (defArticle && defArticle.identifier) {
-    const artEl = consAct.querySelector(`ARTICLE[IDENTIFIER="${defArticle.identifier}"]`);
-    if (artEl) {
-      const meansRegex = buildMeansRegex(lang);
-      const fallbackDefRegex = buildFallbackDefRegex(lang);
-      for (const item of artEl.querySelectorAll("ITEM")) {
-        const txtEl = item.querySelector("TXT") || item.querySelector("NP");
-        if (!txtEl) continue;
-        const text = allText(txtEl);
-        if (!text) continue;
-        if (lang.definitionFormat === "verb_first") {
-          const termMatch = text.match(meansRegex);
-          if (termMatch) {
-            const term = termMatch[1].trim();
-            const definition = text.slice(termMatch[0].length).trim();
-            definitions.push({ term, definition });
-          }
-        } else {
-          let termMatch = text.match(meansRegex);
-          if (termMatch) {
-            const term = termMatch[1].trim();
-            const definition = text.replace(termMatch[0], "").trim();
-            definitions.push({ term, definition });
-          } else {
-            const fbMatch = text.match(fallbackDefRegex);
-            if (fbMatch) {
-              const term = fbMatch[1].trim();
-              const definition = text.slice(fbMatch[0].length).trim();
-              if (term && definition) definitions.push({ term, definition });
-            }
-          }
-        }
-      }
-    }
-  }
-
-  const annexes = [];
-  for (const annexEl of consAct.querySelectorAll("ANNEX")) {
-    const annexTi = annexEl.querySelector("TITLE > TI");
-    const annexSti = annexEl.querySelector("TITLE > STI");
-    const tiText = annexTi ? allText(annexTi) : "";
-    const stiText = annexSti ? allText(annexSti) : "";
-    const idMatch = tiText.match(lang.annexCapture);
-    const annex_id = idMatch ? (idMatch[1] || "").trim() : tiText;
-    const annex_title = stiText ? `${tiText} — ${stiText}` : tiText;
-    const contents = annexEl.querySelector("CONTENTS");
-    let annex_html = "";
-    if (contents) {
-      annex_html = injectCrossRefLinks(renderWithFootnotes(contents, `annex-${annex_id || "body"}`), lang);
-    }
-    annexes.push({ annex_id, annex_title, annex_html });
-  }
-
-  return {
-    meta,
-    title,
-    articles,
-    recitals,
-    annexes,
-    definitions,
-    langCode,
-    crossReferences,
-  };
+  return parseFmxToCombined(xmlText);
 }
