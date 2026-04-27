@@ -20,6 +20,10 @@ function formatDate(isoDate) {
 
 const MAX_VISIBLE_ARTICLES = 5;
 
+function courtLabel(celex) {
+  return /^6\d{4}TJ/.test(celex || "") ? "General Court" : "Court of Justice";
+}
+
 function CaseCard({ c, currentLang }) {
   const [expanded, setExpanded] = useState(false);
   const [showAllArticles, setShowAllArticles] = useState(false);
@@ -38,7 +42,7 @@ function CaseCard({ c, currentLang }) {
       <div className="px-3 py-2">
         <div className="flex items-center gap-1.5 text-xs">
           <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
-            CJEU
+            {courtLabel(c.celex)}
           </span>
           {dateLabel && (
             <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">

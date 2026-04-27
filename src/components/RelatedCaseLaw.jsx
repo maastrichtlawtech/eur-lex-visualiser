@@ -20,6 +20,10 @@ function matchesArticle(c, celex, articleNumber) {
   );
 }
 
+function courtLabel(celex) {
+  return /^6\d{4}TJ/.test(celex || "") ? "General Court" : "Court of Justice";
+}
+
 function CaseCard({ c, currentLang }) {
   const [expanded, setExpanded] = useState(false);
   const eurlexUrl = `https://eur-lex.europa.eu/legal-content/${currentLang || "EN"}/TXT/?uri=CELEX:${c.celex}`;
@@ -30,7 +34,7 @@ function CaseCard({ c, currentLang }) {
     <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 transition hover:border-teal-300 hover:shadow-md dark:bg-gray-800 dark:border-gray-700 dark:hover:border-teal-600">
       <div className="flex items-center gap-1.5 text-xs">
         <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">
-          CJEU
+          {courtLabel(c.celex)}
         </span>
         {dateLabel && (
           <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums">{dateLabel}</span>

@@ -237,7 +237,7 @@ SELECT DISTINCT ?caseCelex ?ecli ?date WHERE {
   ?caseWork cdm:case-law_interpretes_resource_legal ?law .
   ?law owl:sameAs <${celexUri}> .
   ?caseWork cdm:resource_legal_id_celex ?caseCelex .
-  FILTER(REGEX(?caseCelex, "^6[0-9]{4}CJ"))
+  FILTER(REGEX(?caseCelex, "^6[0-9]{4}(CJ|TJ)[0-9]"))
   OPTIONAL { ?caseWork cdm:case-law_ecli ?ecli }
   OPTIONAL { ?caseWork cdm:work_date_document ?date }
 }
@@ -248,9 +248,10 @@ LIMIT 200`;
   const cases = (data.results?.bindings || []).map((b) => {
     const caseCelex = b.caseCelex?.value || null;
     let caseNumber = caseCelex;
-    const m = caseCelex?.match(/^6(\d{4})CJ(\d{4})$/);
+    const m = caseCelex?.match(/^6(\d{4})(CJ|TJ)(\d{4})$/);
     if (m) {
-      caseNumber = `C-${parseInt(m[2], 10)}/${m[1].slice(2)}`;
+      const prefix = m[2] === 'TJ' ? 'T' : 'C';
+      caseNumber = `${prefix}-${parseInt(m[3], 10)}/${m[1].slice(2)}`;
     }
     const cached = cache[caseCelex];
     return {
